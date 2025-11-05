@@ -114,8 +114,19 @@ defmodule NFTex.Set do
 
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
-  def delete(_pid, _table, _name, _family) do
-    {:error, :not_implemented}
+  def delete(pid, table, name, family) do
+    # Allocate, configure, send delete to kernel, and cleanup
+    with {:ok, set_id} <- Kernel.Set.alloc(pid),
+         :ok <- Kernel.Set.set_str(pid, set_id, :name, name),
+         :ok <- Kernel.Set.set_str(pid, set_id, :table, table),
+         :ok <- Kernel.Set.set_u32(pid, set_id, :family, family_to_int(family)),
+         :ok <- Kernel.Set.send_to_kernel(pid, set_id, :delete),
+         :ok <- Kernel.Set.free(pid, set_id) do
+      :ok
+    else
+      {:error, _reason} = error ->
+        error
+    end
   end
 
   @doc """

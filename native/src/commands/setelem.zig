@@ -332,8 +332,7 @@ pub fn handleSetElemSendToKernel(
         };
 
         if (err_code != 0) {
-            const err_msg = try netlink_errors.errnoToString(allocator, err_code);
-            return common.errorResponse(allocator, request.req_id, err_msg);
+            return common.errorErrnoResponse(allocator, request.req_id, err_code);
         }
     }
 

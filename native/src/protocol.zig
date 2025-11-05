@@ -90,7 +90,9 @@ pub const Response = struct {
         ok_u32: u32,
         ok_binary: []const u8,
         ok_list: [][]const u8,  // List of binaries
+        ok_encoded: []const u8,  // Pre-encoded ETF data (list of maps, etc.)
         error_msg: []const u8,
+        error_errno: c_int,  // Send errno as integer instead of string
     };
 
     pub fn deinit(self: Response) void {
@@ -98,6 +100,7 @@ pub const Response = struct {
             .error_msg => |msg| self.allocator.free(msg),
             .ok_string => |s| self.allocator.free(s),
             .ok_binary => |b| self.allocator.free(b),
+            .ok_encoded => |e| self.allocator.free(e),
             .ok_list => |list| {
                 for (list) |item| {
                     self.allocator.free(item);
@@ -379,6 +382,34 @@ fn encodeResponse(buf: *std.ArrayList(u8), response: Response) !void {
                 return error.EncodeError;
             }
             if (c.ei_encode_binary(&ei_buf, &index, @ptrCast(msg.ptr), @intCast(msg.len)) != 0) {
+                return error.EncodeError;
+            }
+        },
+        .ok_encoded => |encoded| {
+            // The data is already ETF-encoded, just wrap in {:ok, ...}
+            if (c.ei_encode_tuple_header(&ei_buf, &index, 2) != 0) {
+                return error.EncodeError;
+            }
+            if (c.ei_encode_atom(&ei_buf, &index, "ok") != 0) {
+                return error.EncodeError;
+            }
+            // Copy the pre-encoded data directly
+            const current_index: usize = @intCast(index);
+            if (current_index + encoded.len > 1024) {
+                return error.EncodeError; // Buffer too small
+            }
+            @memcpy(ei_buf[current_index..][0..encoded.len], encoded);
+            index = @intCast(current_index + encoded.len);
+        },
+        .error_errno => |errno| {
+            // Encode tuple {:error, errno_int}
+            if (c.ei_encode_tuple_header(&ei_buf, &index, 2) != 0) {
+                return error.EncodeError;
+            }
+            if (c.ei_encode_atom(&ei_buf, &index, "error") != 0) {
+                return error.EncodeError;
+            }
+            if (c.ei_encode_long(&ei_buf, &index, errno) != 0) {
                 return error.EncodeError;
             }
         },

@@ -189,6 +189,20 @@ defmodule NFTex.Chain do
   """
   @spec create(pid(), chain_spec()) :: :ok | {:error, term()}
   def create(pid, spec) do
+    # Validate chain name
+    cond do
+      !Map.has_key?(spec, :name) ->
+        {:error, :name_required}
+
+      byte_size(spec.name) == 0 ->
+        {:error, :empty_name}
+
+      true ->
+        create_chain(pid, spec)
+    end
+  end
+
+  defp create_chain(pid, spec) do
     is_base_chain = Map.has_key?(spec, :hook)
 
     # Allocate, configure, send to kernel, and cleanup
@@ -242,8 +256,8 @@ defmodule NFTex.Chain do
   defp maybe_set_base_chain_attrs(pid, chain_id, spec, true) do
     with :ok <- Kernel.Chain.set_str(pid, chain_id, :type, to_string(spec.type)),
          :ok <- Kernel.Chain.set_u32(pid, chain_id, :hooknum, hook_to_int(spec.hook)),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :prio, spec.priority),
-         :ok <- Kernel.Chain.set_u8(pid, chain_id, :policy, policy_to_int(spec.policy)) do
+         :ok <- Kernel.Chain.set_u32(pid, chain_id, :prio, encode_priority(spec.priority)),
+         :ok <- Kernel.Chain.set_u32(pid, chain_id, :policy, policy_to_int(spec.policy)) do
       :ok
     end
   end
@@ -262,4 +276,109 @@ defmodule NFTex.Chain do
 
   defp policy_to_int(:drop), do: 0
   defp policy_to_int(:accept), do: 1
+
+  # Priority is a signed 32-bit integer, but we use set_u32
+  # For negative values, we need to convert to unsigned representation
+  defp encode_priority(prio) when prio < 0 do
+    # Convert negative to unsigned 32-bit representation
+    0x100000000 + prio
+  end
+
+  defp encode_priority(prio) when prio >= 0, do: prio
+
+  @doc """
+  List all chains for a given protocol family.
+
+  This is a convenience function that calls `NFTex.Query.list_chains/2`.
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:inet`)
+    - `:parse` - Parse responses into structs (default: `true`)
+    - `:timeout` - Operation timeout in ms (default: 5000)
+
+  ## Examples
+
+      {:ok, chains} = NFTex.Chain.list(pid)
+      {:ok, chains} = NFTex.Chain.list(pid, family: :inet6)
+
+      for chain <- chains do
+        IO.puts("Chain: \#{chain.name} in table \#{chain.table}")
+      end
+
+  """
+  @spec list(pid(), keyword()) :: {:ok, [map()]} | {:error, term()}
+  def list(pid, opts \\ []) do
+    NFTex.Query.list_chains(pid, opts)
+  end
+
+  @doc """
+  Check if a chain exists.
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name
+  - `name` - Chain name
+  - `family` - Protocol family (default: `:inet`)
+
+  ## Examples
+
+      if NFTex.Chain.exists?(pid, "filter", "INPUT", :inet) do
+        IO.puts("Chain exists")
+      end
+
+  """
+  @spec exists?(pid(), String.t(), String.t(), family()) :: boolean()
+  def exists?(pid, table, name, family \\ :inet) do
+    case NFTex.Query.list_chains(pid, family: family) do
+      {:ok, chains} ->
+        Enum.any?(chains, fn chain ->
+          chain.name == name and chain.table == table
+        end)
+
+      {:error, _} ->
+        false
+    end
+  end
+
+  @doc """
+  Set the default policy for a base chain.
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name
+  - `name` - Chain name
+  - `family` - Protocol family
+  - `policy` - Policy (`:accept` or `:drop`)
+
+  Note: Only base chains (chains with hooks) can have policies.
+  Regular chains will return an error.
+
+  ## Example
+
+      :ok = NFTex.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
+
+  """
+  @spec set_policy(pid(), String.t(), String.t(), family(), policy()) ::
+          :ok | {:error, term()}
+  def set_policy(pid, table, name, family, policy) when policy in [:accept, :drop] do
+    policy_int = policy_to_int(policy)
+
+    with {:ok, chain_id} <- Kernel.Chain.alloc(pid),
+         :ok <- Kernel.Chain.set_str(pid, chain_id, :table, table),
+         :ok <- Kernel.Chain.set_str(pid, chain_id, :name, name),
+         :ok <- Kernel.Chain.set_u32(pid, chain_id, :family, family_to_int(family)),
+         :ok <- Kernel.Chain.set_u32(pid, chain_id, :policy, policy_int),
+         :ok <- Kernel.Chain.send_to_kernel(pid, chain_id, :add),
+         :ok <- Kernel.Chain.free(pid, chain_id) do
+      :ok
+    else
+      {:error, _reason} = error ->
+        error
+    end
+  end
 end

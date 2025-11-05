@@ -1,0 +1,291 @@
+defmodule NFTex.Policy do
+  @moduledoc """
+  Pre-built firewall policies and common rule patterns.
+
+  This module provides high-level functions for common firewall configurations,
+  making it easy to set up secure defaults without low-level rule management.
+
+  ## Quick Start
+
+      {:ok, pid} = NFTex.start_link()
+
+      # Create table and chain
+      :ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
+      :ok = NFTex.Chain.create(pid, %{
+        table: "filter",
+        name: "INPUT",
+        family: :inet,
+        type: :filter,
+        hook: :input,
+        priority: 0,
+        policy: :drop  # Default drop
+      })
+
+      # Apply common policies
+      :ok = NFTex.Policy.accept_loopback(pid)
+      :ok = NFTex.Policy.accept_established(pid)
+      :ok = NFTex.Policy.allow_ssh(pid)
+
+  ## See Also
+
+  - `NFTex.RuleBuilder` - Fluent API for custom rules
+  - `NFTex.Rule` - Low-level rule operations
+  """
+
+  alias NFTex.RuleBuilder
+
+  @doc """
+  Accept all loopback traffic.
+
+  Loopback traffic (lo interface) should always be accepted as it's internal
+  system communication.
+
+  ## Example
+
+      :ok = NFTex.Policy.accept_loopback(pid)
+      :ok = NFTex.Policy.accept_loopback(pid, table: "filter", chain: "INPUT")
+  """
+  @spec accept_loopback(pid(), keyword()) :: :ok | {:error, term()}
+  def accept_loopback(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+
+    RuleBuilder.new(pid, table, chain, family: family)
+    |> RuleBuilder.match_iif("lo")
+    |> RuleBuilder.accept()
+    |> RuleBuilder.commit()
+  end
+
+  @doc """
+  Accept established and related connections.
+
+  This allows return traffic for existing connections, essential for any
+  stateful firewall.
+
+  ## Example
+
+      :ok = NFTex.Policy.accept_established(pid)
+  """
+  @spec accept_established(pid(), keyword()) :: :ok | {:error, term()}
+  def accept_established(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+
+    RuleBuilder.new(pid, table, chain, family: family)
+    |> RuleBuilder.match_ct_state([:established, :related])
+    |> RuleBuilder.accept()
+    |> RuleBuilder.commit()
+  end
+
+  @doc """
+  Allow SSH connections (port 22).
+
+  ## Options
+
+  - `:rate_limit` - Limit connections per minute (default: no limit)
+  - `:log` - Log accepted connections (default: false)
+  - `:table` - Table name (default: "filter")
+  - `:chain` - Chain name (default: "INPUT")
+  - `:family` - Protocol family (default: :inet)
+
+  ## Examples
+
+      # Basic SSH allow
+      :ok = NFTex.Policy.allow_ssh(pid)
+
+      # With rate limiting
+      :ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10)
+
+      # With logging
+      :ok = NFTex.Policy.allow_ssh(pid, log: true)
+  """
+  @spec allow_ssh(pid(), keyword()) :: :ok | {:error, term()}
+  def allow_ssh(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+    rate_limit = Keyword.get(opts, :rate_limit)
+    log_enabled = Keyword.get(opts, :log, false)
+
+    builder = RuleBuilder.new(pid, table, chain, family: family)
+    |> RuleBuilder.match_dest_port(22)
+
+    builder = if rate_limit do
+      RuleBuilder.rate_limit(builder, rate_limit, :minute)
+    else
+      builder
+    end
+
+    builder = if log_enabled do
+      RuleBuilder.log(builder, "SSH: ")
+    else
+      builder
+    end
+
+    builder
+    |> RuleBuilder.accept()
+    |> RuleBuilder.commit()
+  end
+
+  @doc """
+  Allow HTTP connections (port 80).
+
+  ## Options
+
+  - `:rate_limit` - Limit connections per minute
+  - `:log` - Log accepted connections
+  - `:table` - Table name (default: "filter")
+  - `:chain` - Chain name (default: "INPUT")
+  - `:family` - Protocol family (default: :inet)
+
+  ## Example
+
+      :ok = NFTex.Policy.allow_http(pid)
+      :ok = NFTex.Policy.allow_http(pid, rate_limit: 100)
+  """
+  @spec allow_http(pid(), keyword()) :: :ok | {:error, term()}
+  def allow_http(pid, opts \\ []) do
+    allow_port(pid, 80, Keyword.put(opts, :service, "HTTP"))
+  end
+
+  @doc """
+  Allow HTTPS connections (port 443).
+
+  ## Example
+
+      :ok = NFTex.Policy.allow_https(pid)
+  """
+  @spec allow_https(pid(), keyword()) :: :ok | {:error, term()}
+  def allow_https(pid, opts \\ []) do
+    allow_port(pid, 443, Keyword.put(opts, :service, "HTTPS"))
+  end
+
+  @doc """
+  Allow DNS queries (port 53, UDP).
+
+  ## Example
+
+      :ok = NFTex.Policy.allow_dns(pid)
+  """
+  @spec allow_dns(pid(), keyword()) :: :ok | {:error, term()}
+  def allow_dns(pid, opts \\ []) do
+    allow_port(pid, 53, Keyword.put(opts, :service, "DNS"))
+  end
+
+  @doc """
+  Drop invalid packets.
+
+  Drops packets with invalid connection tracking state.
+
+  ## Example
+
+      :ok = NFTex.Policy.drop_invalid(pid)
+  """
+  @spec drop_invalid(pid(), keyword()) :: :ok | {:error, term()}
+  def drop_invalid(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+
+    RuleBuilder.new(pid, table, chain, family: family)
+    |> RuleBuilder.match_ct_state([:invalid])
+    |> RuleBuilder.drop()
+    |> RuleBuilder.commit()
+  end
+
+  @doc """
+  Setup basic firewall with common defaults.
+
+  Creates a table and INPUT chain with these rules:
+  1. Accept loopback
+  2. Accept established/related
+  3. Drop invalid packets
+  4. Allow SSH (with optional rate limiting)
+  5. Default policy: DROP
+
+  ## Options
+
+  - `:table` - Table name (default: "filter")
+  - `:family` - Protocol family (default: :inet)
+  - `:ssh_rate_limit` - SSH connections per minute (default: 10)
+  - `:allow_services` - List of services to allow (default: [:ssh])
+
+  ## Example
+
+      :ok = NFTex.Policy.setup_basic_firewall(pid)
+      :ok = NFTex.Policy.setup_basic_firewall(pid, allow_services: [:ssh, :http, :https])
+  """
+  @spec setup_basic_firewall(pid(), keyword()) :: :ok | {:error, term()}
+  def setup_basic_firewall(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    family = Keyword.get(opts, :family, :inet)
+    ssh_rate_limit = Keyword.get(opts, :ssh_rate_limit, 10)
+    services = Keyword.get(opts, :allow_services, [:ssh])
+
+    with :ok <- NFTex.Table.create(pid, %{name: table, family: family}),
+         :ok <- NFTex.Chain.create(pid, %{
+           table: table,
+           name: "INPUT",
+           family: family,
+           type: :filter,
+           hook: :input,
+           priority: 0,
+           policy: :drop
+         }),
+         :ok <- accept_loopback(pid, table: table, family: family),
+         :ok <- accept_established(pid, table: table, family: family),
+         :ok <- drop_invalid(pid, table: table, family: family),
+         :ok <- apply_services(pid, services, table: table, family: family, ssh_rate_limit: ssh_rate_limit) do
+      :ok
+    end
+  end
+
+  # Private helpers
+
+  defp allow_port(pid, port, opts) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+    rate_limit = Keyword.get(opts, :rate_limit)
+    log_enabled = Keyword.get(opts, :log, false)
+    service = Keyword.get(opts, :service, "PORT #{port}")
+
+    builder = RuleBuilder.new(pid, table, chain, family: family)
+    |> RuleBuilder.match_dest_port(port)
+
+    builder = if rate_limit do
+      RuleBuilder.rate_limit(builder, rate_limit, :minute)
+    else
+      builder
+    end
+
+    builder = if log_enabled do
+      RuleBuilder.log(builder, "#{service}: ")
+    else
+      builder
+    end
+
+    builder
+    |> RuleBuilder.accept()
+    |> RuleBuilder.commit()
+  end
+
+  defp apply_services(pid, services, opts) do
+    Enum.reduce_while(services, :ok, fn service, :ok ->
+      result = case service do
+        :ssh -> allow_ssh(pid, opts)
+        :http -> allow_http(pid, opts)
+        :https -> allow_https(pid, opts)
+        :dns -> allow_dns(pid, opts)
+        _ -> {:error, "Unknown service: #{service}"}
+      end
+
+      case result do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+end

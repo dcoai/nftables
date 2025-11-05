@@ -115,6 +115,11 @@ const expr_attr_map = std.StaticStringMap(u16).initComptime(.{
     .{ "redir:reg_proto_min", libnftnl.NFTNL_EXPR_REDIR_REG_PROTO_MIN },
     .{ "redir:reg_proto_max", libnftnl.NFTNL_EXPR_REDIR_REG_PROTO_MAX },
     .{ "redir:flags", libnftnl.NFTNL_EXPR_REDIR_FLAGS },
+
+    // FIB (Forwarding Information Base) expression
+    .{ "fib:dreg", libnftnl.NFTNL_EXPR_FIB_DREG },
+    .{ "fib:result", libnftnl.NFTNL_EXPR_FIB_RESULT },
+    .{ "fib:flags", libnftnl.NFTNL_EXPR_FIB_FLAGS },
 });
 
 fn mapExprAttr(expr_type: []const u8, attr_name: []const u8) ?u16 {

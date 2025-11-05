@@ -14,6 +14,14 @@ pub fn errorResponse(allocator: std.mem.Allocator, req_id: u64, msg: []const u8)
     };
 }
 
+pub fn errorErrnoResponse(allocator: std.mem.Allocator, req_id: u64, errno: c_int) protocol.Response {
+    return protocol.Response{
+        .allocator = allocator,
+        .req_id = req_id,
+        .payload = .{ .error_errno = errno },
+    };
+}
+
 pub fn okResponse(allocator: std.mem.Allocator, req_id: u64) protocol.Response {
     return protocol.Response{
         .allocator = allocator,
@@ -234,8 +242,7 @@ pub fn handleSendToKernel(
         };
 
         if (err_code != 0) {
-            const err_msg = try netlink_errors.errnoToString(allocator, err_code);
-            return errorResponse(allocator, request.req_id, err_msg);
+            return errorErrnoResponse(allocator, request.req_id, err_code);
         }
     }
 

@@ -144,6 +144,58 @@ end
 
 ## API Overview
 
+### New in v0.3.0
+
+NFTex 0.3.0 introduces three powerful high-level modules that make firewall management dramatically easier:
+
+#### 🔥 NFTex.Policy - One-Line Firewall Setup
+
+```elixir
+# Complete secure firewall in ONE function call
+:ok = NFTex.Policy.setup_basic_firewall(pid,
+  allow_services: [:ssh, :http, :https],
+  ssh_rate_limit: 10
+)
+
+# Or use individual policies
+:ok = NFTex.Policy.accept_loopback(pid)
+:ok = NFTex.Policy.accept_established(pid)
+:ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10, log: true)
+```
+
+#### 🔗 NFTex.RuleBuilder - Fluent API for Custom Rules
+
+```elixir
+alias NFTex.RuleBuilder
+
+# Intuitive, chainable rule building
+RuleBuilder.new(pid, "filter", "INPUT")
+|> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
+|> RuleBuilder.log("BLOCKED: ")
+|> RuleBuilder.drop()
+|> RuleBuilder.commit()
+```
+
+#### ⛓️ NFTex.Chain - Complete Chain Management
+
+```elixir
+# Create base chains with hooks
+:ok = NFTex.Chain.create(pid, %{
+  table: "filter",
+  name: "INPUT",
+  family: :inet,
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+})
+
+# List, check existence, set policies
+{:ok, chains} = NFTex.Chain.list(pid, family: :inet)
+true = NFTex.Chain.exists?(pid, "filter", "INPUT", :inet)
+:ok = NFTex.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
+```
+
 ### High-Level APIs (Recommended)
 
 NFTex provides simple, idiomatic Elixir functions for common firewall operations:

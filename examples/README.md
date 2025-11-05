@@ -32,7 +32,92 @@ chmod +x examples/ip_blocklist.exs
 
 ## Available Examples
 
-### 1. IP Blocklist (`ip_blocklist.exs`)
+### Comprehensive Examples (Phase 3)
+
+These examples demonstrate complete, production-ready firewall configurations:
+
+#### 1. Basic Firewall (`01_basic_firewall.exs`)
+
+Complete secure firewall setup with defense-in-depth approach.
+
+**Topics covered:**
+- Default DROP policy
+- Loopback traffic acceptance
+- Established/related connection tracking
+- Invalid packet dropping
+- SSH rate limiting
+- High-level Policy module usage
+
+**Use case:** Secure server baseline, VPS hardening
+
+#### 2. NAT Gateway (`02_nat_gateway.exs`)
+
+Internet sharing and port forwarding for local networks.
+
+**Topics covered:**
+- Masquerading (SNAT) for LAN
+- Port forwarding (DNAT)
+- DMZ setup for exposed servers
+- Multi-interface routing
+
+**Use case:** Home router, small office gateway, container networking
+
+#### 3. Anti-Spoofing (`03_anti_spoofing.exs`)
+
+Advanced anti-spoofing and attack prevention.
+
+**Topics covered:**
+- Reverse Path Filtering (RPF) using FIB expressions
+- Bogon filtering (RFC 1918 private networks)
+- Martian packet detection
+- Private network filtering on WAN
+
+**Use case:** ISP edge routers, datacenter security, DDoS mitigation
+
+#### 4. Rate Limiting (`04_rate_limiting.exs`)
+
+DDoS protection and resource management through rate limiting.
+
+**Topics covered:**
+- Per-service rate limits (SSH, HTTP, ICMP)
+- New connection rate limiting
+- Burst handling
+- SYN flood protection
+- Global vs per-IP limits
+
+**Use case:** Public-facing servers, API endpoints, DDoS mitigation
+
+#### 5. Advanced Logging (`05_advanced_logging.exs`)
+
+Comprehensive logging for audit and traffic analysis.
+
+**Topics covered:**
+- Kernel log integration (dmesg/journalctl)
+- Netlink logging (ulogd) for external tools
+- Connection tracking logs
+- Traffic statistics and counters
+- Port scan detection
+- Log levels and prefixes
+
+**Use case:** Security audit, compliance, intrusion detection, SIEM integration
+
+#### 6. Load Balancing (`06_load_balancing.exs`)
+
+Basic load balancing using DNAT for traffic distribution.
+
+**Topics covered:**
+- Round-robin DNAT distribution
+- Multi-backend configuration
+- Weighted load balancing concepts
+- Session persistence patterns
+
+**Use case:** High-availability web services, backend distribution
+
+**Note:** For production load balancing, use dedicated tools (HAProxy, nginx, IPVS) with health checks and advanced algorithms.
+
+### Basic Examples
+
+#### 7. IP Blocklist (`ip_blocklist.exs`)
 
 Demonstrates how to create and manage an IP address blocklist using nftables sets.
 
@@ -45,7 +130,7 @@ Demonstrates how to create and manage an IP address blocklist using nftables set
 
 **Use case:** Dynamic IP blocklisting for firewall applications
 
-### 2. Query Tables (`query_tables.exs`)
+#### 8. Query Tables (`query_tables.exs`)
 
 Shows how to query and inspect your current nftables configuration.
 
@@ -58,7 +143,7 @@ Shows how to query and inspect your current nftables configuration.
 
 **Use case:** Auditing firewall configuration, building management dashboards
 
-### 3. Firewall Rules (`firewall_rules.exs`)
+#### 9. Firewall Rules (`firewall_rules.exs`)
 
 Demonstrates creating dynamic firewall rules to block malicious IPs and allow trusted sources.
 
@@ -72,6 +157,124 @@ Demonstrates creating dynamic firewall rules to block malicious IPs and allow tr
 **Use case:** IDS integration, dynamic IP blocking, security incident response
 
 ## API Quick Reference
+
+### NFTex.Policy - Pre-built Firewall Policies (New in 0.3.0)
+
+High-level functions for common firewall configurations:
+
+```elixir
+{:ok, pid} = NFTex.start_link()
+
+# Quick setup: Complete basic firewall in one call
+:ok = NFTex.Policy.setup_basic_firewall(pid,
+  allow_services: [:ssh, :http, :https],
+  ssh_rate_limit: 10
+)
+
+# Individual policies
+:ok = NFTex.Policy.accept_loopback(pid)
+:ok = NFTex.Policy.accept_established(pid)
+:ok = NFTex.Policy.drop_invalid(pid)
+
+# Service-specific allows
+:ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10, log: true)
+:ok = NFTex.Policy.allow_http(pid, rate_limit: 100)
+:ok = NFTex.Policy.allow_https(pid)
+:ok = NFTex.Policy.allow_dns(pid)
+```
+
+### NFTex.RuleBuilder - Fluent API for Rules (New in 0.3.0)
+
+Chainable API for building complex rules intuitively:
+
+```elixir
+alias NFTex.RuleBuilder
+
+# Block IP with logging
+RuleBuilder.new(pid, "filter", "INPUT")
+|> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
+|> RuleBuilder.log("BLOCKED: ")
+|> RuleBuilder.drop()
+|> RuleBuilder.commit()
+
+# Rate-limited SSH
+RuleBuilder.new(pid, "filter", "INPUT")
+|> RuleBuilder.match_dest_port(22)
+|> RuleBuilder.rate_limit(10, :minute, burst: 20)
+|> RuleBuilder.counter()
+|> RuleBuilder.accept()
+|> RuleBuilder.commit()
+
+# Match established connections
+RuleBuilder.new(pid, "filter", "INPUT")
+|> RuleBuilder.match_ct_state([:established, :related])
+|> RuleBuilder.accept()
+|> RuleBuilder.commit()
+
+# Interface-specific rules
+RuleBuilder.new(pid, "filter", "INPUT")
+|> RuleBuilder.match_iif("eth0")
+|> RuleBuilder.match_source_ip(<<10, 0, 0, 0>>)
+|> RuleBuilder.reject(:icmp_port_unreachable)
+|> RuleBuilder.commit()
+```
+
+**Available match functions:**
+- `match_source_ip/2` - Match source IP address
+- `match_dest_ip/2` - Match destination IP address
+- `match_source_port/2` - Match source port
+- `match_dest_port/2` - Match destination port
+- `match_ct_state/2` - Match connection tracking state (`:established`, `:related`, `:new`, `:invalid`)
+- `match_iif/2` - Match input interface
+- `match_oif/2` - Match output interface
+
+**Available action functions:**
+- `counter/1` - Add packet/byte counter
+- `log/2` - Log packets with prefix
+- `rate_limit/3` - Rate limit (rate, unit, opts)
+
+**Available verdict functions:**
+- `accept/1` - Accept packets
+- `drop/1` - Drop packets silently
+- `reject/1` - Reject with ICMP error
+
+### NFTex.Chain - Chain Management (New in 0.3.0)
+
+High-level chain operations with automatic resource management:
+
+```elixir
+# Create base chain (hooked into netfilter)
+:ok = NFTex.Chain.create(pid, %{
+  table: "filter",
+  name: "INPUT",
+  family: :inet,
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+})
+
+# Create regular chain (for organizing rules)
+:ok = NFTex.Chain.create(pid, %{
+  table: "filter",
+  name: "my_custom_rules",
+  family: :inet
+})
+
+# List all chains
+{:ok, chains} = NFTex.Chain.list(pid, family: :inet)
+
+# Check if chain exists
+if NFTex.Chain.exists?(pid, "filter", "INPUT", :inet) do
+  IO.puts("Chain exists")
+end
+
+# Set chain policy
+:ok = NFTex.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
+
+# Delete chain
+:ok = NFTex.Chain.delete(pid, "filter", "INPUT", :inet)
+```
 
 ### NFTex.Rule - High-level rule operations
 

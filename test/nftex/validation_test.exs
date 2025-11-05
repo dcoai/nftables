@@ -106,4 +106,81 @@ defmodule NFTex.ValidationTest do
                Validation.enhance_netlink_error("Unknown error (errno=999)", %{})
     end
   end
+
+  describe "errno_to_string/1" do
+    test "converts common errno values" do
+      assert Validation.errno_to_string(0) == "Success"
+      assert Validation.errno_to_string(1) == "Operation not permitted (EPERM)"
+      assert Validation.errno_to_string(2) == "No such file or directory (ENOENT)"
+      assert Validation.errno_to_string(13) == "Permission denied (EACCES)"
+      assert Validation.errno_to_string(17) == "File exists (EEXIST)"
+      assert Validation.errno_to_string(22) == "Invalid argument (EINVAL)"
+      assert Validation.errno_to_string(105) == "No buffer space available (ENOBUFS)"
+    end
+
+    test "handles negative errno values" do
+      assert Validation.errno_to_string(-2) == "No such file or directory (ENOENT)"
+      assert Validation.errno_to_string(-1) == "Operation not permitted (EPERM)"
+    end
+
+    test "handles unknown errno values" do
+      assert Validation.errno_to_string(999) == "Unknown error (errno=999)"
+      assert Validation.errno_to_string(12345) == "Unknown error (errno=12345)"
+    end
+  end
+
+  describe "enhance_netlink_error/2 with errno integers" do
+    test "enhances ENOENT (errno 2) with context" do
+      result = Validation.enhance_netlink_error(2, %{
+        operation: :rule_add,
+        table: "filter",
+        chain: "INPUT"
+      })
+
+      assert result =~ "Failed to add rule to filter/INPUT"
+      assert result =~ "Table or chain not found"
+      assert result =~ "nft add table"
+    end
+
+    test "enhances EPERM (errno 1) with capability instructions" do
+      result = Validation.enhance_netlink_error(1, %{operation: :rule_add})
+
+      assert result =~ "Failed to add rule"
+      assert result =~ "CAP_NET_ADMIN"
+      assert result =~ "setcap"
+    end
+
+    test "enhances EEXIST (errno 17)" do
+      result = Validation.enhance_netlink_error(17, %{
+        operation: :table_add,
+        table: "filter"
+      })
+
+      assert result =~ "Failed to add table"
+      assert result =~ "Already exists"
+    end
+
+    test "enhances EINVAL (errno 22)" do
+      result = Validation.enhance_netlink_error(22, %{operation: :rule_add})
+
+      assert result =~ "Failed to add rule"
+      assert result =~ "Invalid argument"
+    end
+
+    test "handles negative errno values" do
+      result = Validation.enhance_netlink_error(-2, %{
+        operation: :rule_add,
+        table: "filter",
+        chain: "INPUT"
+      })
+
+      assert result =~ "Failed to add rule to filter/INPUT"
+      assert result =~ "Table or chain not found"
+    end
+
+    test "handles unknown errno values" do
+      result = Validation.enhance_netlink_error(999, %{operation: :rule_add})
+      assert result == "Unknown error (errno=999)"
+    end
+  end
 end

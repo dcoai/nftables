@@ -36,9 +36,10 @@ defmodule NFTex.Query do
   @type family :: :inet | :inet6 | :arp | :bridge | :netdev | non_neg_integer()
   @type result(t) :: {:ok, t} | {:error, String.t()}
 
-  # Family atom to integer mapping
+  # Family atom to integer mapping (from linux/netfilter.h)
+  # NFPROTO_INET=1, NFPROTO_IPV4=2, NFPROTO_ARP=3, NFPROTO_NETDEV=5, NFPROTO_BRIDGE=7, NFPROTO_IPV6=10
   @family_map %{
-    inet: 2,
+    inet: 1,
     ip: 2,
     ipv4: 2,
     inet6: 10,
@@ -288,80 +289,31 @@ defmodule NFTex.Query do
 
   ## Parsing Functions
 
-  defp parse_table(bin) do
-    [name, family_str, flags_str | _] = String.split(bin, <<0>>, trim: true)
-
-    %{
-      name: name,
-      family: parse_family_int(family_str),
-      flags: String.to_integer(flags_str)
-    }
+  defp parse_table(table) when is_map(table) do
+    # Tables are now received as ETF maps directly from Zig
+    # Just enhance with atom family representation
+    %{table | family: int_to_family(table.family)}
   end
 
-  defp parse_chain(bin) do
-    fields = String.split(bin, <<0>>, trim: true)
-
-    case fields do
-      [name, table, type, hook, prio, policy, family] ->
-        %{
-          name: name,
-          table: table,
-          type: type,
-          hook: parse_hook(hook),
-          priority: String.to_integer(prio),
-          policy: parse_policy(policy),
-          family: parse_family_int(family),
-          base_chain: true
-        }
-
-      [name, table, family] ->
-        %{
-          name: name,
-          table: table,
-          family: parse_family_int(family),
-          base_chain: false
-        }
-
-      _ ->
-        %{raw: bin}
-    end
+  defp parse_chain(chain) when is_map(chain) do
+    # Chains are now received as ETF maps directly from Zig
+    # Enhance with atom representations
+    chain
+    |> Map.update(:family, nil, &int_to_family/1)
+    |> Map.update(:hook, nil, &int_to_hook/1)
+    |> Map.update(:policy, nil, &int_to_policy/1)
   end
 
-  defp parse_rule(bin) do
-    fields = String.split(bin, <<0>>, trim: true)
-
-    case fields do
-      [table, chain, family, handle, position] ->
-        %{
-          table: table,
-          chain: chain,
-          family: parse_family_int(family),
-          handle: String.to_integer(handle),
-          position: String.to_integer(position)
-        }
-
-      _ ->
-        %{raw: bin}
-    end
+  defp parse_rule(rule) when is_map(rule) do
+    # Rules are now received as ETF maps directly from Zig
+    # Just enhance with atom family representation
+    %{rule | family: int_to_family(rule.family)}
   end
 
-  defp parse_set(bin) do
-    fields = String.split(bin, <<0>>, trim: true)
-
-    case fields do
-      [name, table, family, key_type, key_len, flags] ->
-        %{
-          name: name,
-          table: table,
-          family: parse_family_int(family),
-          key_type: String.to_integer(key_type),
-          key_len: String.to_integer(key_len),
-          flags: String.to_integer(flags)
-        }
-
-      _ ->
-        %{raw: bin}
-    end
+  defp parse_set(set) when is_map(set) do
+    # Sets are now received as ETF maps directly from Zig
+    # Just enhance with atom family representation
+    %{set | family: int_to_family(set.family)}
   end
 
   defp parse_set_element(bin) do
@@ -382,9 +334,10 @@ defmodule NFTex.Query do
 
   defp resolve_family(family) when is_integer(family), do: family
 
-  defp parse_family_int(str) do
-    case String.to_integer(str) do
-      2 -> :inet
+  defp int_to_family(family_int) when is_integer(family_int) do
+    case family_int do
+      1 -> :inet
+      2 -> :ip
       10 -> :inet6
       3 -> :arp
       7 -> :bridge
@@ -393,8 +346,8 @@ defmodule NFTex.Query do
     end
   end
 
-  defp parse_hook(str) do
-    case String.to_integer(str) do
+  defp int_to_hook(hook_int) when is_integer(hook_int) do
+    case hook_int do
       0 -> :prerouting
       1 -> :input
       2 -> :forward
@@ -403,14 +356,17 @@ defmodule NFTex.Query do
       other -> other
     end
   end
+  defp int_to_hook(nil), do: nil
 
-  defp parse_policy(str) do
-    case String.to_integer(str) do
+  defp int_to_policy(policy_int) when is_integer(policy_int) do
+    case policy_int do
       0 -> :drop
       1 -> :accept
       other -> other
     end
   end
+  defp int_to_policy(nil), do: nil
+
 
   defp hex_to_ip(hex) when byte_size(hex) == 8 do
     # IPv4 address (4 bytes = 8 hex chars)

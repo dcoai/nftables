@@ -77,6 +77,34 @@ defmodule NFTex.ExpressionBuilderTest do
       assert is_integer(expr_id)
       assert expr_id > 0
     end
+
+    test "cmp_lt/3 creates less than comparison", %{pid: pid} do
+      port = <<4, 0>>  # Port 1024 in network byte order
+      {:ok, expr_id} = ExpressionBuilder.cmp_lt(pid, 1, port)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "cmp_lte/3 creates less than or equal comparison", %{pid: pid} do
+      port = <<4, 0>>  # Port 1024
+      {:ok, expr_id} = ExpressionBuilder.cmp_lte(pid, 1, port)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "cmp_gt/3 creates greater than comparison", %{pid: pid} do
+      port = <<4, 0>>  # Port 1024
+      {:ok, expr_id} = ExpressionBuilder.cmp_gt(pid, 1, port)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "cmp_gte/3 creates greater than or equal comparison", %{pid: pid} do
+      port = <<4, 0>>  # Port 1024
+      {:ok, expr_id} = ExpressionBuilder.cmp_gte(pid, 1, port)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
   end
 
   describe "counter expression" do
@@ -125,6 +153,87 @@ defmodule NFTex.ExpressionBuilderTest do
       {:ok, expr_id} = ExpressionBuilder.verdict(pid, 0)
       assert is_integer(expr_id)
       assert expr_id > 0
+    end
+  end
+
+  describe "reject expression" do
+    setup do
+      {:ok, pid} = NFTex.start_link()
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          NFTex.stop(pid)
+        end
+      end)
+      {:ok, pid: pid}
+    end
+
+    test "reject/1 creates REJECT with default type", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.reject(pid)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "reject/2 creates REJECT with icmp_port_unreachable", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.reject(pid, :icmp_port_unreachable)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "reject/2 creates REJECT with tcp_reset", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.reject(pid, :tcp_reset)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "reject/2 creates REJECT with icmp_host_unreachable", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.reject(pid, :icmp_host_unreachable)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+  end
+
+  describe "limit expression" do
+    setup do
+      {:ok, pid} = NFTex.start_link()
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          NFTex.stop(pid)
+        end
+      end)
+      {:ok, pid: pid}
+    end
+
+    test "limit/3 creates limit with default options", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.limit(pid, 10, :second)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "limit/4 creates limit with custom burst", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.limit(pid, 100, :minute, burst: 20)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "limit/4 creates limit for bytes", %{pid: pid} do
+      {:ok, expr_id} = ExpressionBuilder.limit(pid, 1_000_000, :second, type: :bytes)
+      assert is_integer(expr_id)
+      assert expr_id > 0
+    end
+
+    test "limit/4 creates limit with different time units", %{pid: pid} do
+      # Test various time units
+      {:ok, expr_id_sec} = ExpressionBuilder.limit(pid, 10, :second)
+      {:ok, expr_id_min} = ExpressionBuilder.limit(pid, 100, :minute)
+      {:ok, expr_id_hour} = ExpressionBuilder.limit(pid, 1000, :hour)
+      {:ok, expr_id_day} = ExpressionBuilder.limit(pid, 10000, :day)
+      {:ok, expr_id_week} = ExpressionBuilder.limit(pid, 100000, :week)
+
+      assert is_integer(expr_id_sec)
+      assert is_integer(expr_id_min)
+      assert is_integer(expr_id_hour)
+      assert is_integer(expr_id_day)
+      assert is_integer(expr_id_week)
     end
   end
 

@@ -191,8 +191,7 @@ pub fn handleNlParseError(
         return common.okResponse(allocator, request.req_id);
     }
 
-    // Convert errno to human-readable string
-    const err_msg = try netlink_errors.errnoToString(allocator, err_code);
-    return common.errorResponse(allocator, request.req_id, err_msg);
+    // Send errno as integer to Elixir for decoding
+    return common.errorErrnoResponse(allocator, request.req_id, err_code);
 }
 

@@ -132,15 +132,51 @@ defmodule NFTex.Rule do
   @doc """
   Delete a rule by handle.
 
-  ## Example
+  Rules in nftables are identified by their handle, which is a unique identifier
+  assigned by the kernel when the rule is created. Use `NFTex.Rule.list/4` to
+  get the handles of existing rules.
 
-      NFTex.Rule.delete(pid, "filter", "input", :inet, handle)
+  ## Parameters
 
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `chain` - Chain name (string)
+  - `family` - Protocol family (`:inet`, `:ip6`, etc.)
+  - `handle` - Rule handle (non_neg_integer from kernel)
+
+  ## Examples
+
+      # List rules to get handles
+      {:ok, rules} = NFTex.Rule.list(pid, "filter", "INPUT", family: :inet)
+
+      # Delete first rule
+      [first_rule | _] = rules
+      :ok = NFTex.Rule.delete(pid, "filter", "INPUT", :inet, first_rule.handle)
+
+  ## Returns
+
+  `:ok` on success, `{:error, reason}` on failure.
   """
   @spec delete(pid(), String.t(), String.t(), family(), non_neg_integer()) ::
           :ok | {:error, term()}
-  def delete(_pid, _table, _chain, _family, _handle) do
-    {:error, :not_implemented}
+  def delete(pid, table, chain, family, handle) do
+    # Validate family
+    with {:ok, family_int} <- Validation.validate_family(family) do
+      with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family_int}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u64, rule_id, :handle, handle}),
+           result <-
+             NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :delete})
+             |> enhance_rule_error(:rule_delete, table, chain) do
+        NFTex.Port.call(pid, {:rule_free, rule_id})
+        result
+      else
+        error ->
+          error
+      end
+    end
   end
 
   @doc """
@@ -392,6 +428,81 @@ defmodule NFTex.Rule do
     end
   end
 
+  @doc """
+  Create a rate limiting rule.
+
+  This is a high-level helper that creates a rule to drop packets exceeding
+  a specified rate limit. Useful for DDoS protection and abuse prevention.
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `chain` - Chain name (string)
+  - `rate` - Number of packets/bytes per unit
+  - `unit` - Time unit (`:second`, `:minute`, `:hour`, `:day`, `:week`)
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:inet`)
+    - `:burst` - Burst size (default: 5)
+    - `:type` - `:packets` or `:bytes` (default: `:packets`)
+    - `:reject` - Use REJECT instead of DROP (default: `false`)
+    - `:counter` - Add counter to rule (default: `true`)
+
+  ## Examples
+
+      # Drop packets exceeding 100 per second
+      :ok = NFTex.Rule.rate_limit(pid, "filter", "INPUT", 100, :second)
+
+      # Reject HTTP requests exceeding 10 per minute with burst of 20
+      :ok = NFTex.Rule.rate_limit(pid, "filter", "INPUT", 10, :minute,
+        burst: 20, reject: true)
+
+      # Bandwidth limiting: 1 MB per second
+      :ok = NFTex.Rule.rate_limit(pid, "filter", "FORWARD", 1_000_000, :second,
+        type: :bytes)
+
+  ## Returns
+
+  `:ok` on success, `{:error, reason}` on failure.
+
+  ## Note
+
+  This creates a rule that will DROP (or REJECT) packets that exceed the limit.
+  Packets within the limit are allowed to continue to the next rule.
+  """
+  @spec rate_limit(pid(), String.t(), String.t(), non_neg_integer(), atom(), keyword()) ::
+          :ok | {:error, term()}
+  def rate_limit(pid, table, chain, rate, unit, opts \\ []) do
+    with {:ok, family} <- Validation.validate_family(Keyword.get(opts, :family, :inet)) do
+      burst = Keyword.get(opts, :burst, 5)
+      type = Keyword.get(opts, :type, :packets)
+      use_reject = Keyword.get(opts, :reject, false)
+      add_counter = Keyword.get(opts, :counter, true)
+
+      with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
+           # Add limit expression
+           {:ok, limit_id} <-
+             NFTex.ExpressionBuilder.limit(pid, rate, unit, burst: burst, type: type),
+           :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, limit_id}),
+           # Add optional counter
+           :ok <- maybe_add_counter(pid, rule_id, add_counter),
+           # Add verdict (DROP or REJECT)
+           {:ok, _verdict_id} <- add_verdict(pid, rule_id, use_reject),
+           result <-
+             NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add})
+             |> enhance_rule_error(:rule_add, table, chain) do
+        NFTex.Port.call(pid, {:rule_free, rule_id})
+        result
+      else
+        error ->
+          error
+      end
+    end
+  end
+
   ## Private Helpers
 
   defp add_ipv4_saddr_match(pid, rule_id, ip_address) do
@@ -421,6 +532,14 @@ defmodule NFTex.Rule do
     end
   end
 
+  defp add_verdict(pid, rule_id, use_reject) do
+    if use_reject do
+      add_reject_verdict(pid, rule_id)
+    else
+      add_drop_verdict(pid, rule_id)
+    end
+  end
+
   defp add_drop_verdict(pid, rule_id) do
     with {:ok, verdict_id} <- NFTex.ExpressionBuilder.verdict_drop(pid),
          :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, verdict_id}) do
@@ -432,6 +551,13 @@ defmodule NFTex.Rule do
     with {:ok, verdict_id} <- NFTex.ExpressionBuilder.verdict_accept(pid),
          :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, verdict_id}) do
       {:ok, verdict_id}
+    end
+  end
+
+  defp add_reject_verdict(pid, rule_id) do
+    with {:ok, reject_id} <- NFTex.ExpressionBuilder.reject(pid),
+         :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, reject_id}) do
+      {:ok, reject_id}
     end
   end
 

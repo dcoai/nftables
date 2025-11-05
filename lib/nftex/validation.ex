@@ -134,20 +134,94 @@ defmodule NFTex.Validation do
   end
 
   @doc """
+  Convert errno to human-readable error message.
+
+  Takes an errno integer (from netlink/kernel) and converts it to a descriptive string.
+  This mirrors the functionality in the Zig native code but on the Elixir side.
+
+  ## Examples
+
+      iex> NFTex.Validation.errno_to_string(2)
+      "No such file or directory (ENOENT)"
+
+      iex> NFTex.Validation.errno_to_string(1)
+      "Operation not permitted (EPERM)"
+
+      iex> NFTex.Validation.errno_to_string(0)
+      "Success"
+  """
+  @spec errno_to_string(integer()) :: String.t()
+  def errno_to_string(errno) when is_integer(errno) do
+    # errno can be negative or positive, normalize to positive
+    errno = abs(errno)
+
+    case errno do
+      0 -> "Success"
+      1 -> "Operation not permitted (EPERM)"
+      2 -> "No such file or directory (ENOENT)"
+      3 -> "No such process (ESRCH)"
+      4 -> "Interrupted system call (EINTR)"
+      5 -> "I/O error (EIO)"
+      6 -> "No such device or address (ENXIO)"
+      9 -> "Bad file descriptor (EBADF)"
+      11 -> "Try again (EAGAIN)"
+      12 -> "Out of memory (ENOMEM)"
+      13 -> "Permission denied (EACCES)"
+      14 -> "Bad address (EFAULT)"
+      16 -> "Device or resource busy (EBUSY)"
+      17 -> "File exists (EEXIST)"
+      19 -> "No such device (ENODEV)"
+      22 -> "Invalid argument (EINVAL)"
+      24 -> "Too many open files (EMFILE)"
+      28 -> "No space left on device (ENOSPC)"
+      32 -> "Broken pipe (EPIPE)"
+      71 -> "Protocol error (EPROTO)"
+      90 -> "Message too long (EMSGSIZE)"
+      92 -> "Protocol not available (ENOPROTOOPT)"
+      93 -> "Protocol not supported (EPROTONOSUPPORT)"
+      95 -> "Operation not supported (EOPNOTSUPP)"
+      97 -> "Address family not supported (EAFNOSUPPORT)"
+      98 -> "Address already in use (EADDRINUSE)"
+      99 -> "Cannot assign requested address (EADDRNOTAVAIL)"
+      100 -> "Network is down (ENETDOWN)"
+      101 -> "Network is unreachable (ENETUNREACH)"
+      103 -> "Software caused connection abort (ECONNABORTED)"
+      104 -> "Connection reset by peer (ECONNRESET)"
+      105 -> "No buffer space available (ENOBUFS)"
+      106 -> "Transport endpoint is already connected (EISCONN)"
+      107 -> "Transport endpoint is not connected (ENOTCONN)"
+      110 -> "Connection timed out (ETIMEDOUT)"
+      111 -> "Connection refused (ECONNREFUSED)"
+      _ -> "Unknown error (errno=#{errno})"
+    end
+  end
+
+  @doc """
   Enhance netlink error messages with context.
 
-  Takes a raw netlink error string and adds helpful context based on the operation and error type.
+  Takes a raw netlink error (string or errno integer) and adds helpful context based on
+  the operation and error type.
 
   ## Examples
 
       iex> NFTex.Validation.enhance_netlink_error("No such file or directory (ENOENT)", %{operation: :rule_add, table: "filter", chain: "INPUT"})
       "Failed to add rule to filter/INPUT: Table or chain not found. Ensure the table and chain exist (e.g., 'nft add table filter' and 'nft add chain filter INPUT ...')"
 
+      iex> NFTex.Validation.enhance_netlink_error(2, %{operation: :rule_add, table: "filter", chain: "INPUT"})
+      "Failed to add rule to filter/INPUT: Table or chain not found. Ensure the table and chain exist (e.g., 'nft add table filter' and 'nft add chain filter INPUT ...')"
+
       iex> NFTex.Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{operation: :rule_add})
       "Failed to add rule: Permission denied. NFTex requires CAP_NET_ADMIN capability. Run: sudo setcap cap_net_admin=ep path/to/priv/libnf_ex"
   """
-  @spec enhance_netlink_error(String.t(), map()) :: String.t()
-  def enhance_netlink_error(error_msg, context \\ %{})
+  @spec enhance_netlink_error(String.t() | integer(), map()) :: String.t()
+  def enhance_netlink_error(error, context \\ %{})
+
+  def enhance_netlink_error(errno, context) when is_integer(errno) do
+    # Convert errno to string first, then enhance
+    errno
+    |> errno_to_string()
+    |> enhance_netlink_error(context)
+  end
 
   # ENOENT - No such file or directory (table/chain not found)
   def enhance_netlink_error("No such file or directory (ENOENT)", context) do
@@ -222,7 +296,7 @@ defmodule NFTex.Validation do
   end
 
   # Default - pass through the original error
-  def enhance_netlink_error(error_msg, _context) do
+  def enhance_netlink_error(error_msg, _context) when is_binary(error_msg) do
     error_msg
   end
 
