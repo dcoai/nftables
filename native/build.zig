@@ -1,0 +1,39 @@
+const std = @import("std");
+
+pub fn build(b: *std.Build) void {
+    // Get Erlang root from environment (user must set ERL_ROOT)
+    const erl_root = std.process.getEnvVarOwned(b.allocator, "ERL_ROOT") catch blk: {
+        // Default to common asdf path - user can override with ERL_ROOT
+        const home = std.process.getEnvVarOwned(b.allocator, "HOME") catch unreachable;
+        break :blk b.fmt("{s}/.asdf/installs/erlang/28.1.1", .{home});
+    };
+
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    // Create executable with root module
+    const exe = b.addExecutable(.{
+        .name = "libnf_ex",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    // Add Erlang include and library paths
+    const erl_include = b.fmt("{s}/usr/include", .{erl_root});
+    const erl_lib = b.fmt("{s}/usr/lib", .{erl_root});
+
+    exe.root_module.addIncludePath(.{ .cwd_relative = erl_include });
+    exe.root_module.addLibraryPath(.{ .cwd_relative = erl_lib });
+
+    // Link system libraries
+    exe.root_module.linkSystemLibrary("nftnl", .{});
+    exe.root_module.linkSystemLibrary("mnl", .{});
+    exe.root_module.linkSystemLibrary("cap", .{});
+    exe.root_module.linkSystemLibrary("ei", .{});
+    exe.linkLibC();
+
+    b.installArtifact(exe);
+}
