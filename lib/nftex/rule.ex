@@ -88,6 +88,7 @@ defmodule NFTex.Rule do
   """
 
   alias NFTex.Kernel
+  alias NFTex.Validation
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type rule_spec :: %{
@@ -194,23 +195,28 @@ defmodule NFTex.Rule do
   `:ok` on success, `{:error, reason}` on failure.
   """
   @spec block_ip(pid(), String.t(), String.t(), binary(), keyword()) :: :ok | {:error, term()}
-  def block_ip(pid, table, chain, ip_address, opts \\ []) when is_binary(ip_address) do
-    family = family_to_int(Keyword.get(opts, :family, :inet))
-    add_counter = Keyword.get(opts, :counter, true)
+  def block_ip(pid, table, chain, ip_address, opts \\ []) do
+    # Validate IP address format
+    with :ok <- Validation.validate_ipv4(ip_address),
+         {:ok, family} <- Validation.validate_family(Keyword.get(opts, :family, :inet)) do
+      add_counter = Keyword.get(opts, :counter, true)
 
-    with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
-         :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
-         :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
-         :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
-         {:ok, _payload_id} <- add_ipv4_saddr_match(pid, rule_id, ip_address),
-         :ok <- maybe_add_counter(pid, rule_id, add_counter),
-         {:ok, _verdict_id} <- add_drop_verdict(pid, rule_id),
-         result <- NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add}) do
-      NFTex.Port.call(pid, {:rule_free, rule_id})
-      result
-    else
-      error ->
-        error
+      with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
+           {:ok, _payload_id} <- add_ipv4_saddr_match(pid, rule_id, ip_address),
+           :ok <- maybe_add_counter(pid, rule_id, add_counter),
+           {:ok, _verdict_id} <- add_drop_verdict(pid, rule_id),
+           result <-
+             NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add})
+             |> enhance_rule_error(:rule_add, table, chain) do
+        NFTex.Port.call(pid, {:rule_free, rule_id})
+        result
+      else
+        error ->
+          error
+      end
     end
   end
 
@@ -254,41 +260,153 @@ defmodule NFTex.Rule do
   4. Verdict expression: ACCEPT the packet
   """
   @spec accept_ip(pid(), String.t(), String.t(), binary(), keyword()) :: :ok | {:error, term()}
-  def accept_ip(pid, table, chain, ip_address, opts \\ []) when is_binary(ip_address) do
-    family = family_to_int(Keyword.get(opts, :family, :inet))
-    add_counter = Keyword.get(opts, :counter, true)
+  def accept_ip(pid, table, chain, ip_address, opts \\ []) do
+    # Validate IP address format
+    with :ok <- Validation.validate_ipv4(ip_address),
+         {:ok, family} <- Validation.validate_family(Keyword.get(opts, :family, :inet)) do
+      add_counter = Keyword.get(opts, :counter, true)
 
-    with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
-         :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
-         :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
-         :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
-         {:ok, _payload_id} <- add_ipv4_saddr_match(pid, rule_id, ip_address),
-         :ok <- maybe_add_counter(pid, rule_id, add_counter),
-         {:ok, _verdict_id} <- add_accept_verdict(pid, rule_id),
-         result <- NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add}) do
-      NFTex.Port.call(pid, {:rule_free, rule_id})
-      result
-    else
-      error ->
-        error
+      with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
+           {:ok, _payload_id} <- add_ipv4_saddr_match(pid, rule_id, ip_address),
+           :ok <- maybe_add_counter(pid, rule_id, add_counter),
+           {:ok, _verdict_id} <- add_accept_verdict(pid, rule_id),
+           result <-
+             NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add})
+             |> enhance_rule_error(:rule_add, table, chain) do
+        NFTex.Port.call(pid, {:rule_free, rule_id})
+        result
+      else
+        error ->
+          error
+      end
+    end
+  end
+
+  @doc """
+  Block an IPv6 address by creating a DROP rule.
+
+  This is a convenience function that creates a rule to drop all packets
+  from the specified IPv6 source address.
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `chain` - Chain name (string)
+  - `ipv6_address` - IPv6 address to block as binary (16 bytes)
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:ip6`)
+    - `:counter` - Add counter to rule (default: `true`)
+
+  ## Examples
+
+      # Block a single IPv6 address (2001:db8::1)
+      ipv6 = <<0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>>
+      :ok = NFTex.Rule.block_ipv6(pid, "filter", "INPUT", ipv6)
+
+      # Block without counter
+      :ok = NFTex.Rule.block_ipv6(pid, "filter", "INPUT", ipv6, counter: false)
+
+  ## Returns
+
+  `:ok` on success, `{:error, reason}` on failure.
+  """
+  @spec block_ipv6(pid(), String.t(), String.t(), binary(), keyword()) :: :ok | {:error, term()}
+  def block_ipv6(pid, table, chain, ipv6_address, opts \\ []) do
+    # Validate IPv6 address format
+    with :ok <- Validation.validate_ipv6(ipv6_address),
+         {:ok, family} <- Validation.validate_family(Keyword.get(opts, :family, :ip6)) do
+      add_counter = Keyword.get(opts, :counter, true)
+
+      with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
+           {:ok, _payload_id} <- add_ipv6_saddr_match(pid, rule_id, ipv6_address),
+           :ok <- maybe_add_counter(pid, rule_id, add_counter),
+           {:ok, _verdict_id} <- add_drop_verdict(pid, rule_id),
+           result <-
+             NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add})
+             |> enhance_rule_error(:rule_add, table, chain) do
+        NFTex.Port.call(pid, {:rule_free, rule_id})
+        result
+      else
+        error ->
+          error
+      end
+    end
+  end
+
+  @doc """
+  Accept packets from an IPv6 address by creating an ACCEPT rule.
+
+  This is a convenience function that creates a rule to accept all packets
+  from the specified IPv6 source address.
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `chain` - Chain name (string)
+  - `ipv6_address` - IPv6 address to allow as binary (16 bytes)
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:ip6`)
+    - `:counter` - Add counter to rule (default: `true`)
+
+  ## Examples
+
+      # Allow a trusted IPv6 address (2001:db8::2)
+      ipv6 = <<0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2>>
+      :ok = NFTex.Rule.accept_ipv6(pid, "filter", "INPUT", ipv6)
+
+  ## Returns
+
+  `:ok` on success, `{:error, reason}` on failure.
+  """
+  @spec accept_ipv6(pid(), String.t(), String.t(), binary(), keyword()) :: :ok | {:error, term()}
+  def accept_ipv6(pid, table, chain, ipv6_address, opts \\ []) do
+    # Validate IPv6 address format
+    with :ok <- Validation.validate_ipv6(ipv6_address),
+         {:ok, family} <- Validation.validate_family(Keyword.get(opts, :family, :ip6)) do
+      add_counter = Keyword.get(opts, :counter, true)
+
+      with {:ok, rule_id} <- NFTex.Port.call(pid, {:rule_alloc}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :table, table}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_str, rule_id, :chain, chain}),
+           :ok <- NFTex.Port.call(pid, {:rule_set_u32, rule_id, :family, family}),
+           {:ok, _payload_id} <- add_ipv6_saddr_match(pid, rule_id, ipv6_address),
+           :ok <- maybe_add_counter(pid, rule_id, add_counter),
+           {:ok, _verdict_id} <- add_accept_verdict(pid, rule_id),
+           result <-
+             NFTex.Port.call(pid, {:rule_send_to_kernel, rule_id, :add})
+             |> enhance_rule_error(:rule_add, table, chain) do
+        NFTex.Port.call(pid, {:rule_free, rule_id})
+        result
+      else
+        error ->
+          error
+      end
     end
   end
 
   ## Private Helpers
 
-  defp family_to_int(:inet), do: 2
-  defp family_to_int(:ip), do: 2
-  defp family_to_int(:ip6), do: 10
-  defp family_to_int(:inet6), do: 10
-  defp family_to_int(:arp), do: 3
-  defp family_to_int(:bridge), do: 7
-  defp family_to_int(:netdev), do: 5
-  defp family_to_int(n) when is_integer(n), do: n
-
   defp add_ipv4_saddr_match(pid, rule_id, ip_address) do
     with {:ok, payload_id} <- NFTex.ExpressionBuilder.payload_ipv4_saddr(pid, 1),
          :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, payload_id}),
          {:ok, cmp_id} <- NFTex.ExpressionBuilder.cmp_eq(pid, 1, ip_address),
+         :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, cmp_id}) do
+      {:ok, cmp_id}
+    end
+  end
+
+  defp add_ipv6_saddr_match(pid, rule_id, ipv6_address) do
+    with {:ok, payload_id} <- NFTex.ExpressionBuilder.payload_ipv6_saddr(pid, 1),
+         :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, payload_id}),
+         {:ok, cmp_id} <- NFTex.ExpressionBuilder.cmp_eq(pid, 1, ipv6_address),
          :ok <- NFTex.Port.call(pid, {:rule_add_expr, rule_id, cmp_id}) do
       {:ok, cmp_id}
     end
@@ -316,4 +434,21 @@ defmodule NFTex.Rule do
       {:ok, verdict_id}
     end
   end
+
+  # Enhance netlink error messages with context
+  defp enhance_rule_error(:ok, _operation, _table, _chain), do: :ok
+
+  defp enhance_rule_error({:error, error_msg}, operation, table, chain)
+       when is_binary(error_msg) do
+    enhanced =
+      Validation.enhance_netlink_error(error_msg, %{
+        operation: operation,
+        table: table,
+        chain: chain
+      })
+
+    {:error, enhanced}
+  end
+
+  defp enhance_rule_error(error, _operation, _table, _chain), do: error
 end

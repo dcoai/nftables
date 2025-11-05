@@ -129,6 +129,13 @@ defmodule NFTex.ExpressionBuilder do
   @nfta_verdict_drop 0
   @nfta_verdict_accept 1
 
+  # Meta keys (for meta expression)
+  @nft_meta_iifname 1
+  @nft_meta_oifname 2
+  @nft_meta_iif 3
+  @nft_meta_oif 4
+  @nft_meta_protocol 16
+
   ## Payload Expressions
 
   @doc """
@@ -166,6 +173,96 @@ defmodule NFTex.ExpressionBuilder do
   end
 
   @doc """
+  Load IPv6 source address into a register.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, expr_id} = NFTex.ExpressionBuilder.payload_ipv6_saddr(pid, 1)
+  """
+  @spec payload_ipv6_saddr(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def payload_ipv6_saddr(pid, dreg \\ @nft_reg_1) do
+    # IPv6 saddr is at offset 8 in IPv6 header, 16 bytes
+    payload_network(pid, dreg, 8, 16)
+  end
+
+  @doc """
+  Load IPv6 destination address into a register.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, expr_id} = NFTex.ExpressionBuilder.payload_ipv6_daddr(pid, 1)
+  """
+  @spec payload_ipv6_daddr(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def payload_ipv6_daddr(pid, dreg \\ @nft_reg_1) do
+    # IPv6 daddr is at offset 24 in IPv6 header, 16 bytes
+    payload_network(pid, dreg, 24, 16)
+  end
+
+  @doc """
+  Load IPv6 next header field into a register.
+
+  The next header field in IPv6 is equivalent to the protocol field in IPv4.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, expr_id} = NFTex.ExpressionBuilder.payload_ipv6_nexthdr(pid, 1)
+  """
+  @spec payload_ipv6_nexthdr(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def payload_ipv6_nexthdr(pid, dreg \\ @nft_reg_1) do
+    # Next header is at offset 6 in IPv6 header, 1 byte
+    payload_network(pid, dreg, 6, 1)
+  end
+
+  @doc """
+  Load TCP/UDP source port into a register.
+
+  Works for both TCP and UDP protocols.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      # Match source port 22 (SSH)
+      {:ok, port_id} = NFTex.ExpressionBuilder.payload_sport(pid, 1)
+      {:ok, cmp_id} = NFTex.ExpressionBuilder.cmp_eq(pid, 1, <<0, 22>>)
+  """
+  @spec payload_sport(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def payload_sport(pid, dreg \\ @nft_reg_1) do
+    # Source port is at offset 0 in TCP/UDP header, 2 bytes
+    payload_transport(pid, dreg, 0, 2)
+  end
+
+  @doc """
+  Load TCP/UDP destination port into a register.
+
+  Works for both TCP and UDP protocols.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      # Match destination port 80 (HTTP)
+      {:ok, port_id} = NFTex.ExpressionBuilder.payload_dport(pid, 1)
+      {:ok, cmp_id} = NFTex.ExpressionBuilder.cmp_eq(pid, 1, <<0, 80>>)
+  """
+  @spec payload_dport(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def payload_dport(pid, dreg \\ @nft_reg_1) do
+    # Destination port is at offset 2 in TCP/UDP header, 2 bytes
+    payload_transport(pid, dreg, 2, 2)
+  end
+
+  @doc """
   Generic payload expression for network header.
   """
   @spec payload_network(pid(), non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
@@ -173,6 +270,21 @@ defmodule NFTex.ExpressionBuilder do
   def payload_network(pid, dreg, offset, len) do
     with {:ok, expr_id} <- Port.call(pid, {:expr_alloc, "payload"}),
          :ok <- Port.call(pid, {:expr_set_u32, expr_id, :base, @nft_payload_network_header}),
+         :ok <- Port.call(pid, {:expr_set_u32, expr_id, :dreg, dreg}),
+         :ok <- Port.call(pid, {:expr_set_u32, expr_id, :offset, offset}),
+         :ok <- Port.call(pid, {:expr_set_u32, expr_id, :len, len}) do
+      {:ok, expr_id}
+    end
+  end
+
+  @doc """
+  Generic payload expression for transport header.
+  """
+  @spec payload_transport(pid(), non_neg_integer(), non_neg_integer(), non_neg_integer()) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def payload_transport(pid, dreg, offset, len) do
+    with {:ok, expr_id} <- Port.call(pid, {:expr_alloc, "payload"}),
+         :ok <- Port.call(pid, {:expr_set_u32, expr_id, :base, @nft_payload_transport_header}),
          :ok <- Port.call(pid, {:expr_set_u32, expr_id, :dreg, dreg}),
          :ok <- Port.call(pid, {:expr_set_u32, expr_id, :offset, offset}),
          :ok <- Port.call(pid, {:expr_set_u32, expr_id, :len, len}) do
@@ -233,6 +345,105 @@ defmodule NFTex.ExpressionBuilder do
   @spec counter(pid()) :: {:ok, non_neg_integer()} | {:error, term()}
   def counter(pid) do
     Port.call(pid, {:expr_alloc, "counter"})
+  end
+
+  ## Meta Expressions
+
+  @doc """
+  Load input interface name into a register.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, meta_id} = NFTex.ExpressionBuilder.meta_iifname(pid, 1)
+      # Then compare with interface name, e.g., "eth0"
+  """
+  @spec meta_iifname(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def meta_iifname(pid, dreg \\ @nft_reg_1) do
+    meta(pid, @nft_meta_iifname, dreg)
+  end
+
+  @doc """
+  Load output interface name into a register.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, meta_id} = NFTex.ExpressionBuilder.meta_oifname(pid, 1)
+  """
+  @spec meta_oifname(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def meta_oifname(pid, dreg \\ @nft_reg_1) do
+    meta(pid, @nft_meta_oifname, dreg)
+  end
+
+  @doc """
+  Load input interface index into a register.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, meta_id} = NFTex.ExpressionBuilder.meta_iif(pid, 1)
+  """
+  @spec meta_iif(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def meta_iif(pid, dreg \\ @nft_reg_1) do
+    meta(pid, @nft_meta_iif, dreg)
+  end
+
+  @doc """
+  Load output interface index into a register.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, meta_id} = NFTex.ExpressionBuilder.meta_oif(pid, 1)
+  """
+  @spec meta_oif(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def meta_oif(pid, dreg \\ @nft_reg_1) do
+    meta(pid, @nft_meta_oif, dreg)
+  end
+
+  @doc """
+  Load protocol field into a register (from meta layer).
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `dreg` - Destination register (default: 1)
+
+  ## Example
+      {:ok, meta_id} = NFTex.ExpressionBuilder.meta_protocol(pid, 1)
+  """
+  @spec meta_protocol(pid(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def meta_protocol(pid, dreg \\ @nft_reg_1) do
+    meta(pid, @nft_meta_protocol, dreg)
+  end
+
+  @doc """
+  Generic meta expression.
+
+  ## Parameters
+  - `pid` - NFTex process pid
+  - `key` - Meta key constant
+  - `dreg` - Destination register
+
+  ## Example
+      {:ok, meta_id} = NFTex.ExpressionBuilder.meta(pid, 3, 1)
+  """
+  @spec meta(pid(), non_neg_integer(), non_neg_integer()) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def meta(pid, key, dreg) do
+    with {:ok, expr_id} <- Port.call(pid, {:expr_alloc, "meta"}),
+         :ok <- Port.call(pid, {:expr_set_u32, expr_id, :key, key}),
+         :ok <- Port.call(pid, {:expr_set_u32, expr_id, :dreg, dreg}) do
+      {:ok, expr_id}
+    end
   end
 
   ## Verdict Expressions

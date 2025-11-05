@@ -102,7 +102,23 @@ defmodule NFTex.Port do
 
         false ->
           Port.close(port)
-          {:stop, {:error, "capability cap_net_admin not set"}, state}
+
+          error_msg = """
+          NFTex requires CAP_NET_ADMIN capability but it is not set.
+
+          The libnf_ex executable needs network administration privileges to
+          interact with the kernel's nftables subsystem.
+
+          To fix this, run:
+            sudo setcap cap_net_admin=ep #{port_path}
+
+          Or to remove capabilities:
+            sudo setcap -r #{port_path}
+
+          See the Security section in the README for more information.
+          """
+
+          {:stop, {:error, String.trim(error_msg)}, state}
       end
     else
       {:noreply, state}
