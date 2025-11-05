@@ -7,22 +7,19 @@ defmodule NFTex.RuleBuilderTest do
     {:ok, pid} = NFTex.start_link()
 
     # Clean up and create test table and chain
-    Table.delete(pid, "test_rb_table", :inet)
-    :ok = Table.create(pid, %{name: "test_rb_table", family: :inet})
+    Table.delete(pid, "nftex_test_rule_builder", :inet)
+    :ok = Table.create(pid, %{name: "nftex_test_rule_builder", family: :inet})
 
+    # Create regular chain WITHOUT hook (safe - won't filter traffic)
     :ok = Chain.create(pid, %{
-      table: "test_rb_table",
+      table: "nftex_test_rule_builder",
       name: "test_rb_chain",
-      family: :inet,
-      type: :filter,
-      hook: :input,
-      priority: 0,
-      policy: :accept
+      family: :inet
     })
 
     on_exit(fn ->
       if Process.alive?(pid) do
-        Table.delete(pid, "test_rb_table", :inet)
+        Table.delete(pid, "nftex_test_rule_builder", :inet)
       end
     end)
 
@@ -31,18 +28,18 @@ defmodule NFTex.RuleBuilderTest do
 
   describe "new/3" do
     test "creates builder struct with required fields", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       assert %RuleBuilder{} = builder
       assert builder.pid == pid
-      assert builder.table == "test_rb_table"
+      assert builder.table == "nftex_test_rule_builder"
       assert builder.chain == "test_rb_chain"
       assert builder.family == :inet
       assert builder.expressions == []
     end
 
     test "creates builder with custom family", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain", family: :inet6)
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain", family: :inet6)
 
       assert builder.family == :inet6
     end
@@ -50,7 +47,7 @@ defmodule NFTex.RuleBuilderTest do
 
   describe "match functions" do
     test "match_source_ip/2 adds expression to builder", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_source_ip(builder, <<192, 168, 1, 100>>)
 
@@ -59,7 +56,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_dest_ip/2 adds expression to builder", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_dest_ip(builder, <<10, 0, 0, 1>>)
 
@@ -67,7 +64,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_source_port/2 adds expression to builder", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_source_port(builder, 1234)
 
@@ -75,7 +72,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_dest_port/2 adds expression to builder", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_dest_port(builder, 80)
 
@@ -83,7 +80,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_dest_port/2 validates port range", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       # Valid ports
       assert %RuleBuilder{} = RuleBuilder.match_dest_port(builder, 0)
@@ -100,7 +97,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_ct_state/2 with single state", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_ct_state(builder, [:established])
 
@@ -108,7 +105,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_ct_state/2 with multiple states", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_ct_state(builder, [:established, :related])
 
@@ -116,7 +113,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_ct_state/2 with all states", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_ct_state(builder, [:invalid, :established, :related, :new])
 
@@ -124,7 +121,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_iif/2 adds expression to builder", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_iif(builder, "eth0")
 
@@ -132,7 +129,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "match_oif/2 adds expression to builder", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.match_oif(builder, "eth1")
 
@@ -142,7 +139,7 @@ defmodule NFTex.RuleBuilderTest do
 
   describe "action functions" do
     test "counter/1 adds counter expression", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.counter(builder)
 
@@ -150,7 +147,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "log/2 adds log expression with prefix", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.log(builder, "TEST: ")
 
@@ -158,7 +155,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "log/3 adds log expression with options", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.log(builder, "TEST: ", level: :warning)
 
@@ -166,7 +163,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "rate_limit/3 adds rate limit expression", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.rate_limit(builder, 10, :minute)
 
@@ -174,7 +171,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "rate_limit/4 with burst option", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.rate_limit(builder, 100, :second, burst: 50)
 
@@ -184,7 +181,7 @@ defmodule NFTex.RuleBuilderTest do
 
   describe "verdict functions" do
     test "accept/1 adds accept verdict", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.accept(builder)
 
@@ -192,7 +189,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "drop/1 adds drop verdict", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.drop(builder)
 
@@ -200,7 +197,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "reject/1 adds reject verdict with default type", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.reject(builder)
 
@@ -208,7 +205,7 @@ defmodule NFTex.RuleBuilderTest do
     end
 
     test "reject/2 adds reject verdict with custom type", %{pid: pid} do
-      builder = RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+      builder = RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
 
       builder = RuleBuilder.reject(builder, :tcp_reset)
 
@@ -219,7 +216,7 @@ defmodule NFTex.RuleBuilderTest do
   describe "chaining" do
     test "chains multiple match expressions", %{pid: pid} do
       builder =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
         |> RuleBuilder.match_dest_port(22)
 
@@ -228,7 +225,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "chains match, action, and verdict", %{pid: pid} do
       builder =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(80)
         |> RuleBuilder.counter()
         |> RuleBuilder.accept()
@@ -238,7 +235,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "preserves expression order", %{pid: pid} do
       builder =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
         |> RuleBuilder.match_dest_port(22)
         |> RuleBuilder.log("SSH: ")
@@ -252,7 +249,7 @@ defmodule NFTex.RuleBuilderTest do
   describe "commit/1" do
     test "commits simple rule successfully", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(80)
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -262,7 +259,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "commits rule with multiple matches", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
         |> RuleBuilder.match_dest_port(22)
         |> RuleBuilder.drop()
@@ -273,7 +270,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "commits rule with counter", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(443)
         |> RuleBuilder.counter()
         |> RuleBuilder.accept()
@@ -284,7 +281,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "commits rule with rate limiting", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(22)
         |> RuleBuilder.rate_limit(10, :minute)
         |> RuleBuilder.accept()
@@ -295,7 +292,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "commits rule with connection tracking state", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_ct_state([:established, :related])
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -305,7 +302,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "commits rule with interface matching", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_iif("lo")
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -325,7 +322,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "returns error for invalid chain", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "nonexistent_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "nonexistent_chain")
         |> RuleBuilder.match_dest_port(80)
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -337,7 +334,7 @@ defmodule NFTex.RuleBuilderTest do
   describe "complex rule patterns" do
     test "builds SSH rate limiting rule", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(22)
         |> RuleBuilder.rate_limit(10, :minute, burst: 5)
         |> RuleBuilder.log("SSH: ")
@@ -349,7 +346,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "builds IP blocking rule with logging", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
         |> RuleBuilder.counter()
         |> RuleBuilder.log("BLOCKED: ")
@@ -361,7 +358,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "builds established connection acceptance rule", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_ct_state([:established, :related])
         |> RuleBuilder.counter()
         |> RuleBuilder.accept()
@@ -372,7 +369,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "builds loopback acceptance rule", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_iif("lo")
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -382,7 +379,7 @@ defmodule NFTex.RuleBuilderTest do
 
     test "builds web server rule with rate limiting", %{pid: pid} do
       result =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(80)
         |> RuleBuilder.rate_limit(100, :second, burst: 200)
         |> RuleBuilder.counter()
@@ -397,7 +394,7 @@ defmodule NFTex.RuleBuilderTest do
     test "commits multiple different rules successfully", %{pid: pid} do
       # Rule 1: Accept loopback
       result1 =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_iif("lo")
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -406,7 +403,7 @@ defmodule NFTex.RuleBuilderTest do
 
       # Rule 2: Accept established/related
       result2 =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_ct_state([:established, :related])
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
@@ -415,7 +412,7 @@ defmodule NFTex.RuleBuilderTest do
 
       # Rule 3: Allow SSH with rate limit
       result3 =
-        RuleBuilder.new(pid, "test_rb_table", "test_rb_chain")
+        RuleBuilder.new(pid, "nftex_test_rule_builder", "test_rb_chain")
         |> RuleBuilder.match_dest_port(22)
         |> RuleBuilder.rate_limit(10, :minute)
         |> RuleBuilder.accept()

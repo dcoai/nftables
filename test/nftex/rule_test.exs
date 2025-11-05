@@ -4,31 +4,49 @@ defmodule NFTex.RuleTest do
   use ExUnit.Case
   require Logger
 
-  alias NFTex.Rule
+  alias NFTex.{Rule, Table, Chain, TestHelpers}
 
   @moduletag :integration
 
-  # Prerequisites:
-  # - CAP_NET_ADMIN capability set on binary
-  # - filter table exists: nft add table filter
-  # - INPUT chain exists: nft add chain filter INPUT '{ type filter hook input priority 0; }'
+  # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
+  # the host's network connectivity. Never use production tables like "filter"!
 
   describe "block_ip/4" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
-      {:ok, pid: pid}
+
+      # Create isolated test infrastructure
+      test_table = "nftex_test_rule"
+      test_chain = "test_chain"
+
+      # Clean up from previous runs
+      Table.delete(pid, test_table, :inet)
+
+      # Create test table and chain
+      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Chain.create(pid, %{
+        table: test_table,
+        name: test_chain,
+        family: :inet
+      })
+
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          TestHelpers.cleanup_test_table(pid, test_table, :inet)
+          NFTex.stop(pid)
+        end
+      end)
+
+      {:ok, pid: pid, table: test_table, chain: test_chain}
     end
 
-    @tag :requires_chain
-    test "blocks an IPv4 address", %{pid: pid} do
+    test "blocks an IPv4 address", %{pid: pid, table: table, chain: chain} do
       ip = <<192, 168, 99, 99>>
-      result = Rule.block_ip(pid, "filter", "INPUT", ip)
+      result = Rule.block_ip(pid, table, chain, ip)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "blocks multiple IPs sequentially", %{pid: pid} do
+    test "blocks multiple IPs sequentially", %{pid: pid, table: table, chain: chain} do
       ips = [
         <<192, 168, 99, 100>>,
         <<192, 168, 99, 101>>,
@@ -36,15 +54,14 @@ defmodule NFTex.RuleTest do
       ]
 
       for ip <- ips do
-        result = Rule.block_ip(pid, "filter", "INPUT", ip)
+        result = Rule.block_ip(pid, table, chain, ip)
         assert result == :ok
       end
     end
 
-    @tag :requires_chain
-    test "blocks IP without counter when counter: false", %{pid: pid} do
+    test "blocks IP without counter when counter: false", %{pid: pid, table: table, chain: chain} do
       ip = <<192, 168, 99, 103>>
-      result = Rule.block_ip(pid, "filter", "INPUT", ip, counter: false)
+      result = Rule.block_ip(pid, table, chain, ip, counter: false)
       assert result == :ok
     end
 
@@ -58,34 +75,44 @@ defmodule NFTex.RuleTest do
   describe "accept_ip/4" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
-      {:ok, pid: pid}
+
+      test_table = "nftex_test_rule"
+      test_chain = "test_chain"
+      Table.delete(pid, test_table, :inet)
+      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          TestHelpers.cleanup_test_table(pid, test_table, :inet)
+          NFTex.stop(pid)
+        end
+      end)
+
+      {:ok, pid: pid, table: test_table, chain: test_chain}
     end
 
-    @tag :requires_chain
-    test "accepts an IPv4 address", %{pid: pid} do
+    test "accepts an IPv4 address", %{pid: pid, table: table, chain: chain} do
       ip = <<192, 168, 99, 200>>
-      result = Rule.accept_ip(pid, "filter", "INPUT", ip)
+      result = Rule.accept_ip(pid, table, chain, ip)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "accepts multiple IPs sequentially", %{pid: pid} do
+    test "accepts multiple IPs sequentially", %{pid: pid, table: table, chain: chain} do
       ips = [
         <<192, 168, 99, 201>>,
         <<192, 168, 99, 202>>
       ]
 
       for ip <- ips do
-        result = Rule.accept_ip(pid, "filter", "INPUT", ip)
+        result = Rule.accept_ip(pid, table, chain, ip)
         assert result == :ok
       end
     end
 
-    @tag :requires_chain
-    test "accepts IP without counter when counter: false", %{pid: pid} do
+    test "accepts IP without counter when counter: false", %{pid: pid, table: table, chain: chain} do
       ip = <<192, 168, 99, 203>>
-      result = Rule.accept_ip(pid, "filter", "INPUT", ip, counter: false)
+      result = Rule.accept_ip(pid, table, chain, ip, counter: false)
       assert result == :ok
     end
   end
@@ -93,22 +120,34 @@ defmodule NFTex.RuleTest do
   describe "list/4" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
-      {:ok, pid: pid}
+
+      test_table = "nftex_test_rule"
+      test_chain = "test_chain"
+      Table.delete(pid, test_table, :inet)
+      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          TestHelpers.cleanup_test_table(pid, test_table, :inet)
+          NFTex.stop(pid)
+        end
+      end)
+
+      {:ok, pid: pid, table: test_table, chain: test_chain}
     end
 
-    @tag :requires_chain
-    test "lists rules in a chain", %{pid: pid} do
+    test "lists rules in a chain", %{pid: pid, table: table, chain: chain} do
       # Get initial count
-      {:ok, rules_before} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, rules_before} = Rule.list(pid, table, chain, family: :inet)
       initial_count = length(rules_before)
 
       # Add a rule
       ip = <<192, 168, 99, 210>>
-      :ok = Rule.block_ip(pid, "filter", "INPUT", ip)
+      :ok = Rule.block_ip(pid, table, chain, ip)
 
       # Check count increased
-      {:ok, rules_after} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, rules_after} = Rule.list(pid, table, chain, family: :inet)
       assert length(rules_after) == initial_count + 1
 
       # Verify rules have required fields
@@ -116,21 +155,20 @@ defmodule NFTex.RuleTest do
         assert is_map(rule)
         assert Map.has_key?(rule, :table)
         assert Map.has_key?(rule, :chain)
-        assert rule.table == "filter"
-        assert rule.chain == "INPUT"
+        assert rule.table == table
+        assert rule.chain == chain
       end
     end
 
-    @tag :requires_chain
-    test "returns empty list for chain with no rules", %{pid: pid} do
+    test "returns empty list for chain with no rules", %{pid: pid, table: table} do
       # Try to list from a non-existent chain (will filter out everything)
-      {:ok, rules} = Rule.list(pid, "filter", "NONEXISTENT", family: :inet)
+      {:ok, rules} = Rule.list(pid, table, "NONEXISTENT", family: :inet)
       assert rules == []
     end
 
-    test "returns error for invalid family", %{pid: pid} do
+    test "returns error for invalid family", %{pid: pid, table: table, chain: chain} do
       # Query module should handle this, but let's test the flow
-      result = Rule.list(pid, "filter", "INPUT", family: :inet)
+      result = Rule.list(pid, table, chain, family: :inet)
       # Should succeed even if chain doesn't exist (just returns empty)
       assert {:ok, _rules} = result
     end
@@ -139,18 +177,30 @@ defmodule NFTex.RuleTest do
   describe "delete/5" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
-      {:ok, pid: pid}
+
+      test_table = "nftex_test_rule"
+      test_chain = "test_chain"
+      Table.delete(pid, test_table, :inet)
+      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          TestHelpers.cleanup_test_table(pid, test_table, :inet)
+          NFTex.stop(pid)
+        end
+      end)
+
+      {:ok, pid: pid, table: test_table, chain: test_chain}
     end
 
-    @tag :requires_chain
-    test "deletes a rule by handle", %{pid: pid} do
+    test "deletes a rule by handle", %{pid: pid, table: table, chain: chain} do
       # Create a test rule
       ip = <<192, 168, 99, 230>>
-      :ok = Rule.block_ip(pid, "filter", "INPUT", ip)
+      :ok = Rule.block_ip(pid, table, chain, ip)
 
       # Get the rule's handle
-      {:ok, rules} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, rules} = Rule.list(pid, table, chain, family: :inet)
 
       # Find our test rule (should be the last one added)
       test_rule = List.last(rules)
@@ -158,29 +208,28 @@ defmodule NFTex.RuleTest do
       assert is_integer(test_rule.handle)
 
       # Delete it
-      result = Rule.delete(pid, "filter", "INPUT", :inet, test_rule.handle)
+      result = Rule.delete(pid, table, chain, :inet, test_rule.handle)
       assert result == :ok
 
       # Verify it's gone
-      {:ok, rules_after} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, rules_after} = Rule.list(pid, table, chain, family: :inet)
       remaining_handles = Enum.map(rules_after, & &1.handle)
       refute test_rule.handle in remaining_handles
     end
 
-    @tag :requires_chain
-    test "deletes multiple rules by handle", %{pid: pid} do
+    test "deletes multiple rules by handle", %{pid: pid, table: table, chain: chain} do
       # Get initial count
-      {:ok, initial_rules} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, initial_rules} = Rule.list(pid, table, chain, family: :inet)
       initial_count = length(initial_rules)
 
       # Add 3 test rules
       ips = [<<192, 168, 99, 231>>, <<192, 168, 99, 232>>, <<192, 168, 99, 233>>]
       for ip <- ips do
-        :ok = Rule.block_ip(pid, "filter", "INPUT", ip)
+        :ok = Rule.block_ip(pid, table, chain, ip)
       end
 
       # Get their handles
-      {:ok, rules_after_add} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, rules_after_add} = Rule.list(pid, table, chain, family: :inet)
       assert length(rules_after_add) == initial_count + 3
 
       # Get the last 3 rules (our test rules)
@@ -188,22 +237,22 @@ defmodule NFTex.RuleTest do
 
       # Delete them all
       for rule <- test_rules do
-        :ok = Rule.delete(pid, "filter", "INPUT", :inet, rule.handle)
+        :ok = Rule.delete(pid, table, chain, :inet, rule.handle)
       end
 
       # Verify they're all gone
-      {:ok, final_rules} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, final_rules} = Rule.list(pid, table, chain, family: :inet)
       assert length(final_rules) == initial_count
     end
 
-    test "returns error for invalid handle", %{pid: pid} do
+    test "returns error for invalid handle", %{pid: pid, table: table, chain: chain} do
       # Try to delete with a non-existent handle
-      result = Rule.delete(pid, "filter", "INPUT", :inet, 99999999)
+      result = Rule.delete(pid, table, chain, :inet, 99999999)
       assert {:error, _reason} = result
     end
 
-    test "returns error for invalid family", %{pid: pid} do
-      result = Rule.delete(pid, "filter", "INPUT", :invalid_family, 123)
+    test "returns error for invalid family", %{pid: pid, table: table, chain: chain} do
+      result = Rule.delete(pid, table, chain, :invalid_family, 123)
       assert {:error, error_msg} = result
       assert error_msg =~ "Invalid family"
     end
@@ -212,48 +261,55 @@ defmodule NFTex.RuleTest do
   describe "rate_limit/6" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
-      {:ok, pid: pid}
+
+      test_table = "nftex_test_rule"
+      test_chain = "test_chain"
+      Table.delete(pid, test_table, :inet)
+      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          TestHelpers.cleanup_test_table(pid, test_table, :inet)
+          NFTex.stop(pid)
+        end
+      end)
+
+      {:ok, pid: pid, table: test_table, chain: test_chain}
     end
 
-    @tag :requires_chain
-    test "creates rate limit rule with default options", %{pid: pid} do
-      result = Rule.rate_limit(pid, "filter", "INPUT", 100, :second)
+    test "creates rate limit rule with default options", %{pid: pid, table: table, chain: chain} do
+      result = Rule.rate_limit(pid, table, chain, 100, :second)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "creates rate limit rule with custom burst", %{pid: pid} do
-      result = Rule.rate_limit(pid, "filter", "INPUT", 50, :minute, burst: 20)
+    test "creates rate limit rule with custom burst", %{pid: pid, table: table, chain: chain} do
+      result = Rule.rate_limit(pid, table, chain, 50, :minute, burst: 20)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "creates rate limit rule with reject verdict", %{pid: pid} do
-      result = Rule.rate_limit(pid, "filter", "INPUT", 10, :second, reject: true)
+    test "creates rate limit rule with reject verdict", %{pid: pid, table: table, chain: chain} do
+      result = Rule.rate_limit(pid, table, chain, 10, :second, reject: true)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "creates rate limit rule without counter", %{pid: pid} do
-      result = Rule.rate_limit(pid, "filter", "INPUT", 100, :second, counter: false)
+    test "creates rate limit rule without counter", %{pid: pid, table: table, chain: chain} do
+      result = Rule.rate_limit(pid, table, chain, 100, :second, counter: false)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "creates bandwidth limit rule (bytes)", %{pid: pid} do
-      result = Rule.rate_limit(pid, "filter", "INPUT", 1_000_000, :second, type: :bytes)
+    test "creates bandwidth limit rule (bytes)", %{pid: pid, table: table, chain: chain} do
+      result = Rule.rate_limit(pid, table, chain, 1_000_000, :second, type: :bytes)
       assert result == :ok
     end
 
-    @tag :requires_chain
-    test "creates rate limit with different time units", %{pid: pid} do
+    test "creates rate limit with different time units", %{pid: pid, table: table, chain: chain} do
       # Test various time units
-      assert :ok = Rule.rate_limit(pid, "filter", "INPUT", 10, :second)
-      assert :ok = Rule.rate_limit(pid, "filter", "INPUT", 100, :minute)
-      assert :ok = Rule.rate_limit(pid, "filter", "INPUT", 1000, :hour)
-      assert :ok = Rule.rate_limit(pid, "filter", "INPUT", 10000, :day)
-      assert :ok = Rule.rate_limit(pid, "filter", "INPUT", 100000, :week)
+      assert :ok = Rule.rate_limit(pid, table, chain, 10, :second)
+      assert :ok = Rule.rate_limit(pid, table, chain, 100, :minute)
+      assert :ok = Rule.rate_limit(pid, table, chain, 1000, :hour)
+      assert :ok = Rule.rate_limit(pid, table, chain, 10000, :day)
+      assert :ok = Rule.rate_limit(pid, table, chain, 100000, :week)
     end
 
     test "returns error for invalid table/chain", %{pid: pid} do
@@ -261,8 +317,8 @@ defmodule NFTex.RuleTest do
       assert {:error, _reason} = result
     end
 
-    test "returns error for invalid family", %{pid: pid} do
-      result = Rule.rate_limit(pid, "filter", "INPUT", 100, :second, family: :invalid)
+    test "returns error for invalid family", %{pid: pid, table: table, chain: chain} do
+      result = Rule.rate_limit(pid, table, chain, 100, :second, family: :invalid)
       assert {:error, error_msg} = result
       assert error_msg =~ "Invalid family"
     end
@@ -271,25 +327,37 @@ defmodule NFTex.RuleTest do
   describe "integration test" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
-      {:ok, pid: pid}
+
+      test_table = "nftex_test_rule"
+      test_chain = "test_chain"
+      Table.delete(pid, test_table, :inet)
+      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+
+      on_exit(fn ->
+        if Process.alive?(pid) do
+          TestHelpers.cleanup_test_table(pid, test_table, :inet)
+          NFTex.stop(pid)
+        end
+      end)
+
+      {:ok, pid: pid, table: test_table, chain: test_chain}
     end
 
-    @tag :requires_chain
-    test "complete workflow: block, accept, and list", %{pid: pid} do
+    test "complete workflow: block, accept, and list", %{pid: pid, table: table, chain: chain} do
       # Get initial count
-      {:ok, initial_rules} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, initial_rules} = Rule.list(pid, table, chain, family: :inet)
       initial_count = length(initial_rules)
 
       # Block 2 IPs
-      :ok = Rule.block_ip(pid, "filter", "INPUT", <<192, 168, 99, 220>>)
-      :ok = Rule.block_ip(pid, "filter", "INPUT", <<192, 168, 99, 221>>)
+      :ok = Rule.block_ip(pid, table, chain, <<192, 168, 99, 220>>)
+      :ok = Rule.block_ip(pid, table, chain, <<192, 168, 99, 221>>)
 
       # Accept 1 IP
-      :ok = Rule.accept_ip(pid, "filter", "INPUT", <<192, 168, 99, 222>>)
+      :ok = Rule.accept_ip(pid, table, chain, <<192, 168, 99, 222>>)
 
       # Verify 3 rules added
-      {:ok, final_rules} = Rule.list(pid, "filter", "INPUT", family: :inet)
+      {:ok, final_rules} = Rule.list(pid, table, chain, family: :inet)
       assert length(final_rules) == initial_count + 3
     end
   end

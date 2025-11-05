@@ -14,6 +14,10 @@ defmodule Nftables.MixProject do
       compilers: Mix.compilers() ++ [:zig],
       aliases: aliases(),
 
+      # Test configuration
+      test_pattern: "*_test.exs",
+      test_coverage: [tool: ExCoveralls],
+
       # Hex package configuration
       description: description(),
       package: package(),

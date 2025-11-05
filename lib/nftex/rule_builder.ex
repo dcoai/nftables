@@ -325,7 +325,7 @@ defmodule NFTex.RuleBuilder do
     end)
   end
 
-  defp family_to_int(:inet), do: 2
+  defp family_to_int(:inet), do: 1
   defp family_to_int(:ip), do: 2
   defp family_to_int(:inet6), do: 10
   defp family_to_int(:ip6), do: 10

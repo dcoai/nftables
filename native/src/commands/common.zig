@@ -191,8 +191,15 @@ pub fn handleSendToKernel(
     seq += 1;
 
     // Build resource message
-    const flags: u16 = libnftnl.NLM_F_ACK |
-        if (std.mem.eql(u8, cmd, "add")) libnftnl.NLM_F_CREATE else 0;
+    // Rules need NLM_F_APPEND to append to the chain
+    // Other resources (sets, tables, chains) only need NLM_F_CREATE
+    const flags: u16 = libnftnl.NLM_F_REQUEST | libnftnl.NLM_F_ACK |
+        if (std.mem.eql(u8, cmd, "add")) blk: {
+            const create_flag = libnftnl.NLM_F_CREATE;
+            // Only rules need NLM_F_APPEND
+            const append_flag = if (config.resource_type == .rule) libnftnl.NLM_F_APPEND else 0;
+            break :blk create_flag | append_flag;
+        } else 0;
 
     const nlh = libnftnl.nlmsgBuildHdr(libnftnl.mnlBatchCurrent(batch), msg_type, family, flags, seq);
     config.build_payload_fn(nlh, resource.ptr);

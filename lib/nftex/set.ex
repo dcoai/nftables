@@ -271,7 +271,7 @@ defmodule NFTex.Set do
 
   # Private helpers
 
-  defp family_to_int(:inet), do: 2
+  defp family_to_int(:inet), do: 1
   defp family_to_int(:ip), do: 2
   defp family_to_int(:ip6), do: 10
   defp family_to_int(:arp), do: 3

@@ -203,7 +203,7 @@ defmodule NFTex.Policy do
   2. Accept established/related
   3. Drop invalid packets
   4. Allow SSH (with optional rate limiting)
-  5. Default policy: DROP
+  5. Default policy: DROP (only in production mode)
 
   ## Options
 
@@ -211,29 +211,57 @@ defmodule NFTex.Policy do
   - `:family` - Protocol family (default: :inet)
   - `:ssh_rate_limit` - SSH connections per minute (default: 10)
   - `:allow_services` - List of services to allow (default: [:ssh])
+  - `:test_mode` - If true, creates chains WITHOUT hooks (safe for testing) (default: false)
 
-  ## Example
+  ## Test Mode
 
+  **IMPORTANT**: When `test_mode: true`, chains are created WITHOUT netfilter hooks.
+  This prevents the chains from filtering actual network traffic, making tests safe.
+
+  In test mode, the table name is automatically prefixed with "nftex_test_" if not already prefixed.
+
+  ## Examples
+
+      # Production use (creates hooked chains that filter traffic)
       :ok = NFTex.Policy.setup_basic_firewall(pid)
       :ok = NFTex.Policy.setup_basic_firewall(pid, allow_services: [:ssh, :http, :https])
+
+      # Test use (creates regular chains without hooks - SAFE)
+      :ok = NFTex.Policy.setup_basic_firewall(pid, test_mode: true, table: "my_test")
   """
   @spec setup_basic_firewall(pid(), keyword()) :: :ok | {:error, term()}
   def setup_basic_firewall(pid, opts \\ []) do
-    table = Keyword.get(opts, :table, "filter")
+    test_mode = Keyword.get(opts, :test_mode, false)
+    base_table = Keyword.get(opts, :table, "filter")
     family = Keyword.get(opts, :family, :inet)
     ssh_rate_limit = Keyword.get(opts, :ssh_rate_limit, 10)
     services = Keyword.get(opts, :allow_services, [:ssh])
 
+    # In test mode, ensure table has nftex_test_ prefix and create chains without hooks
+    table = if test_mode, do: ensure_test_prefix(base_table), else: base_table
+
+    chain_attrs = if test_mode do
+      # Test mode: Create regular chain WITHOUT hook (safe - won't filter traffic)
+      %{
+        table: table,
+        name: "INPUT",
+        family: family
+      }
+    else
+      # Production mode: Create base chain WITH hook (filters traffic)
+      %{
+        table: table,
+        name: "INPUT",
+        family: family,
+        type: :filter,
+        hook: :input,
+        priority: 0,
+        policy: :drop
+      }
+    end
+
     with :ok <- NFTex.Table.create(pid, %{name: table, family: family}),
-         :ok <- NFTex.Chain.create(pid, %{
-           table: table,
-           name: "INPUT",
-           family: family,
-           type: :filter,
-           hook: :input,
-           priority: 0,
-           policy: :drop
-         }),
+         :ok <- NFTex.Chain.create(pid, chain_attrs),
          :ok <- accept_loopback(pid, table: table, family: family),
          :ok <- accept_established(pid, table: table, family: family),
          :ok <- drop_invalid(pid, table: table, family: family),
@@ -243,6 +271,14 @@ defmodule NFTex.Policy do
   end
 
   # Private helpers
+
+  defp ensure_test_prefix(table_name) do
+    if String.starts_with?(table_name, "nftex_test_") do
+      table_name
+    else
+      "nftex_test_#{table_name}"
+    end
+  end
 
   defp allow_port(pid, port, opts) do
     table = Keyword.get(opts, :table, "filter")
