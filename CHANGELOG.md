@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **NFTex.UnifiedPort** - Unified port supporting both JSON strings and Elixir terms
+  - Automatic format detection (JSON raw, JSON prefixed, ETF)
+  - Accepts both `is_binary` (JSON strings) and `is_map` (Elixir maps)
+  - Backward compatible with existing JSON code
+  - Seamlessly handles interleaved JSON and ETF requests
+  - Best of both worlds: type safety of ETF with simplicity of JSON
+
+### Technical Details
+
+- Added `native/src/unified_port.zig` (~520 lines)
+- Added `lib/nftex/unified_port.ex` (~230 lines)
+- Added `test/nftex/unified_port_test.exs` (~380 lines)
+- Updated build system to compile 4 binaries: `libnf_unified`, `libnf_json`, `libnf_etf`, `libnf_ex`
+- Compile task now sets secure 750 permissions automatically
+
 ### In Progress
 - CI/CD pipeline configuration
 - Performance benchmarking

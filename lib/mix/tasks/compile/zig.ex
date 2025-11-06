@@ -14,12 +14,21 @@ defmodule Mix.Tasks.Compile.Zig do
     config = Mix.Project.config()
     app = config[:app]
 
-    source = "native/zig-out/bin/libnf_ex"
-    dest = "priv/libnf_ex"
+    # We now build multiple binaries
+    binaries = [
+      {"native/zig-out/bin/libnf_ex", "priv/libnf_ex"},
+      {"native/zig-out/bin/libnf_json", "priv/libnf_json"},
+      {"native/zig-out/bin/libnf_etf", "priv/libnf_etf"},
+      {"native/zig-out/bin/libnf_unified", "priv/libnf_unified"}
+    ]
 
-    # Check if compilation is needed
-    if needs_compilation?(source, dest) do
-      Mix.shell().info("Compiling Zig port for #{app}...")
+    # Check if compilation is needed for any binary
+    needs_compile = Enum.any?(binaries, fn {source, dest} ->
+      needs_compilation?(source, dest)
+    end)
+
+    if needs_compile do
+      Mix.shell().info("Compiling Zig ports for #{app}...")
 
       case System.cmd("zig", ["build"], cd: "native", stderr_to_stdout: true) do
         {output, 0} ->
@@ -30,18 +39,28 @@ defmodule Mix.Tasks.Compile.Zig do
           # Ensure priv directory exists
           File.mkdir_p!("priv")
 
-          # Copy the compiled binary
-          case File.cp(source, dest) do
-            :ok ->
-              # Set executable permissions
-              File.chmod!(dest, 0o755)
-              Mix.shell().info("Compiled libnf_ex port successfully")
-              check_capabilities(dest)
-              {:ok, []}
+          # Copy all compiled binaries
+          results = Enum.map(binaries, fn {source, dest} ->
+            case File.cp(source, dest) do
+              :ok ->
+                # Set executable permissions (no world permissions for security)
+                File.chmod!(dest, 0o750)
+                name = Path.basename(dest)
+                Mix.shell().info("Compiled #{name} port successfully")
+                check_capabilities(dest)
+                :ok
 
-            {:error, reason} ->
-              Mix.shell().error("Failed to copy libnf_ex binary: #{inspect(reason)}")
-              {:error, []}
+              {:error, reason} ->
+                name = Path.basename(dest)
+                Mix.shell().error("Failed to copy #{name} binary: #{inspect(reason)}")
+                :error
+            end
+          end)
+
+          if Enum.all?(results, &(&1 == :ok)) do
+            {:ok, []}
+          else
+            {:error, []}
           end
 
         {output, status} ->
@@ -51,7 +70,11 @@ defmodule Mix.Tasks.Compile.Zig do
       end
     else
       # Check capabilities even when not recompiling
-      check_capabilities(dest)
+      Enum.each(binaries, fn {_source, dest} ->
+        if File.exists?(dest) do
+          check_capabilities(dest)
+        end
+      end)
       {:noop, []}
     end
   end
@@ -111,6 +134,9 @@ defmodule Mix.Tasks.Compile.Zig do
     File.rm_rf("native/zig-cache")
     File.rm_rf("native/zig-out")
     File.rm_rf("priv/libnf_ex")
+    File.rm_rf("priv/libnf_json")
+    File.rm_rf("priv/libnf_etf")
+    File.rm_rf("priv/libnf_unified")
     :ok
   end
 end

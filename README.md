@@ -59,6 +59,47 @@ NFTex uses a **hybrid approach** for optimal simplicity:
 
 Both formats are processed by the same `libnftables.nft_run_cmd_from_buffer()` function.
 
+### Multiple Port Options
+
+NFTex now provides **four port implementations** to choose from based on your needs:
+
+| Port | Format | Use Case | Module |
+|------|--------|----------|--------|
+| **Unified** | JSON strings + Elixir terms | **Recommended** - Best of both worlds | `NFTex.UnifiedPort` |
+| **JSON** | JSON strings only | Simple, text-based communication | `NFTex.JSONPort` |
+| **ETF** | Elixir terms (maps, lists) | Type-safe, efficient binary protocol | `NFTex.ETFPort` |
+| **Legacy** | Binary protocol | Original libnftnl implementation | `NFTex` |
+
+#### Unified Port (NEW) ⭐
+
+The **unified port** automatically detects request format and responds in the same format:
+
+```elixir
+{:ok, pid} = NFTex.UnifiedPort.start_link()
+
+# Send JSON strings (backward compatible, no prefix)
+json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
+{:ok, json_response} = NFTex.UnifiedPort.call(pid, json_cmd)
+
+# Or send Elixir maps (automatically uses ETF format)
+map_cmd = %{"nftables" => [%{"list" => %{"tables" => %{}}}]}
+{:ok, json_response} = NFTex.UnifiedPort.call(pid, map_cmd)
+
+# Seamlessly mix both formats!
+```
+
+**Format Detection:**
+- **JSON raw** - No prefix, backward compatible (default when sending strings)
+- **ETF mode** - Automatic when sending Elixir maps
+- **JSON prefixed** - "JSN:" prefix for explicit JSON (rarely needed)
+
+**Benefits:**
+- ✅ Backward compatible with existing JSON code
+- ✅ Type-safe Elixir term support for complex data
+- ✅ Efficient binary ETF protocol when needed
+- ✅ Single port handles all use cases
+- ✅ Automatic format detection
+
 See [MIGRATION_SUCCESS.md](MIGRATION_SUCCESS.md) for detailed architecture documentation.
 
 ## System Requirements
@@ -354,18 +395,24 @@ See [examples/README.md](examples/README.md) for detailed descriptions and usage
 
 ## Running with Capabilities
 
-The `libnf_ex` port requires the `CAP_NET_ADMIN` Linux capability to perform netlink operations with the kernel's nftables subsystem.
+All NFTex ports require the `CAP_NET_ADMIN` Linux capability to perform netlink operations with the kernel's nftables subsystem.
 
 **⚠️ Without this capability, kernel operations will fail with "Permission denied (EACCES)".**
 
 ### Quick Setup (Development)
 
 ```bash
-# After compilation, set capabilities on the binary
-sudo setcap cap_net_admin+ep priv/libnf_ex
+# After compilation, set capabilities on the binaries you're using
+# For the recommended unified port:
+sudo setcap cap_net_admin+ep priv/libnf_unified
+
+# Or for other ports:
+sudo setcap cap_net_admin+ep priv/libnf_json
+sudo setcap cap_net_admin+ep priv/libnf_etf
+sudo setcap cap_net_admin+ep priv/libnf_ex  # Legacy
 
 # Verify it worked
-getcap priv/libnf_ex
+getcap priv/libnf_unified
 
 # Now run as a normal user
 iex -S mix

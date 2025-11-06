@@ -7,14 +7,19 @@ This directory contains practical examples demonstrating how to use NFTex for co
 Before running these examples, ensure the NFTex port binary has the required capability:
 
 ```bash
-sudo setcap cap_net_admin=ep priv/libnf_ex
+# For the recommended unified port (supports both JSON and ETF):
+sudo setcap cap_net_admin=ep priv/libnf_unified
+
+# Or for other ports:
+sudo setcap cap_net_admin=ep priv/libnf_json    # JSON strings only
+sudo setcap cap_net_admin=ep priv/libnf_etf     # Elixir terms only
 ```
 
 Verify it's set correctly:
 
 ```bash
-getcap priv/libnf_ex
-# Should show: priv/libnf_ex = cap_net_admin+ep
+getcap priv/libnf_unified
+# Should show: priv/libnf_unified = cap_net_admin+ep
 ```
 
 ## Running Examples
@@ -32,9 +37,9 @@ chmod +x examples/ip_blocklist.exs
 
 ## Available Examples
 
-### Comprehensive Examples (Phase 3)
+### Current API Examples (v0.4.0+)
 
-These examples demonstrate complete, production-ready firewall configurations:
+These examples use the current JSON-based API (libnftables):
 
 #### 1. Basic Firewall (`01_basic_firewall.exs`)
 
@@ -50,31 +55,7 @@ Complete secure firewall setup with defense-in-depth approach.
 
 **Use case:** Secure server baseline, VPS hardening
 
-#### 2. NAT Gateway (`02_nat_gateway.exs`)
-
-Internet sharing and port forwarding for local networks.
-
-**Topics covered:**
-- Masquerading (SNAT) for LAN
-- Port forwarding (DNAT)
-- DMZ setup for exposed servers
-- Multi-interface routing
-
-**Use case:** Home router, small office gateway, container networking
-
-#### 3. Anti-Spoofing (`03_anti_spoofing.exs`)
-
-Advanced anti-spoofing and attack prevention.
-
-**Topics covered:**
-- Reverse Path Filtering (RPF) using FIB expressions
-- Bogon filtering (RFC 1918 private networks)
-- Martian packet detection
-- Private network filtering on WAN
-
-**Use case:** ISP edge routers, datacenter security, DDoS mitigation
-
-#### 4. Rate Limiting (`04_rate_limiting.exs`)
+#### 2. Rate Limiting (`04_rate_limiting.exs`)
 
 DDoS protection and resource management through rate limiting.
 
@@ -83,54 +64,37 @@ DDoS protection and resource management through rate limiting.
 - New connection rate limiting
 - Burst handling
 - SYN flood protection
-- Global vs per-IP limits
+- RuleBuilder API usage
 
 **Use case:** Public-facing servers, API endpoints, DDoS mitigation
 
-#### 5. Advanced Logging (`05_advanced_logging.exs`)
-
-Comprehensive logging for audit and traffic analysis.
-
-**Topics covered:**
-- Kernel log integration (dmesg/journalctl)
-- Netlink logging (ulogd) for external tools
-- Connection tracking logs
-- Traffic statistics and counters
-- Port scan detection
-- Log levels and prefixes
-
-**Use case:** Security audit, compliance, intrusion detection, SIEM integration
-
-#### 6. Load Balancing (`06_load_balancing.exs`)
-
-Basic load balancing using DNAT for traffic distribution.
-
-**Topics covered:**
-- Round-robin DNAT distribution
-- Multi-backend configuration
-- Weighted load balancing concepts
-- Session persistence patterns
-
-**Use case:** High-availability web services, backend distribution
-
-**Note:** For production load balancing, use dedicated tools (HAProxy, nginx, IPVS) with health checks and advanced algorithms.
-
-### Basic Examples
-
-#### 7. IP Blocklist (`ip_blocklist.exs`)
+#### 3. IP Blocklist (`ip_blocklist.exs`)
 
 Demonstrates how to create and manage an IP address blocklist using nftables sets.
 
 **Topics covered:**
 - Creating sets in the kernel
-- Adding multiple IP addresses
+- Adding multiple IP addresses (string format)
 - Listing blocked IPs
 - Removing IPs from blocklist
 - Checking if sets exist
 
 **Use case:** Dynamic IP blocklisting for firewall applications
 
-#### 8. Query Tables (`query_tables.exs`)
+#### 4. Firewall Rules (`firewall_rules.exs`)
+
+Demonstrates creating dynamic firewall rules to block malicious IPs and allow trusted sources.
+
+**Topics covered:**
+- Using `NFTex.Rule.block_ip/4` for simple IP blocking
+- Using `NFTex.Rule.accept_ip/4` for allowlist rules
+- Listing rules with `NFTex.Rule.list/4`
+- Automatic counter addition for traffic monitoring
+- Dynamic rule creation without system restart
+
+**Use case:** IDS integration, dynamic IP blocking, security incident response
+
+#### 5. Query Tables (`query_tables.exs`)
 
 Shows how to query and inspect your current nftables configuration.
 
@@ -143,18 +107,16 @@ Shows how to query and inspect your current nftables configuration.
 
 **Use case:** Auditing firewall configuration, building management dashboards
 
-#### 9. Firewall Rules (`firewall_rules.exs`)
+### Legacy Examples
 
-Demonstrates creating dynamic firewall rules to block malicious IPs and allow trusted sources.
+Advanced examples using the old libnftnl API (v0.3.x) have been moved to the `legacy/` directory:
 
-**Topics covered:**
-- Using `NFTex.Rule.block_ip/4` for simple IP blocking
-- Using `NFTex.Rule.accept_ip/4` for allowlist rules
-- Listing rules with `NFTex.Rule.list/4`
-- Automatic counter addition for traffic monitoring
-- Dynamic rule creation without system restart
+- `legacy/02_nat_gateway.exs` - NAT Gateway and port forwarding
+- `legacy/03_anti_spoofing.exs` - Anti-spoofing with FIB expressions
+- `legacy/05_advanced_logging.exs` - Advanced logging configurations
+- `legacy/06_load_balancing.exs` - Load balancing with DNAT
 
-**Use case:** IDS integration, dynamic IP blocking, security incident response
+**Note:** These examples use the old `NFTex.Port` and `ExpressionBuilder` API with resource management. For current API usage, see the examples above or consult `legacy/README.md` for migration guidance.
 
 ## API Quick Reference
 
@@ -183,7 +145,7 @@ High-level functions for common firewall configurations:
 :ok = NFTex.Policy.allow_dns(pid)
 ```
 
-### NFTex.RuleBuilder - Fluent API for Rules (New in 0.3.0)
+### NFTex.RuleBuilder - Fluent API for Rules
 
 Chainable API for building complex rules intuitively:
 
@@ -192,7 +154,7 @@ alias NFTex.RuleBuilder
 
 # Block IP with logging
 RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_source_ip(<<192, 168, 1, 100>>)
+|> RuleBuilder.match_source_ip("192.168.1.100")
 |> RuleBuilder.log("BLOCKED: ")
 |> RuleBuilder.drop()
 |> RuleBuilder.commit()
@@ -214,7 +176,7 @@ RuleBuilder.new(pid, "filter", "INPUT")
 # Interface-specific rules
 RuleBuilder.new(pid, "filter", "INPUT")
 |> RuleBuilder.match_iif("eth0")
-|> RuleBuilder.match_source_ip(<<10, 0, 0, 0>>)
+|> RuleBuilder.match_source_ip("10.0.0.0")
 |> RuleBuilder.reject(:icmp_port_unreachable)
 |> RuleBuilder.commit()
 ```
@@ -282,7 +244,7 @@ end
 {:ok, pid} = NFTex.start_link()
 
 # Block an IP address
-ip = <<192, 168, 1, 100>>
+ip = "192.168.1.100"
 :ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", ip)
 
 # Accept an IP address
@@ -295,11 +257,10 @@ ip = <<192, 168, 1, 100>>
 ### NFTex.Set - High-level set operations
 
 ```elixir
-# Create a set (currently requires low-level API)
 {:ok, pid} = NFTex.start_link()
 
-# Add elements to existing set
-ips = [<<192, 168, 1, 100>>, <<10, 0, 0, 50>>]
+# Add elements to existing set (string format)
+ips = ["192.168.1.100", "10.0.0.50"]
 :ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ips)
 
 # Delete elements
@@ -315,21 +276,11 @@ exists = NFTex.Set.exists?(pid, "filter", "blocklist", :inet)
 {:ok, sets} = NFTex.Set.list(pid, family: :inet)
 ```
 
-### NFTex.ExpressionBuilder - Low-level expression helpers
+### NFTex.ExpressionBuilder - Low-level expression helpers (Legacy)
 
-```elixir
-# Load IP source address into register
-{:ok, payload_id} = NFTex.ExpressionBuilder.payload_ipv4_saddr(pid, 1)
+**Note:** This module is part of the legacy libnftnl API. For current v0.4.0+ code, use `NFTex.RuleBuilder` or `NFTex.JSONBuilder` instead.
 
-# Compare register value
-{:ok, cmp_id} = NFTex.ExpressionBuilder.cmp_eq(pid, 1, <<192, 168, 1, 100>>)
-
-# Add counter
-{:ok, counter_id} = NFTex.ExpressionBuilder.counter(pid)
-
-# Set verdict
-{:ok, verdict_id} = NFTex.ExpressionBuilder.verdict_drop(pid)
-```
+See `legacy/` examples for usage patterns.
 
 ### NFTex.Query - Query operations
 
@@ -354,11 +305,12 @@ exists = NFTex.Set.exists?(pid, "filter", "blocklist", :inet)
 
 ## Common Patterns
 
-### IP Address Conversion
+### IP Address Format
 
 ```elixir
-# Convert IP address to binary
-ip_binary = <<192, 168, 1, 100>>  # 192.168.1.100
+# Use string format for IP addresses (v0.4.0+)
+ip = "192.168.1.100"
+:ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", ip)
 
 # NFTex.Query automatically converts hex keys to readable IPs
 {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")

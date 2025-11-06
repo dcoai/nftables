@@ -35,18 +35,24 @@ The fastest way to get NFTex working with kernel operations:
 # Compile the project
 mix compile
 
-# Set capabilities on the binary
-sudo setcap cap_net_admin+ep priv/libnf_ex
+# Set capabilities on the binary you're using
+# For the recommended unified port:
+sudo setcap cap_net_admin+ep priv/libnf_unified
+
+# Or for other ports:
+sudo setcap cap_net_admin+ep priv/libnf_json   # JSON strings only
+sudo setcap cap_net_admin+ep priv/libnf_etf    # Elixir terms only
+sudo setcap cap_net_admin+ep priv/libnf_ex     # Legacy libnftnl
 
 # Verify capabilities are set
-getcap priv/libnf_ex
-# Should show: priv/libnf_ex cap_net_admin=ep
+getcap priv/libnf_unified
+# Should show: priv/libnf_unified cap_net_admin=ep
 
 # Run your application (no sudo needed!)
 iex -S mix
 ```
 
-**Note**: You'll need to re-run `setcap` after each recompilation, as the build process creates a new binary.
+**Note**: You'll need to re-run `setcap` after each recompilation, as the build process creates new binaries.
 
 ## Setup Methods
 

@@ -5,41 +5,44 @@
 # This example demonstrates how to use NFTex to create firewall rules
 # dynamically for blocking and allowing IP addresses.
 #
+# **Format**: This example uses ETF format (Elixir maps/terms) with UnifiedPort.
+# See ip_blocklist.exs for JSN: format (JSON strings) demonstration.
+#
 # Requirements:
 # - The NFTex port binary must have CAP_NET_ADMIN capability
-# - Run: sudo setcap cap_net_admin=ep priv/libnf_ex
+# - Run: sudo setcap cap_net_admin=ep priv/libnf_unified
 # - A base chain must exist: nft add chain filter INPUT '{ type filter hook input priority 0; }'
 #
 # Usage:
 #   mix run examples/firewall_rules.exs
 
-# Start NFTex
-{:ok, pid} = NFTex.start_link()
-IO.puts("✓ NFTex started\n")
+# Start NFTex with UnifiedPort (ETF format - Elixir maps/terms)
+{:ok, pid} = NFTex.start_link(port: NFTex.UnifiedPort)
+IO.puts("✓ NFTex started (UnifiedPort with ETF format)\n")
 
 table = "filter"
 chain = "INPUT"
 
 IO.puts("===== DYNAMIC FIREWALL RULES EXAMPLE =====\n")
 
-# Scenario: Block malicious IPs, allow trusted IPs
+# Scenario: Block malicious IPs, allow trusted IPs (now using string format)
 
 malicious_ips = [
-  {<<192, 168, 1, 111>>, "192.168.1.111"},
-  {<<10, 0, 0, 99>>, "10.0.0.99"},
-  {<<172, 16, 5, 50>>, "172.16.5.50"}
+  "192.168.1.111",
+  "10.0.0.99",
+  "172.16.5.50"
 ]
 
 trusted_ips = [
-  {<<192, 168, 1, 10>>, "192.168.1.10"},  # Admin workstation
-  {<<192, 168, 1, 20>>, "192.168.1.20"}   # Monitoring server
+  "192.168.1.10",  # Admin workstation
+  "192.168.1.20"   # Monitoring server
 ]
 
 ## STEP 1: Block malicious IPs
 IO.puts("Step 1: Blocking malicious IPs...")
 
-for {ip_binary, ip_string} <- malicious_ips do
-  case NFTex.Rule.block_ip(pid, table, chain, ip_binary) do
+for ip_string <- malicious_ips do
+  case NFTex.Rule.block_ip(pid, table, chain, ip_string) do
     :ok ->
       IO.puts("  ✓ Blocked #{ip_string}")
     {:error, reason} ->
@@ -52,8 +55,8 @@ IO.puts("\nMalicious IPs are now blocked. Packets from these addresses will be d
 ## STEP 2: Accept trusted IPs (higher priority - add first)
 IO.puts("Step 2: Creating accept rules for trusted IPs...")
 
-for {ip_binary, ip_string} <- trusted_ips do
-  case NFTex.Rule.accept_ip(pid, table, chain, ip_binary) do
+for ip_string <- trusted_ips do
+  case NFTex.Rule.accept_ip(pid, table, chain, ip_string) do
     :ok ->
       IO.puts("  ✓ Accepted #{ip_string}")
     {:error, reason} ->

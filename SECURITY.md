@@ -12,7 +12,12 @@ NFTex requires the `CAP_NET_ADMIN` Linux capability to modify firewall rules. Th
 
 **Required Setup:**
 ```bash
-sudo setcap cap_net_admin=ep priv/libnf_ex
+# For the recommended unified port:
+sudo setcap cap_net_admin=ep priv/libnf_unified
+
+# Or for other ports:
+sudo setcap cap_net_admin=ep priv/libnf_json
+sudo setcap cap_net_admin=ep priv/libnf_etf
 ```
 
 **Security Implications:**
@@ -62,16 +67,16 @@ end
 ```
 
 #### IP Addresses
-- Use binary format (`<<192, 168, 1, 100>>`)
-- Validate IP address format before conversion
+- Use string format (`"192.168.1.100"`)
+- Validate IP address format before use
 - Use `:inet.parse_address/1` for validation
 
 ```elixir
 # GOOD: Validate IP before use
 case :inet.parse_address(String.to_charlist(user_ip)) do
   {:ok, {a, b, c, d}} ->
-    ip_binary = <<a, b, c, d>>
-    Rule.block_ip(pid, "filter", "INPUT", ip_binary)
+    ip_string = "#{a}.#{b}.#{c}.#{d}"
+    Rule.block_ip(pid, "filter", "INPUT", ip_string)
   {:error, :einval} ->
     {:error, :invalid_ip}
 end
@@ -207,8 +212,8 @@ end
 
 ```bash
 # GOOD: Set capability, run as unprivileged user
-sudo setcap cap_net_admin=ep priv/libnf_ex
-chmod 750 priv/libnf_ex
+sudo setcap cap_net_admin=ep priv/libnf_unified
+chmod 750 priv/libnf_unified
 # Now run as regular user
 ```
 

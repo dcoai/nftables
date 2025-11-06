@@ -53,4 +53,44 @@ pub fn build(b: *std.Build) void {
     json_exe.linkLibC();
 
     b.installArtifact(json_exe);
+
+    // Create ETF port executable (uses ETF for communication + libnftables for nftables)
+    const etf_exe = b.addExecutable(.{
+        .name = "libnf_etf",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/etf_port.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    // ETF port needs libnftables, cap, and Erlang ei library
+    etf_exe.root_module.addIncludePath(.{ .cwd_relative = erl_include });
+    etf_exe.root_module.addLibraryPath(.{ .cwd_relative = erl_lib });
+    etf_exe.root_module.linkSystemLibrary("nftables", .{});
+    etf_exe.root_module.linkSystemLibrary("cap", .{});
+    etf_exe.root_module.linkSystemLibrary("ei", .{});
+    etf_exe.linkLibC();
+
+    b.installArtifact(etf_exe);
+
+    // Create Unified port executable (supports both JSON and ETF)
+    const unified_exe = b.addExecutable(.{
+        .name = "libnf_unified",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/unified_port.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    // Unified port needs libnftables, cap, and Erlang ei library (same as ETF port)
+    unified_exe.root_module.addIncludePath(.{ .cwd_relative = erl_include });
+    unified_exe.root_module.addLibraryPath(.{ .cwd_relative = erl_lib });
+    unified_exe.root_module.linkSystemLibrary("nftables", .{});
+    unified_exe.root_module.linkSystemLibrary("cap", .{});
+    unified_exe.root_module.linkSystemLibrary("ei", .{});
+    unified_exe.linkLibC();
+
+    b.installArtifact(unified_exe);
 }

@@ -5,40 +5,53 @@
 # This example demonstrates how to use NFTex to create and manage
 # an IP address blocklist using nftables sets.
 #
+# **Format Demonstration**: This example uses the JSN: format (JSON strings)
+# with UnifiedPort to explicitly show JSON-based communication.
+# Other examples use ETF: format (Elixir maps/terms).
+#
 # Requirements:
 # - The NFTex port binary must have CAP_NET_ADMIN capability
-# - Run: sudo setcap cap_net_admin=ep priv/libnf_ex
+# - Run: sudo setcap cap_net_admin=ep priv/libnf_unified
 #
 # Usage:
 #   mix run examples/ip_blocklist.exs
 
-# Start NFTex
-{:ok, pid} = NFTex.start_link()
-IO.puts("✓ NFTex started\n")
+# Start NFTex with UnifiedPort (demonstrating JSN: format with JSON strings)
+{:ok, pid} = NFTex.start_link(port: NFTex.UnifiedPort)
+IO.puts("✓ NFTex started (UnifiedPort with JSN: format - JSON strings)\n")
 
 # Configuration
 table = "filter"
 blocklist_name = "banned_ips"
 
-# Step 1: Create the blocklist set in the kernel
+# Step 1: Create the blocklist set (if it doesn't exist)
 IO.puts("Creating blocklist set...")
 
-{:ok, set_id} = NFTex.Port.call(pid, {:set_alloc})
-:ok = NFTex.Port.call(pid, {:set_set_str, set_id, :name, blocklist_name})
-:ok = NFTex.Port.call(pid, {:set_set_str, set_id, :table, table})
-:ok = NFTex.Port.call(pid, {:set_set_u32, set_id, :family, 2})  # inet
-:ok = NFTex.Port.call(pid, {:set_set_u32, set_id, :key_len, 4})  # IPv4
-:ok = NFTex.Port.call(pid, {:set_set_u32, set_id, :id, 100})
+# Try to create the set (will fail if it already exists, which is fine)
+# Demonstrate JSN: format - send JSON string prefixed with "JSN:"
+json_cmd = Jason.encode!(%{
+  "nftables" => [
+    %{
+      "add" => %{
+        "set" => %{
+          "family" => "inet",
+          "table" => table,
+          "name" => blocklist_name,
+          "type" => "ipv4_addr"
+        }
+      }
+    }
+  ]
+})
 
-case NFTex.Port.call(pid, {:set_send_to_kernel, set_id, :add}) do
-  :ok ->
-    IO.puts("✓ Created set '#{blocklist_name}' in table '#{table}'")
-    NFTex.Port.call(pid, {:set_free, set_id})
+# Send with JSN: prefix to explicitly indicate JSON format
+case NFTex.UnifiedPort.call(pid, "JSN:#{json_cmd}") do
+  {:ok, _response} ->
+    IO.puts("✓ Created set '#{blocklist_name}' in table '#{table}' (via JSN: format)")
 
   {:error, reason} ->
     # Set might already exist
-    IO.puts("Note: #{reason}")
-    NFTex.Port.call(pid, {:set_free, set_id})
+    IO.puts("Note: Set may already exist (#{reason})")
 end
 
 # Step 2: Check if the set exists
@@ -53,21 +66,18 @@ end
 # Step 3: Add suspicious IPs to the blocklist
 IO.puts("\nAdding IPs to blocklist...")
 
-# Example: Block some IP addresses
+# Example: Block some IP addresses (now using string format)
 # In a real scenario, these might come from an intrusion detection system
 blocked_ips = [
-  {<<192, 168, 1, 100>>, "192.168.1.100"},  # Example attacker
-  {<<10, 0, 0, 50>>, "10.0.0.50"},           # Example scanner
-  {<<203, 0, 113, 42>>, "203.0.113.42"}      # TEST-NET-3 (example)
+  "192.168.1.100",  # Example attacker
+  "10.0.0.50",      # Example scanner
+  "203.0.113.42"    # TEST-NET-3 (example)
 ]
 
-# Extract just the binary addresses
-ip_binaries = Enum.map(blocked_ips, fn {binary, _} -> binary end)
-
-case NFTex.Set.add_elements(pid, table, blocklist_name, :inet, ip_binaries) do
+case NFTex.Set.add_elements(pid, table, blocklist_name, :inet, blocked_ips) do
   :ok ->
     IO.puts("✓ Added #{length(blocked_ips)} IPs to blocklist:")
-    for {_, ip_str} <- blocked_ips do
+    for ip_str <- blocked_ips do
       IO.puts("  - #{ip_str}")
     end
 
@@ -93,7 +103,7 @@ end
 # (Maybe it was a false positive)
 IO.puts("\nRemoving false positive...")
 
-ip_to_unblock = [<<192, 168, 1, 100>>]
+ip_to_unblock = ["192.168.1.100"]
 
 case NFTex.Set.delete_elements(pid, table, blocklist_name, :inet, ip_to_unblock) do
   :ok ->
