@@ -1,11 +1,10 @@
 defmodule NFTex.Table do
   @moduledoc """
-  High-level table operations with automatic resource management.
+  High-level table operations.
 
   Tables are the top-level containers in nftables that organize chains, rules,
   and sets by protocol family (IPv4, IPv6, etc.). This module provides an
-  idiomatic Elixir interface for creating and deleting tables with automatic
-  resource cleanup.
+  idiomatic Elixir interface for creating and deleting tables.
 
   ## Overview
 
@@ -15,7 +14,7 @@ defmodule NFTex.Table do
 
   Tables organize related firewall components and are specific to a protocol
   family. For example, you might have:
-  - `filter` table for IPv4 packet filtering (family: `:inet`)
+  - `filter` table for IPv4/IPv6 packet filtering (family: `:inet`)
   - `nat` table for NAT operations (family: `:ip`)
   - `filter6` table for IPv6 filtering (family: `:ip6`)
 
@@ -63,16 +62,14 @@ defmodule NFTex.Table do
   - `NFTex.Chain` - Create chains within tables
   - `NFTex.Rule` - Add rules to chains
   - `NFTex.Query` - Query existing tables and configuration
-  - `NFTex.Kernel.Table` - Low-level table operations
   """
 
-  alias NFTex.Kernel
+  alias NFTex.{JSONPort, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type table_spec :: %{
           name: String.t(),
-          family: family(),
-          flags: [atom()]
+          family: family()
         }
 
   @doc """
@@ -82,7 +79,6 @@ defmodule NFTex.Table do
 
   - `name` - Table name (required)
   - `family` - Protocol family (required)
-  - `flags` - Table flags (optional, default: [])
 
   ## Families
 
@@ -97,34 +93,44 @@ defmodule NFTex.Table do
 
       NFTex.Table.create(pid, %{
         name: "filter",
-        family: :inet,
-        flags: []
+        family: :inet
       })
 
   """
   @spec create(pid(), table_spec()) :: :ok | {:error, term()}
-  def create(pid, %{name: name, family: family} = spec) do
-    flags = Map.get(spec, :flags, [])
+  def create(pid, %{name: name, family: family}) when is_binary(name) do
+    # Build JSON command
+    cmd = JSONBuilder.add_table(family, name)
+    json = Jason.encode!(cmd)
 
-    # Allocate, configure, send to kernel, and cleanup
-    with {:ok, table_id} <- Kernel.Table.alloc(pid),
-         :ok <- Kernel.Table.set_str(pid, table_id, :name, name),
-         :ok <- Kernel.Table.set_u32(pid, table_id, :family, family_to_int(family)),
-         :ok <- maybe_set_flags(pid, table_id, flags),
-         :ok <- Kernel.Table.send_to_kernel(pid, table_id, :add),
-         :ok <- Kernel.Table.free(pid, table_id) do
-      :ok
-    else
-      {:error, _reason} = error ->
-        # Note: If allocation succeeded but later steps fail, the resource will be
-        # cleaned up when the port process exits. For long-lived processes, consider
-        # using a try/rescue to ensure cleanup.
-        error
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @doc """
   Delete a table.
+
+  This will also delete all chains, rules, and sets within the table.
 
   ## Example
 
@@ -132,60 +138,61 @@ defmodule NFTex.Table do
 
   """
   @spec delete(pid(), String.t(), family()) :: :ok | {:error, term()}
-  def delete(pid, name, family) do
-    # Allocate, configure, send delete to kernel, and cleanup
-    with {:ok, table_id} <- Kernel.Table.alloc(pid),
-         :ok <- Kernel.Table.set_str(pid, table_id, :name, name),
-         :ok <- Kernel.Table.set_u32(pid, table_id, :family, family_to_int(family)),
-         :ok <- Kernel.Table.send_to_kernel(pid, table_id, :delete),
-         :ok <- Kernel.Table.free(pid, table_id) do
-      :ok
-    else
-      {:error, _reason} = error ->
-        error
+  def delete(pid, name, family) when is_binary(name) do
+    # Build JSON command
+    cmd = JSONBuilder.delete_table(family, name)
+    json = Jason.encode!(cmd)
+
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @doc """
-  List all tables.
+  Check if a table exists.
 
-  Returns a list of table specifications.
+  ## Parameters
 
-  ## Example
+  - `pid` - NFTex process pid
+  - `name` - Table name (string)
+  - `family` - Protocol family (default: `:inet`)
 
-      {:ok, tables} = NFTex.Table.list(pid, :inet)
-      # => [%{name: "filter", family: :inet}, ...]
+  ## Examples
+
+      if NFTex.Table.exists?(pid, "filter", :inet) do
+        IO.puts("Table exists")
+      end
 
   """
-  @spec list(pid(), family()) :: {:ok, [table_spec()]} | {:error, term()}
-  def list(_pid, _family) do
-    # TODO: Implement table listing via netlink
-    {:error, :not_implemented}
-  end
+  @spec exists?(pid(), String.t(), family()) :: boolean()
+  def exists?(pid, name, family \\ :inet) do
+    case NFTex.Query.list_tables(pid, family: family) do
+      {:ok, tables} ->
+        Enum.any?(tables, fn table ->
+          table.name == name
+        end)
 
-  # Private helpers
-
-  defp family_to_int(:inet), do: 1
-  defp family_to_int(:ip), do: 2
-  defp family_to_int(:ip6), do: 10
-  defp family_to_int(:arp), do: 3
-  defp family_to_int(:bridge), do: 7
-  defp family_to_int(:netdev), do: 5
-
-  defp maybe_set_flags(pid, table_id, []) do
-    # No flags to set
-    :ok
-  end
-
-  defp maybe_set_flags(pid, table_id, flags) when is_list(flags) do
-    flags_int = flags_to_int(flags)
-    Kernel.Table.set_u32(pid, table_id, :flags, flags_int)
-  end
-
-  defp flags_to_int(flags) do
-    # TODO: Implement flag conversion when needed
-    # For now, return 0 (no flags)
-    _ = flags
-    0
+      {:error, _} ->
+        false
+    end
   end
 end

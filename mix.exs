@@ -39,6 +39,7 @@ defmodule Nftables.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:jason, "~> 1.4"},
       {:usage_rules, "~> 0.1.25", only: :dev},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
@@ -46,9 +47,9 @@ defmodule Nftables.MixProject do
 
   defp description do
     """
-    High-performance Elixir bindings for Linux nftables via libnftnl.
+    High-performance Elixir bindings for Linux nftables via the official libnftables JSON API.
     Provides high-level APIs for firewall management with automatic resource cleanup,
-    type safety, and production-ready security features.
+    type safety, and production-ready security features. Supports both JSON and nft syntax.
     """
   end
 
@@ -75,6 +76,8 @@ defmodule Nftables.MixProject do
       extras: [
         "README.md",
         "CHANGELOG.md",
+        "MIGRATION_GUIDE.md",
+        "MIGRATION_SUCCESS.md",
         "SECURITY.md",
         "LICENSE"
       ],
@@ -85,21 +88,12 @@ defmodule Nftables.MixProject do
           NFTex.Chain,
           NFTex.Table,
           NFTex.Rule,
-          NFTex.Set
-        ],
-        "Low-Level API": [
-          NFTex.ExpressionBuilder,
-          NFTex.Port,
+          NFTex.Set,
           NFTex.Query
         ],
-        "Kernel Operations": [
-          NFTex.Kernel.Table,
-          NFTex.Kernel.Chain,
-          NFTex.Kernel.Rule,
-          NFTex.Kernel.Set,
-          NFTex.Kernel.SetElement,
-          NFTex.Kernel.Expression,
-          NFTex.Kernel.Batch
+        "Internal API": [
+          NFTex.JSONPort,
+          NFTex.JSONBuilder
         ]
       ]
     ]

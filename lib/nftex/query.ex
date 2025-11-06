@@ -3,7 +3,7 @@ defmodule NFTex.Query do
   High-level API for querying nftables resources.
 
   Provides convenient functions for listing tables, chains, rules, sets,
-  and set elements with automatic parsing of responses.
+  and set elements with automatic parsing of JSON responses.
 
   ## Quick Start
 
@@ -18,37 +18,12 @@ defmodule NFTex.Query do
       # List elements in a specific set
       {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocklist")
 
-      # Elements are automatically parsed
-      for elem <- elements do
-        IO.puts("IP: \#{elem.key_ip}, Hex: \#{elem.key_hex}, Flags: \#{elem.flags}")
-      end
-
-  ## Examples
-
-  See `examples/query_tables.exs` for a complete example showing how to
-  query and inspect your nftables configuration.
-
-  Run it with: `mix run examples/query_tables.exs`
   """
 
-  alias NFTex.Port
+  alias NFTex.{JSONPort, JSONBuilder}
 
-  @type family :: :inet | :inet6 | :arp | :bridge | :netdev | non_neg_integer()
-  @type result(t) :: {:ok, t} | {:error, String.t()}
-
-  # Family atom to integer mapping (from linux/netfilter.h)
-  # NFPROTO_INET=1, NFPROTO_IPV4=2, NFPROTO_ARP=3, NFPROTO_NETDEV=5, NFPROTO_BRIDGE=7, NFPROTO_IPV6=10
-  @family_map %{
-    inet: 1,
-    ip: 2,
-    ipv4: 2,
-    inet6: 10,
-    ip6: 10,
-    ipv6: 10,
-    arp: 3,
-    bridge: 7,
-    netdev: 5
-  }
+  @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
+  @type result(t) :: {:ok, t} | {:error, term()}
 
   ## Table Operations
 
@@ -60,30 +35,51 @@ defmodule NFTex.Query do
   - `pid` - NFTex process pid
   - `opts` - Keyword list options:
     - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
     - `:timeout` - Operation timeout in ms (default: 5000)
 
   ## Examples
 
       {:ok, tables} = NFTex.Query.list_tables(pid)
       {:ok, tables} = NFTex.Query.list_tables(pid, family: :inet6)
-      {:ok, tables} = NFTex.Query.list_tables(pid, parse: false)
   """
   @spec list_tables(pid(), keyword()) :: result([map()])
   def list_tables(pid, opts \\ []) do
-    family = resolve_family(Keyword.get(opts, :family, :inet))
+    family = Keyword.get(opts, :family)
     timeout = Keyword.get(opts, :timeout, 5000)
-    parse = Keyword.get(opts, :parse, true)
 
-    case Port.call(pid, {:table_list, family}, timeout) do
-      {:ok, tables} when parse ->
-        {:ok, Enum.map(tables, &parse_table/1)}
+    # Build JSON command
+    cmd = JSONBuilder.list_tables(family: family)
+    json = Jason.encode!(cmd)
 
-      {:ok, tables} ->
-        {:ok, tables}
+    # Send to port
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        # Empty response - return empty list
+        {:ok, []}
 
-      error ->
-        error
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => items}} ->
+            tables = items
+              |> Enum.filter(&Map.has_key?(&1, "table"))
+              |> Enum.map(fn %{"table" => t} ->
+                %{
+                  name: t["name"],
+                  family: String.to_atom(t["family"]),
+                  handle: t["handle"]
+                }
+              end)
+            {:ok, tables}
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -97,7 +93,6 @@ defmodule NFTex.Query do
   - `pid` - NFTex process pid
   - `opts` - Keyword list options:
     - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
     - `:timeout` - Operation timeout in ms (default: 5000)
 
   ## Examples
@@ -107,55 +102,155 @@ defmodule NFTex.Query do
   """
   @spec list_chains(pid(), keyword()) :: result([map()])
   def list_chains(pid, opts \\ []) do
-    family = resolve_family(Keyword.get(opts, :family, :inet))
+    family = Keyword.get(opts, :family)
     timeout = Keyword.get(opts, :timeout, 5000)
-    parse = Keyword.get(opts, :parse, true)
 
-    case Port.call(pid, {:chain_list, family}, timeout) do
-      {:ok, chains} when parse ->
-        {:ok, Enum.map(chains, &parse_chain/1)}
+    # Use list_ruleset to get chains
+    cmd = JSONBuilder.list_ruleset(family: family)
+    json = Jason.encode!(cmd)
 
-      {:ok, chains} ->
-        {:ok, chains}
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        # Empty response - return empty list
+        {:ok, []}
 
-      error ->
-        error
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => items}} ->
+            chains = items
+              |> Enum.filter(&Map.has_key?(&1, "chain"))
+              |> Enum.map(fn %{"chain" => c} ->
+                %{
+                  name: c["name"],
+                  table: c["table"],
+                  family: String.to_atom(c["family"]),
+                  handle: c["handle"],
+                  type: c["type"] && String.to_atom(c["type"]),
+                  hook: c["hook"] && String.to_atom(c["hook"]),
+                  prio: c["prio"],
+                  policy: c["policy"] && String.to_atom(c["policy"])
+                }
+              end)
+            {:ok, chains}
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   ## Rule Operations
 
   @doc """
-  List all rules for a given protocol family.
+  List all rules in a specific chain.
 
   ## Parameters
 
   - `pid` - NFTex process pid
+  - `table` - Table name
+  - `chain` - Chain name
   - `opts` - Keyword list options:
     - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
     - `:timeout` - Operation timeout in ms (default: 5000)
 
   ## Examples
 
-      {:ok, rules} = NFTex.Query.list_rules(pid)
-      {:ok, rules} = NFTex.Query.list_rules(pid, family: :inet6)
+      {:ok, rules} = NFTex.Query.list_rules(pid, "filter", "input")
+      {:ok, rules} = NFTex.Query.list_rules(pid, "filter", "input", family: :inet6)
+
+  ## List all rules for a family
+
+      {:ok, rules} = NFTex.Query.list_rules(pid, family: :inet)
   """
   @spec list_rules(pid(), keyword()) :: result([map()])
-  def list_rules(pid, opts \\ []) do
-    family = resolve_family(Keyword.get(opts, :family, :inet))
+  @spec list_rules(pid(), String.t(), String.t()) :: result([map()])
+  @spec list_rules(pid(), String.t(), String.t(), keyword()) :: result([map()])
+  def list_rules(pid, opts) when is_list(opts) do
+    family = Keyword.get(opts, :family, :inet)
     timeout = Keyword.get(opts, :timeout, 5000)
-    parse = Keyword.get(opts, :parse, true)
 
-    case Port.call(pid, {:rule_list, family}, timeout) do
-      {:ok, rules} when parse ->
-        {:ok, Enum.map(rules, &parse_rule/1)}
+    # Use list ruleset to get all rules
+    cmd = JSONBuilder.list_ruleset(family: family)
+    json = Jason.encode!(cmd)
 
-      {:ok, rules} ->
-        {:ok, rules}
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        {:ok, []}
 
-      error ->
-        error
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => items}} ->
+            rules = items
+              |> Enum.filter(&Map.has_key?(&1, "rule"))
+              |> Enum.map(fn %{"rule" => r} ->
+                %{
+                  family: String.to_atom(r["family"]),
+                  table: r["table"],
+                  chain: r["chain"],
+                  handle: r["handle"],
+                  expr: r["expr"]
+                }
+              end)
+            {:ok, rules}
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def list_rules(pid, table, chain), do: list_rules(pid, table, chain, [])
+
+  def list_rules(pid, table, chain, opts) do
+    family = Keyword.get(opts, :family, :inet)
+    timeout = Keyword.get(opts, :timeout, 5000)
+
+    # Use list_chain to get rules
+    cmd = JSONBuilder.list_chain(family, table, chain)
+    json = Jason.encode!(cmd)
+
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        # Empty response - return empty list
+        {:ok, []}
+
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => items}} ->
+            rules = items
+              |> Enum.filter(&Map.has_key?(&1, "rule"))
+              |> Enum.map(fn %{"rule" => r} ->
+                %{
+                  family: String.to_atom(r["family"]),
+                  table: r["table"],
+                  chain: r["chain"],
+                  handle: r["handle"],
+                  expr: r["expr"]
+                }
+              end)
+            {:ok, rules}
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -169,7 +264,6 @@ defmodule NFTex.Query do
   - `pid` - NFTex process pid
   - `opts` - Keyword list options:
     - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
     - `:timeout` - Operation timeout in ms (default: 5000)
 
   ## Examples
@@ -179,26 +273,52 @@ defmodule NFTex.Query do
   """
   @spec list_sets(pid(), keyword()) :: result([map()])
   def list_sets(pid, opts \\ []) do
-    family = resolve_family(Keyword.get(opts, :family, :inet))
+    family = Keyword.get(opts, :family)
     timeout = Keyword.get(opts, :timeout, 5000)
-    parse = Keyword.get(opts, :parse, true)
 
-    case Port.call(pid, {:set_list, family}, timeout) do
-      {:ok, sets} when parse ->
-        {:ok, Enum.map(sets, &parse_set/1)}
+    # Use list_ruleset to get sets
+    cmd = JSONBuilder.list_ruleset(family: family)
+    json = Jason.encode!(cmd)
 
-      {:ok, sets} ->
-        {:ok, sets}
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        # Empty response - return empty list
+        {:ok, []}
 
-      error ->
-        error
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => items}} ->
+            sets = items
+              |> Enum.filter(&Map.has_key?(&1, "set"))
+              |> Enum.map(fn %{"set" => s} ->
+                %{
+                  name: s["name"],
+                  table: s["table"],
+                  family: String.to_atom(s["family"]),
+                  handle: s["handle"],
+                  key_type: s["type"],
+                  key_len: s["key_len"],
+                  flags: s["flags"]
+                }
+              end)
+            {:ok, sets}
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   ## Set Element Operations
 
   @doc """
-  List all elements in a specific set.
+  List elements in a specific set.
 
   ## Parameters
 
@@ -207,29 +327,56 @@ defmodule NFTex.Query do
   - `set_name` - Set name (string)
   - `opts` - Keyword list options:
     - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
     - `:timeout` - Operation timeout in ms (default: 5000)
 
   ## Examples
 
-      {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "banned_ips")
-      {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "banned_ips", family: :inet6)
+      {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocked_ips")
   """
   @spec list_set_elements(pid(), String.t(), String.t(), keyword()) :: result([map()])
   def list_set_elements(pid, table, set_name, opts \\ []) do
-    family = resolve_family(Keyword.get(opts, :family, :inet))
+    family = Keyword.get(opts, :family, :inet)
     timeout = Keyword.get(opts, :timeout, 5000)
-    parse = Keyword.get(opts, :parse, true)
 
-    case Port.call(pid, {:set_elem_list, family, table, set_name}, timeout) do
-      {:ok, elements} when parse ->
-        {:ok, Enum.map(elements, &parse_set_element/1)}
+    # Use list_set to get elements
+    cmd = JSONBuilder.list_set(family, table, set_name)
+    json = Jason.encode!(cmd)
 
-      {:ok, elements} ->
-        {:ok, elements}
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        # Empty response - return empty list
+        {:ok, []}
 
-      error ->
-        error
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => items}} ->
+            # Find the set object which contains elements
+            elements = items
+              |> Enum.find_value([], fn
+                %{"set" => %{"elem" => elems}} when is_list(elems) -> elems
+                _ -> false
+              end)
+              |> List.wrap()
+              |> Enum.map(fn elem ->
+                # Elements can be strings or maps
+                case elem do
+                  val when is_binary(val) -> %{value: val}
+                  val when is_map(val) -> val
+                  val -> %{value: inspect(val)}
+                end
+              end)
+
+            {:ok, elements}
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -239,146 +386,46 @@ defmodule NFTex.Query do
   ## Parameters
 
   - `pid` - NFTex process pid
-  - `table` - Table name (string)
-  - `set_name` - Set name (string)
-  - `elements` - List of binary keys to delete (e.g., `[<<192, 168, 1, 100>>, <<10, 0, 0, 1>>]`)
+  - `table` - Table name
+  - `set_name` - Set name
+  - `elements` - List of element values (strings)
   - `opts` - Keyword list options:
     - `:family` - Protocol family (default: `:inet`)
     - `:timeout` - Operation timeout in ms (default: 5000)
 
-  ## Examples
+  ## Example
 
-      # Delete specific IPs from a blocklist
-      ips = [<<192, 168, 1, 100>>, <<10, 0, 0, 50>>]
-      :ok = NFTex.Query.delete_set_elements(pid, "filter", "banned_ips", ips)
-
-      # Delete from IPv6 set
-      :ok = NFTex.Query.delete_set_elements(pid, "filter", "banned_ips6", [ipv6_addr], family: :inet6)
+      :ok = NFTex.Query.delete_set_elements(pid, "filter", "blocked_ips", ["192.168.1.100"])
   """
-  @spec delete_set_elements(pid(), String.t(), String.t(), [binary()], keyword()) :: :ok | {:error, String.t()}
+  @spec delete_set_elements(pid(), String.t(), String.t(), [String.t()], keyword()) :: :ok | {:error, term()}
   def delete_set_elements(pid, table, set_name, elements, opts \\ []) when is_list(elements) do
-    family = resolve_family(Keyword.get(opts, :family, :inet))
+    family = Keyword.get(opts, :family, :inet)
     timeout = Keyword.get(opts, :timeout, 5000)
 
-    # Create a set object for deletion
-    with {:ok, set_id} <- Port.call(pid, {:set_alloc}, timeout),
-         :ok <- Port.call(pid, {:set_set_str, set_id, :name, set_name}, timeout),
-         :ok <- Port.call(pid, {:set_set_str, set_id, :table, table}, timeout) do
+    # Build JSON command
+    cmd = JSONBuilder.delete_element(family, table, set_name, elements)
+    json = Jason.encode!(cmd)
 
-      # Add all elements to be deleted
-      elem_result = Enum.reduce_while(elements, :ok, fn key, :ok ->
-        with {:ok, elem_id} <- Port.call(pid, {:set_elem_alloc}, timeout),
-             :ok <- Port.call(pid, {:set_elem_set_data, elem_id, :key, key}, timeout),
-             :ok <- Port.call(pid, {:set_elem_add, set_id, elem_id}, timeout) do
-          {:cont, :ok}
-        else
-          error -> {:halt, error}
+    # Send to port
+    case JSONPort.call(pid, json, timeout) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
         end
-      end)
 
-      case elem_result do
-        :ok ->
-          # Send deletion command to kernel
-          Port.call(pid, {:set_elem_send_to_kernel, set_id, :delete, family}, timeout)
-
-        error ->
-          error
-      end
+      {:error, reason} ->
+        {:error, reason}
     end
   end
-
-  ## Parsing Functions
-
-  defp parse_table(table) when is_map(table) do
-    # Tables are now received as ETF maps directly from Zig
-    # Just enhance with atom family representation
-    %{table | family: int_to_family(table.family)}
-  end
-
-  defp parse_chain(chain) when is_map(chain) do
-    # Chains are now received as ETF maps directly from Zig
-    # Enhance with atom representations
-    chain
-    |> Map.update(:family, nil, &int_to_family/1)
-    |> Map.update(:hook, nil, &int_to_hook/1)
-    |> Map.update(:policy, nil, &int_to_policy/1)
-  end
-
-  defp parse_rule(rule) when is_map(rule) do
-    # Rules are now received as ETF maps directly from Zig
-    # Just enhance with atom family representation
-    %{rule | family: int_to_family(rule.family)}
-  end
-
-  defp parse_set(set) when is_map(set) do
-    # Sets are now received as ETF maps directly from Zig
-    # Just enhance with atom family representation
-    %{set | family: int_to_family(set.family)}
-  end
-
-  defp parse_set_element(bin) do
-    [key_hex, flags_str | _] = String.split(bin, <<0>>, trim: true)
-
-    %{
-      key_hex: key_hex,
-      key_ip: hex_to_ip(key_hex),
-      flags: String.to_integer(flags_str)
-    }
-  end
-
-  ## Helper Functions
-
-  defp resolve_family(family) when is_atom(family) do
-    Map.get(@family_map, family, 2)
-  end
-
-  defp resolve_family(family) when is_integer(family), do: family
-
-  defp int_to_family(family_int) when is_integer(family_int) do
-    case family_int do
-      1 -> :inet
-      2 -> :ip
-      10 -> :inet6
-      3 -> :arp
-      7 -> :bridge
-      5 -> :netdev
-      other -> other
-    end
-  end
-
-  defp int_to_hook(hook_int) when is_integer(hook_int) do
-    case hook_int do
-      0 -> :prerouting
-      1 -> :input
-      2 -> :forward
-      3 -> :output
-      4 -> :postrouting
-      other -> other
-    end
-  end
-  defp int_to_hook(nil), do: nil
-
-  defp int_to_policy(policy_int) when is_integer(policy_int) do
-    case policy_int do
-      0 -> :drop
-      1 -> :accept
-      other -> other
-    end
-  end
-  defp int_to_policy(nil), do: nil
-
-
-  defp hex_to_ip(hex) when byte_size(hex) == 8 do
-    # IPv4 address (4 bytes = 8 hex chars)
-    with {a, ""} <- Integer.parse(String.slice(hex, 0, 2), 16),
-         {b, ""} <- Integer.parse(String.slice(hex, 2, 2), 16),
-         {c, ""} <- Integer.parse(String.slice(hex, 4, 2), 16),
-         {d, ""} <- Integer.parse(String.slice(hex, 6, 2), 16) do
-      "#{a}.#{b}.#{c}.#{d}"
-    else
-      _ -> hex
-    end
-  end
-
-  defp hex_to_ip(hex), do: hex
 end

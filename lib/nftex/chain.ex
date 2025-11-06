@@ -1,6 +1,6 @@
 defmodule NFTex.Chain do
   @moduledoc """
-  High-level chain operations with automatic resource management.
+  High-level chain operations.
 
   Chains are containers for rules within a table. They can be either base chains
   (hooked directly into the kernel's netfilter framework) or regular chains
@@ -88,7 +88,7 @@ defmodule NFTex.Chain do
       })
 
       # 3. Add rules
-      :ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", <<192, 168, 1, 100>>)
+      :ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
 
   ## Querying Chains
 
@@ -122,10 +122,9 @@ defmodule NFTex.Chain do
   - `NFTex.Table` - Create tables to contain chains
   - `NFTex.Rule` - Add rules to chains
   - `NFTex.Query` - Query existing chains
-  - `NFTex.Kernel.Chain` - Low-level chain operations
   """
 
-  alias NFTex.Kernel
+  alias NFTex.{JSONPort, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type chain_type :: :filter | :nat | :route
@@ -205,18 +204,44 @@ defmodule NFTex.Chain do
   defp create_chain(pid, spec) do
     is_base_chain = Map.has_key?(spec, :hook)
 
-    # Allocate, configure, send to kernel, and cleanup
-    with {:ok, chain_id} <- Kernel.Chain.alloc(pid),
-         :ok <- Kernel.Chain.set_str(pid, chain_id, :table, spec.table),
-         :ok <- Kernel.Chain.set_str(pid, chain_id, :name, spec.name),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :family, family_to_int(spec.family)),
-         :ok <- maybe_set_base_chain_attrs(pid, chain_id, spec, is_base_chain),
-         :ok <- Kernel.Chain.send_to_kernel(pid, chain_id, :add),
-         :ok <- Kernel.Chain.free(pid, chain_id) do
-      :ok
-    else
-      {:error, _reason} = error ->
-        error
+    # Build chain options
+    opts =
+      if is_base_chain do
+        [
+          type: to_string(spec.type),
+          hook: to_string(spec.hook),
+          prio: spec.priority,
+          policy: to_string(spec.policy)
+        ]
+      else
+        []
+      end
+
+    # Build JSON command
+    cmd = JSONBuilder.add_chain(spec.family, spec.table, spec.name, opts)
+    json = Jason.encode!(cmd)
+
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -230,61 +255,33 @@ defmodule NFTex.Chain do
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
   def delete(pid, table, name, family) do
-    # Allocate, configure, send delete to kernel, and cleanup
-    with {:ok, chain_id} <- Kernel.Chain.alloc(pid),
-         :ok <- Kernel.Chain.set_str(pid, chain_id, :table, table),
-         :ok <- Kernel.Chain.set_str(pid, chain_id, :name, name),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :family, family_to_int(family)),
-         :ok <- Kernel.Chain.send_to_kernel(pid, chain_id, :delete),
-         :ok <- Kernel.Chain.free(pid, chain_id) do
-      :ok
-    else
-      {:error, _reason} = error ->
-        error
+    # Build JSON command
+    cmd = JSONBuilder.delete_chain(family, table, name)
+    json = Jason.encode!(cmd)
+
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
-
-  # Private helpers
-
-  defp family_to_int(:inet), do: 1
-  defp family_to_int(:ip), do: 2
-  defp family_to_int(:ip6), do: 10
-  defp family_to_int(:arp), do: 3
-  defp family_to_int(:bridge), do: 7
-  defp family_to_int(:netdev), do: 5
-
-  defp maybe_set_base_chain_attrs(pid, chain_id, spec, true) do
-    with :ok <- Kernel.Chain.set_str(pid, chain_id, :type, to_string(spec.type)),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :hooknum, hook_to_int(spec.hook)),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :prio, encode_priority(spec.priority)),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :policy, policy_to_int(spec.policy)) do
-      :ok
-    end
-  end
-
-  defp maybe_set_base_chain_attrs(_pid, _chain_id, _spec, false) do
-    # Regular chain, no additional attributes
-    :ok
-  end
-
-  defp hook_to_int(:prerouting), do: 0
-  defp hook_to_int(:input), do: 1
-  defp hook_to_int(:forward), do: 2
-  defp hook_to_int(:output), do: 3
-  defp hook_to_int(:postrouting), do: 4
-  defp hook_to_int(:ingress), do: 0
-
-  defp policy_to_int(:drop), do: 0
-  defp policy_to_int(:accept), do: 1
-
-  # Priority is a signed 32-bit integer, but we use set_u32
-  # For negative values, we need to convert to unsigned representation
-  defp encode_priority(prio) when prio < 0 do
-    # Convert negative to unsigned 32-bit representation
-    0x100000000 + prio
-  end
-
-  defp encode_priority(prio) when prio >= 0, do: prio
 
   @doc """
   List all chains for a given protocol family.
@@ -304,8 +301,8 @@ defmodule NFTex.Chain do
       {:ok, chains} = NFTex.Chain.list(pid)
       {:ok, chains} = NFTex.Chain.list(pid, family: :inet6)
 
-      for chain <- chains do
-        IO.puts("Chain: \#{chain.name} in table \#{chain.table}")
+      for c <- chains do
+        IO.puts("Chain: \#{c.name} in table \#{c.table}")
       end
 
   """
@@ -347,6 +344,9 @@ defmodule NFTex.Chain do
   @doc """
   Set the default policy for a base chain.
 
+  Note: This requires recreating the chain with the new policy.
+  In nftables, policy is set at chain creation time.
+
   ## Parameters
 
   - `pid` - NFTex process pid
@@ -356,7 +356,6 @@ defmodule NFTex.Chain do
   - `policy` - Policy (`:accept` or `:drop`)
 
   Note: Only base chains (chains with hooks) can have policies.
-  Regular chains will return an error.
 
   ## Example
 
@@ -365,20 +364,9 @@ defmodule NFTex.Chain do
   """
   @spec set_policy(pid(), String.t(), String.t(), family(), policy()) ::
           :ok | {:error, term()}
-  def set_policy(pid, table, name, family, policy) when policy in [:accept, :drop] do
-    policy_int = policy_to_int(policy)
-
-    with {:ok, chain_id} <- Kernel.Chain.alloc(pid),
-         :ok <- Kernel.Chain.set_str(pid, chain_id, :table, table),
-         :ok <- Kernel.Chain.set_str(pid, chain_id, :name, name),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :family, family_to_int(family)),
-         :ok <- Kernel.Chain.set_u32(pid, chain_id, :policy, policy_int),
-         :ok <- Kernel.Chain.send_to_kernel(pid, chain_id, :add),
-         :ok <- Kernel.Chain.free(pid, chain_id) do
-      :ok
-    else
-      {:error, _reason} = error ->
-        error
-    end
+  def set_policy(_pid, _table, _name, _family, policy) when policy in [:accept, :drop] do
+    # In the JSON API, policies are set at chain creation time
+    # To change a policy, you need to delete and recreate the chain
+    {:error, :policy_change_requires_recreation}
   end
 end

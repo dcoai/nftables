@@ -11,9 +11,8 @@ defmodule NFTex.SetOperationsTest do
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
   # the host's network connectivity. Never use production tables like "filter"!
 
-  # Note: Set operations require a test set to be created. Since this requires
-  # kernel operations to create sets, we'll test the API but the actual set
-  # creation would need to be done via NFTex.Kernel.Set or nft command.
+  # Note: Set operations require a test set to be created. Sets are now created
+  # using the JSON API via NFTex.Set.create/2.
 
   describe "add_elements/5" do
     setup do
@@ -27,15 +26,13 @@ defmodule NFTex.SetOperationsTest do
       Table.delete(pid, test_table, :inet)
       :ok = Table.create(pid, %{name: test_table, family: :inet})
 
-      # Create the set in the kernel
-      {:ok, set_id} = NFTex.Kernel.Set.alloc(pid)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :table, test_table)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :name, test_set)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :family, 1)  # NFPROTO_INET
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_type, 7)  # NFT_DATA_VALUE (IPv4 addr)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_len, 4)  # 4 bytes for IPv4
-      :ok = NFTex.Kernel.Set.send_to_kernel(pid, set_id, :add)
-      :ok = NFTex.Kernel.Set.free(pid, set_id)
+      # Create the set using new JSON API
+      :ok = Set.create(pid, %{
+        name: test_set,
+        table: test_table,
+        family: :inet,
+        key_type: :ipv4_addr
+      })
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -48,7 +45,7 @@ defmodule NFTex.SetOperationsTest do
     end
 
     test "adds single IP to set", %{pid: pid, table: table, set: set_name} do
-      ips = [<<192, 168, 88, 10>>]
+      ips = ["192.168.88.10"]
       result = Set.add_elements(pid, table, set_name, :inet, ips)
       # May fail if set doesn't exist, which is expected in isolated test
       assert result == :ok or match?({:error, _}, result)
@@ -57,9 +54,9 @@ defmodule NFTex.SetOperationsTest do
     @tag :requires_set
     test "adds multiple IPs to set", %{pid: pid, table: table, set: set_name} do
       ips = [
-        <<192, 168, 88, 20>>,
-        <<192, 168, 88, 21>>,
-        <<192, 168, 88, 22>>
+        "192.168.88.20",
+        "192.168.88.21",
+        "192.168.88.22"
       ]
       result = Set.add_elements(pid, table, set_name, :inet, ips)
       assert result == :ok
@@ -67,7 +64,7 @@ defmodule NFTex.SetOperationsTest do
 
     @tag :requires_set
     test "adding duplicate IP is idempotent", %{pid: pid, table: table, set: set_name} do
-      ip = <<192, 168, 88, 30>>
+      ip = "192.168.88.30"
 
       # Add once
       result1 = Set.add_elements(pid, table, set_name, :inet, [ip])
@@ -80,13 +77,13 @@ defmodule NFTex.SetOperationsTest do
     end
 
     test "returns error for non-existent set", %{pid: pid, table: table} do
-      ips = [<<192, 168, 88, 40>>]
+      ips = ["192.168.88.40"]
       result = Set.add_elements(pid, table, "nonexistent_set", :inet, ips)
       assert {:error, _reason} = result
     end
 
     test "returns error for non-existent table", %{pid: pid} do
-      ips = [<<192, 168, 88, 41>>]
+      ips = ["192.168.88.41"]
       result = Set.add_elements(pid, "nonexistent_table", "test_blocklist", :inet, ips)
       assert {:error, _reason} = result
     end
@@ -102,14 +99,12 @@ defmodule NFTex.SetOperationsTest do
       :ok = Table.create(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      {:ok, set_id} = NFTex.Kernel.Set.alloc(pid)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :table, test_table)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :name, test_set)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :family, 1)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_type, 7)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_len, 4)
-      :ok = NFTex.Kernel.Set.send_to_kernel(pid, set_id, :add)
-      :ok = NFTex.Kernel.Set.free(pid, set_id)
+      :ok = Set.create(pid, %{
+        name: test_set,
+        table: test_table,
+        family: :inet,
+        key_type: :ipv4_addr
+      })
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -123,7 +118,7 @@ defmodule NFTex.SetOperationsTest do
 
     @tag :requires_set
     test "deletes IP from set", %{pid: pid, table: table, set: set_name} do
-      ip = <<192, 168, 88, 50>>
+      ip = "192.168.88.50"
 
       # First add it
       :ok = Set.add_elements(pid, table, set_name, :inet, [ip])
@@ -136,8 +131,8 @@ defmodule NFTex.SetOperationsTest do
     @tag :requires_set
     test "deletes multiple IPs from set", %{pid: pid, table: table, set: set_name} do
       ips = [
-        <<192, 168, 88, 60>>,
-        <<192, 168, 88, 61>>
+        "192.168.88.60",
+        "192.168.88.61"
       ]
 
       # Add them
@@ -150,7 +145,7 @@ defmodule NFTex.SetOperationsTest do
 
     @tag :requires_set
     test "deleting non-existent IP succeeds or returns error", %{pid: pid, table: table, set: set_name} do
-      ip = <<192, 168, 88, 70>>
+      ip = "192.168.88.70"
       result = Set.delete_elements(pid, table, set_name, :inet, [ip])
       # Implementation dependent - might succeed (idempotent) or error
       assert result == :ok or match?({:error, _}, result)
@@ -167,14 +162,12 @@ defmodule NFTex.SetOperationsTest do
       :ok = Table.create(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      {:ok, set_id} = NFTex.Kernel.Set.alloc(pid)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :table, test_table)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :name, test_set)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :family, 1)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_type, 7)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_len, 4)
-      :ok = NFTex.Kernel.Set.send_to_kernel(pid, set_id, :add)
-      :ok = NFTex.Kernel.Set.free(pid, set_id)
+      :ok = Set.create(pid, %{
+        name: test_set,
+        table: test_table,
+        family: :inet,
+        key_type: :ipv4_addr
+      })
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -190,8 +183,8 @@ defmodule NFTex.SetOperationsTest do
     test "lists elements in set", %{pid: pid, table: table, set: set_name} do
       # Add some elements
       ips = [
-        <<192, 168, 88, 80>>,
-        <<192, 168, 88, 81>>
+        "192.168.88.80",
+        "192.168.88.81"
       ]
       :ok = Set.add_elements(pid, table, set_name, :inet, ips)
 
@@ -203,25 +196,25 @@ defmodule NFTex.SetOperationsTest do
       # Verify element structure
       for elem <- elements do
         assert is_map(elem)
-        # Should have either key_ip or key_hex
-        assert Map.has_key?(elem, :key_ip) or Map.has_key?(elem, :key_hex)
+        # Should have value key
+        assert Map.has_key?(elem, :value)
       end
     end
 
     @tag :requires_set
     test "element has readable IP format", %{pid: pid, table: table, set: set_name} do
-      ip = <<192, 168, 88, 90>>
+      ip = "192.168.88.90"
       :ok = Set.add_elements(pid, table, set_name, :inet, [ip])
 
       {:ok, elements} = Set.list_elements(pid, table, set_name)
 
       # Find our element
       our_elem = Enum.find(elements, fn e ->
-        Map.get(e, :key_ip) == "192.168.88.90"
+        Map.get(e, :value) == "192.168.88.90"
       end)
 
       if our_elem do
-        assert our_elem.key_ip == "192.168.88.90"
+        assert our_elem.value == "192.168.88.90"
       end
     end
 
@@ -242,14 +235,12 @@ defmodule NFTex.SetOperationsTest do
       :ok = Table.create(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      {:ok, set_id} = NFTex.Kernel.Set.alloc(pid)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :table, test_table)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :name, test_set)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :family, 1)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_type, 7)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_len, 4)
-      :ok = NFTex.Kernel.Set.send_to_kernel(pid, set_id, :add)
-      :ok = NFTex.Kernel.Set.free(pid, set_id)
+      :ok = Set.create(pid, %{
+        name: test_set,
+        table: test_table,
+        family: :inet,
+        key_type: :ipv4_addr
+      })
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -318,14 +309,12 @@ defmodule NFTex.SetOperationsTest do
       :ok = Table.create(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      {:ok, set_id} = NFTex.Kernel.Set.alloc(pid)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :table, test_table)
-      :ok = NFTex.Kernel.Set.set_str(pid, set_id, :name, test_set)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :family, 1)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_type, 7)
-      :ok = NFTex.Kernel.Set.set_u32(pid, set_id, :key_len, 4)
-      :ok = NFTex.Kernel.Set.send_to_kernel(pid, set_id, :add)
-      :ok = NFTex.Kernel.Set.free(pid, set_id)
+      :ok = Set.create(pid, %{
+        name: test_set,
+        table: test_table,
+        family: :inet,
+        key_type: :ipv4_addr
+      })
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -341,9 +330,9 @@ defmodule NFTex.SetOperationsTest do
     test "complete workflow: add, list, delete, verify", %{pid: pid, table: table, set: set_name} do
       # Add elements
       ips = [
-        <<192, 168, 88, 100>>,
-        <<192, 168, 88, 101>>,
-        <<192, 168, 88, 102>>
+        "192.168.88.100",
+        "192.168.88.101",
+        "192.168.88.102"
       ]
       :ok = Set.add_elements(pid, table, set_name, :inet, ips)
 
@@ -364,7 +353,7 @@ defmodule NFTex.SetOperationsTest do
     @tag :requires_set
     test "batch operations are efficient", %{pid: pid, table: table, set: set_name} do
       # Generate 50 IPs
-      ips = for i <- 1..50, do: <<192, 168, 77, i>>
+      ips = for i <- 1..50, do: "192.168.77.#{i}"
 
       # Add them all at once
       start_time = System.monotonic_time(:millisecond)

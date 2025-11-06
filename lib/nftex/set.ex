@@ -3,47 +3,36 @@ defmodule NFTex.Set do
   High-level set operations for nftables.
 
   Sets allow efficient matching against multiple values (IP addresses, ports, etc.).
-  This module provides simplified access for common set operations.
-
-  For advanced features (maps, concatenated sets, interval sets), use
-  `NFTex.Kernel.Set` and `NFTex.Kernel.SetElement`.
 
   ## Quick Start
 
       # Start NFTex
       {:ok, pid} = NFTex.start_link()
 
-      # Create a set (currently requires low-level API)
-      {:ok, set_id} = NFTex.Port.call(pid, {:set_alloc})
-      :ok = NFTex.Port.call(pid, {:set_set_str, set_id, :name, "blocklist"})
-      :ok = NFTex.Port.call(pid, {:set_set_str, set_id, :table, "filter"})
-      :ok = NFTex.Port.call(pid, {:set_set_u32, set_id, :family, 2})  # inet
-      :ok = NFTex.Port.call(pid, {:set_set_u32, set_id, :key_len, 4})  # IPv4
-      :ok = NFTex.Port.call(pid, {:set_send_to_kernel, set_id, :add})
-      NFTex.Port.call(pid, {:set_free, set_id})
+      # Create table first
+      :ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
+
+      # Create a set
+      :ok = NFTex.Set.create(pid, %{
+        name: "blocklist",
+        table: "filter",
+        family: :inet,
+        key_type: :ipv4_addr
+      })
 
       # Add IP addresses to blocklist
-      ips = [<<192, 168, 1, 100>>, <<10, 0, 0, 50>>]
+      ips = ["192.168.1.100", "10.0.0.50"]
       :ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ips)
 
       # List blocked IPs
       {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
-      for elem <- elements, do: IO.puts(elem.key_ip)
 
       # Remove an IP
-      :ok = NFTex.Set.delete_elements(pid, "filter", "blocklist", :inet, [<<192, 168, 1, 100>>])
-
-  ## Working Examples
-
-  See the `examples/` directory for complete, runnable examples:
-  - `examples/ip_blocklist.exs` - Dynamic IP blocklist management
-  - `examples/query_tables.exs` - Querying nftables configuration
-
-  Run them with: `mix run examples/ip_blocklist.exs`
+      :ok = NFTex.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.100"])
 
   """
 
-  alias NFTex.Kernel
+  alias NFTex.{JSONPort, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type key_type :: :ipv4_addr | :ipv6_addr | :ether_addr | :inet_protocol | :inet_service
@@ -51,12 +40,11 @@ defmodule NFTex.Set do
           name: String.t(),
           table: String.t(),
           family: family(),
-          key_type: key_type(),
-          elements: [binary()]
+          key_type: key_type()
         }
 
   @doc """
-  Create a set with elements.
+  Create a set.
 
   ## Parameters
 
@@ -64,15 +52,14 @@ defmodule NFTex.Set do
   - `table` - Table name (required)
   - `family` - Protocol family (required)
   - `key_type` - Key data type (required)
-  - `elements` - List of element keys as binaries (required)
 
   ## Key Types
 
-  - `:ipv4_addr` - IPv4 address (4 bytes)
-  - `:ipv6_addr` - IPv6 address (16 bytes)
-  - `:ether_addr` - Ethernet MAC address (6 bytes)
-  - `:inet_protocol` - IP protocol number (1 byte)
-  - `:inet_service` - Port number (2 bytes)
+  - `:ipv4_addr` - IPv4 address
+  - `:ipv6_addr` - IPv6 address
+  - `:ether_addr` - Ethernet MAC address
+  - `:inet_protocol` - IP protocol number
+  - `:inet_service` - Port number
 
   ## Example
 
@@ -80,28 +67,37 @@ defmodule NFTex.Set do
         name: "banned_ips",
         table: "filter",
         family: :inet,
-        key_type: :ipv4_addr,
-        elements: [
-          <<192, 168, 1, 100>>,
-          <<192, 168, 1, 101>>
-        ]
+        key_type: :ipv4_addr
       })
 
   """
   @spec create(pid(), set_spec()) :: :ok | {:error, term()}
-  def create(pid, %{name: name, table: table, family: family, key_type: key_type, elements: elements}) do
-    {key_type_int, key_len} = key_type_to_int_and_len(key_type)
+  def create(pid, %{name: name, table: table, family: family, key_type: key_type}) do
+    # Build JSON command
+    cmd = JSONBuilder.add_set(family, table, name, type: key_type_to_string(key_type))
+    json = Jason.encode!(cmd)
 
-    with {:ok, set_id} <- Kernel.Set.alloc(pid),
-         :ok <- Kernel.Set.set_str(pid, set_id, :name, name),
-         :ok <- Kernel.Set.set_str(pid, set_id, :table, table),
-         :ok <- Kernel.Set.set_u32(pid, set_id, :family, family_to_int(family)),
-         :ok <- Kernel.Set.set_u32(pid, set_id, :key_type, key_type_int),
-         :ok <- Kernel.Set.set_u32(pid, set_id, :key_len, key_len),
-         :ok <- add_elements(pid, set_id, elements),
-         # TODO: Send to kernel via netlink
-         :ok <- Kernel.Set.free(pid, set_id) do
-      :ok
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -115,58 +111,80 @@ defmodule NFTex.Set do
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
   def delete(pid, table, name, family) do
-    # Allocate, configure, send delete to kernel, and cleanup
-    with {:ok, set_id} <- Kernel.Set.alloc(pid),
-         :ok <- Kernel.Set.set_str(pid, set_id, :name, name),
-         :ok <- Kernel.Set.set_str(pid, set_id, :table, table),
-         :ok <- Kernel.Set.set_u32(pid, set_id, :family, family_to_int(family)),
-         :ok <- Kernel.Set.send_to_kernel(pid, set_id, :delete),
-         :ok <- Kernel.Set.free(pid, set_id) do
-      :ok
-    else
-      {:error, _reason} = error ->
-        error
+    # Build JSON command
+    cmd = JSONBuilder.delete_set(family, table, name)
+    json = Jason.encode!(cmd)
+
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @doc """
   Add elements to an existing set.
 
+  Elements should be strings in the appropriate format for the key type:
+  - IPv4: "192.168.1.100"
+  - IPv6: "2001:db8::1"
+  - MAC: "aa:bb:cc:dd:ee:ff"
+  - Protocol: "tcp" or number
+  - Port: "80" or number
+
   ## Example
 
       NFTex.Set.add_elements(pid, "filter", "banned_ips", :inet, [
-        <<192, 168, 1, 200>>
+        "192.168.1.200",
+        "10.0.0.50"
       ])
 
   """
-  @spec add_elements(pid(), String.t(), String.t(), family(), [binary()]) ::
+  @spec add_elements(pid(), String.t(), String.t(), family(), [String.t()]) ::
           :ok | {:error, term()}
   def add_elements(pid, table, name, family, elements) when is_list(elements) do
-    family_int = family_to_int(family)
-    timeout = 5000
+    # Build JSON command
+    cmd = JSONBuilder.add_element(family, table, name, elements)
+    json = Jason.encode!(cmd)
 
-    with {:ok, set_id} <- NFTex.Port.call(pid, {:set_alloc}, timeout),
-         :ok <- NFTex.Port.call(pid, {:set_set_str, set_id, :name, name}, timeout),
-         :ok <- NFTex.Port.call(pid, {:set_set_str, set_id, :table, table}, timeout) do
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
 
-      # Add all elements
-      elem_result = Enum.reduce_while(elements, :ok, fn key, :ok ->
-        with {:ok, elem_id} <- NFTex.Port.call(pid, {:set_elem_alloc}, timeout),
-             :ok <- NFTex.Port.call(pid, {:set_elem_set_data, elem_id, :key, key}, timeout),
-             :ok <- NFTex.Port.call(pid, {:set_elem_add, set_id, elem_id}, timeout) do
-          {:cont, :ok}
-        else
-          error -> {:halt, error}
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
         end
-      end)
 
-      case elem_result do
-        :ok ->
-          NFTex.Port.call(pid, {:set_elem_send_to_kernel, set_id, :add, family_int}, timeout)
-
-        error ->
-          error
-      end
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -176,14 +194,39 @@ defmodule NFTex.Set do
   ## Example
 
       NFTex.Set.delete_elements(pid, "filter", "banned_ips", :inet, [
-        <<192, 168, 1, 100>>
+        "192.168.1.100"
       ])
 
   """
-  @spec delete_elements(pid(), String.t(), String.t(), family(), [binary()]) ::
+  @spec delete_elements(pid(), String.t(), String.t(), family(), [String.t()]) ::
           :ok | {:error, term()}
   def delete_elements(pid, table, name, family, elements) when is_list(elements) do
-    NFTex.Query.delete_set_elements(pid, table, name, elements, family: family)
+    # Build JSON command
+    cmd = JSONBuilder.delete_element(family, table, name, elements)
+    json = Jason.encode!(cmd)
+
+    # Send to port
+    case JSONPort.call(pid, json) do
+      {:ok, ""} ->
+        # Empty response means success
+        :ok
+
+      {:ok, response_json} ->
+        # Parse response to check for errors
+        case Jason.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -202,8 +245,8 @@ defmodule NFTex.Set do
       {:ok, sets} = NFTex.Set.list(pid)
       {:ok, sets} = NFTex.Set.list(pid, family: :inet6)
 
-      for set <- sets do
-        IO.puts("Set: \#{set.name} in table \#{set.table}")
+      for s <- sets do
+        IO.puts("Set: \#{s.name} in table \#{s.table}")
       end
 
   """
@@ -229,8 +272,8 @@ defmodule NFTex.Set do
 
       {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "banned_ips")
 
-      for elem <- elements do
-        IO.puts("IP: \#{elem.key_ip}")
+      for el <- elements do
+        IO.puts("Element: \#{inspect(el)}")
       end
 
   """
@@ -271,27 +314,9 @@ defmodule NFTex.Set do
 
   # Private helpers
 
-  defp family_to_int(:inet), do: 1
-  defp family_to_int(:ip), do: 2
-  defp family_to_int(:ip6), do: 10
-  defp family_to_int(:arp), do: 3
-  defp family_to_int(:bridge), do: 7
-  defp family_to_int(:netdev), do: 5
-
-  defp key_type_to_int_and_len(:ipv4_addr), do: {7, 4}
-  defp key_type_to_int_and_len(:ipv6_addr), do: {8, 16}
-  defp key_type_to_int_and_len(:ether_addr), do: {9, 6}
-  defp key_type_to_int_and_len(:inet_protocol), do: {12, 1}
-  defp key_type_to_int_and_len(:inet_service), do: {13, 2}
-
-  defp add_elements(_pid, _set_id, []), do: :ok
-
-  defp add_elements(pid, set_id, [element | rest]) do
-    with {:ok, elem_id} <- Kernel.SetElement.alloc(pid),
-         :ok <- Kernel.SetElement.set_data(pid, elem_id, :key, element),
-         :ok <- Kernel.SetElement.add(pid, set_id, elem_id) do
-      # Element now owned by set, continue with rest
-      add_elements(pid, set_id, rest)
-    end
-  end
+  defp key_type_to_string(:ipv4_addr), do: "ipv4_addr"
+  defp key_type_to_string(:ipv6_addr), do: "ipv6_addr"
+  defp key_type_to_string(:ether_addr), do: "ether_addr"
+  defp key_type_to_string(:inet_protocol), do: "inet_proto"
+  defp key_type_to_string(:inet_service), do: "inet_service"
 end

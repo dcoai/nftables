@@ -15,7 +15,9 @@ defmodule NFTex.QueryTest do
   describe "list_tables/2" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
+      on_exit(fn ->
+        if Process.alive?(pid), do: NFTex.stop(pid)
+      end)
       {:ok, pid: pid}
     end
 
@@ -49,7 +51,9 @@ defmodule NFTex.QueryTest do
   describe "list_chains/2" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
+      on_exit(fn ->
+        if Process.alive?(pid), do: NFTex.stop(pid)
+      end)
       {:ok, pid: pid}
     end
 
@@ -87,7 +91,9 @@ defmodule NFTex.QueryTest do
   describe "list_rules/2" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
+      on_exit(fn ->
+        if Process.alive?(pid), do: NFTex.stop(pid)
+      end)
       {:ok, pid: pid}
     end
 
@@ -123,7 +129,9 @@ defmodule NFTex.QueryTest do
   describe "list_sets/2" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
+      on_exit(fn ->
+        if Process.alive?(pid), do: NFTex.stop(pid)
+      end)
       {:ok, pid: pid}
     end
 
@@ -155,7 +163,9 @@ defmodule NFTex.QueryTest do
   describe "list_set_elements/3" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
+      on_exit(fn ->
+        if Process.alive?(pid), do: NFTex.stop(pid)
+      end)
       {:ok, pid: pid}
     end
 
@@ -184,15 +194,17 @@ defmodule NFTex.QueryTest do
 
     test "returns error for non-existent set", %{pid: pid} do
       result = Query.list_set_elements(pid, "nonexistent_table", "nonexistent_set")
-      # Should either return empty list or error depending on implementation
-      assert {:ok, _elements} = result or match?({:error, _}, result)
+      # Should return error for non-existent set
+      assert match?({:error, _}, result)
     end
   end
 
   describe "integration test" do
     setup do
       {:ok, pid} = NFTex.start_link()
-      on_exit(fn -> NFTex.stop(pid) end)
+      on_exit(fn ->
+        if Process.alive?(pid), do: NFTex.stop(pid)
+      end)
       {:ok, pid: pid}
     end
 

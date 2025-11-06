@@ -26,6 +26,7 @@ defmodule NFTex.PolicyTest do
     on_exit(fn ->
       if Process.alive?(pid) do
         TestHelpers.cleanup_test_table(pid, test_table, :inet)
+        NFTex.stop(pid)
       end
     end)
 

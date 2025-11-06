@@ -25,6 +25,7 @@ defmodule NFTex.IntegrationTest do
         TestHelpers.cleanup_test_table(pid, test_table, :inet)
         TestHelpers.cleanup_test_table(pid, filter_test_table, :inet)
         TestHelpers.cleanup_test_table(pid, nat_test_table, :inet)
+        NFTex.stop(pid)
       end
     end)
 

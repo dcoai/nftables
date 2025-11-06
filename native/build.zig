@@ -36,4 +36,21 @@ pub fn build(b: *std.Build) void {
     exe.linkLibC();
 
     b.installArtifact(exe);
+
+    // Create JSON port executable (uses libnftables instead of libnftnl)
+    const json_exe = b.addExecutable(.{
+        .name = "libnf_json",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/json_port.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    // JSON port only needs libnftables and cap (no Erlang, no libnftnl/mnl)
+    json_exe.root_module.linkSystemLibrary("nftables", .{});
+    json_exe.root_module.linkSystemLibrary("cap", .{});
+    json_exe.linkLibC();
+
+    b.installArtifact(json_exe);
 }

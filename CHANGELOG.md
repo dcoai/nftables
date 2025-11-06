@@ -7,14 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### In Progress
+- CI/CD pipeline configuration
+- Performance benchmarking
+
+## [0.4.0] - 2025-11-05
+
+### Changed - BREAKING CHANGES
+
+**Major Architecture Migration: ETF/libnftnl → JSON/libnftables**
+
+This release represents a complete rewrite of the underlying nftables communication layer, moving from manual netlink message construction to the official libnftables API.
+
+#### Migration to JSON/libnftables API
+
+- **Complete replacement of ETF/libnftnl backend** with official libnftables JSON API
+- **Hybrid approach**: JSON for data operations (tables/chains/sets), nft syntax for rules
+- **45% code reduction** (5000 → 2757 lines)
+- **80% native code reduction** (2000+ → 400 lines)
+- **Rule module simplified by 55%** (580 → 264 lines)
+
+#### Breaking API Changes
+
+1. **IP addresses now use string format instead of binaries**
+   ```elixir
+   # v0.3.0 (old)
+   NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, [<<192, 168, 1, 100>>])
+
+   # v0.4.0 (new)
+   NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.100"])
+   ```
+
+2. **Rules use nft syntax strings instead of expression builders**
+   ```elixir
+   # v0.3.0 (old)
+   {:ok, payload_id} = Expr.payload_ipv4_saddr(pid, 1)
+   {:ok, cmp_id} = Expr.cmp_eq(pid, 1, ip)
+
+   # v0.4.0 (new)
+   "ip saddr 192.168.1.100 drop"  # Simple nft syntax
+   ```
+
+3. **No resource ID management required**
+   ```elixir
+   # v0.3.0 (old)
+   {:ok, table_id} <- Kernel.Table.alloc(pid)
+   :ok <- Kernel.Table.set_str(pid, table_id, :name, name)
+   :ok <- Kernel.Table.send_to_kernel(pid, table_id, :add)
+   :ok <- Kernel.Table.free(pid, table_id)
+
+   # v0.4.0 (new)
+   NFTex.Table.create(pid, %{name: name, family: :inet})
+   ```
+
 ### Added
-- Comprehensive test suite for Phase 3 modules (80+ new tests)
-  - NFTex.Chain tests (30+ test cases)
-  - NFTex.RuleBuilder tests (35+ test cases)
-  - NFTex.Policy tests (25+ test cases)
-  - Integration tests for real-world scenarios (15+ test cases)
-- Security audit and hardening (in progress)
-- CI/CD pipeline configuration (pending)
+
+- **NFTex.JSONPort** - GenServer wrapper for libnftables API (220 lines)
+- **NFTex.JSONBuilder** - Builds JSON commands for tables/chains/sets (387 lines)
+- **Hybrid architecture** - JSON for structured data, nft syntax for complex rules
+- **Better error messages** - Directly from libnftables instead of custom parsing
+- **Comprehensive test suite** - 182 tests with 100% pass rate
+
+### Fixed
+
+- **Set creation now works correctly** - Primary motivation for migration
+- **More reliable operations** - Official API handles edge cases
+- **Better nftables version compatibility** - No manual netlink message construction
+- **Test suite** - All 182 tests passing (100% success rate)
+
+### Removed - BREAKING CHANGES
+
+- **NFTex.Port** - Replaced by NFTex.JSONPort
+- **NFTex.ExpressionBuilder** - No longer needed (use nft syntax)
+- **All NFTex.Kernel.*** modules** - No longer needed with JSON API
+
+**Note:** High-level API (Table, Chain, Rule, Set, Policy, RuleBuilder) remains mostly compatible. Only low-level changes and IP format changes required.
+
+### Performance
+
+- Simpler codebase with less overhead
+- Fewer allocations in native code
+- Direct API calls instead of manual message construction
+
+### Migration Guide
+
+See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for detailed migration instructions from v0.3.0 to v0.4.0.
 
 ## [0.3.0] - 2025-11-05
 
@@ -168,7 +245,8 @@ Six production-ready example scripts demonstrating real-world firewall configura
 - Automatic resource cleanup
 - Type-safe Elixir interface
 
-[Unreleased]: https://github.com/yourusername/nftex/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/yourusername/nftex/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/yourusername/nftex/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yourusername/nftex/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yourusername/nftex/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/yourusername/nftex/releases/tag/v0.1.0
