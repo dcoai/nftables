@@ -365,6 +365,45 @@ defmodule NFTex.JSONBuilder do
     nftables([%{"list" => %{"set" => set_spec}}])
   end
 
+  ## Sysctl Operations
+
+  @doc """
+  Build a "get sysctl" command.
+
+  ## Example
+
+      NFTex.JSONBuilder.sysctl_get("net.ipv4.ip_forward")
+      #=> "{\"sysctl\":{\"operation\":\"get\",\"parameter\":\"net.ipv4.ip_forward\"}}"
+  """
+  @spec sysctl_get(String.t()) :: String.t()
+  def sysctl_get(parameter) when is_binary(parameter) do
+    Jason.encode!(%{
+      "sysctl" => %{
+        "operation" => "get",
+        "parameter" => parameter
+      }
+    })
+  end
+
+  @doc """
+  Build a "set sysctl" command.
+
+  ## Example
+
+      NFTex.JSONBuilder.sysctl_set("net.ipv4.ip_forward", "1")
+      #=> "{\"sysctl\":{\"operation\":\"set\",\"parameter\":\"net.ipv4.ip_forward\",\"value\":\"1\"}}"
+  """
+  @spec sysctl_set(String.t(), String.t()) :: String.t()
+  def sysctl_set(parameter, value) when is_binary(parameter) and is_binary(value) do
+    Jason.encode!(%{
+      "sysctl" => %{
+        "operation" => "set",
+        "parameter" => parameter,
+        "value" => value
+      }
+    })
+  end
+
   ## Private Helpers
 
   # Wrap commands in nftables root object

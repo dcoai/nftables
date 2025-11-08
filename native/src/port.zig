@@ -1,6 +1,48 @@
 const std = @import("std");
 const libnftables = @import("libnftables.zig");
 const capabilities = @import("capabilities.zig");
+const sysctl = @import("sysctl.zig");
+
+/// Check if JSON message is a sysctl operation (vs nftables operation)
+/// Returns true if message contains {"sysctl": ...}
+fn isSysctlMessage(json: []const u8) bool {
+    // Simple check: look for "sysctl" key in JSON
+    // This is a lightweight check before full JSON parsing
+    return std.mem.indexOf(u8, json, "\"sysctl\"") != null;
+}
+
+/// Parse and handle sysctl JSON message
+/// Expected format: {"sysctl": {"operation": "get|set", "parameter": "...", "value": "..."}}
+fn handleSysctlMessage(allocator: std.mem.Allocator, json: []const u8) ![]const u8 {
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        allocator,
+        json,
+        .{}
+    );
+    defer parsed.deinit();
+
+    const root = parsed.value.object;
+    const sysctl_obj = root.get("sysctl") orelse return error.MissingSysctlKey;
+
+    if (sysctl_obj != .object) return error.InvalidSysctlFormat;
+
+    const operation_value = sysctl_obj.object.get("operation") orelse return error.MissingOperation;
+    const param_value = sysctl_obj.object.get("parameter") orelse return error.MissingParameter;
+
+    if (operation_value != .string) return error.InvalidOperation;
+    if (param_value != .string) return error.InvalidParameter;
+
+    const operation = operation_value.string;
+    const parameter = param_value.string;
+
+    const value = if (sysctl_obj.object.get("value")) |v|
+        if (v == .string) v.string else null
+    else
+        null;
+
+    return try sysctl.handleSysctlOperation(allocator, operation, parameter, value);
+}
 
 /// Security check: Verify that the executable has restricted permissions.
 /// For security, the executable must NOT have world-readable, world-writable,
@@ -136,39 +178,60 @@ pub fn main() !void {
         };
         defer allocator.free(json_cmd);
 
-        // Null-terminate for C string (libnftables expects null-terminated strings)
-        const json_cmd_z = try allocator.dupeZ(u8, json_cmd);
-        defer allocator.free(json_cmd_z);
-
-        // Execute command via libnftables
-        const result = libnftables.runCmdFromBuffer(ctx, json_cmd_z.ptr);
-
-        // Get output or error buffer
-        const response_json = if (result == 0) blk: {
-            // Success - get output buffer
-            if (libnftables.ctxGetOutputBuffer(ctx)) |buf| {
-                break :blk std.mem.span(buf);
-            } else {
-                // No output (e.g., for add/delete commands with no echo)
-                break :blk "";
-            }
+        // Detect message type and route accordingly
+        const response_json = if (isSysctlMessage(json_cmd)) blk: {
+            // Handle sysctl operation
+            const result = handleSysctlMessage(allocator, json_cmd) catch |err| {
+                const error_msg = try std.fmt.allocPrint(allocator,
+                    "{{\"error\": \"Sysctl operation failed: {}\"}}",
+                    .{err}
+                );
+                break :blk error_msg;
+            };
+            break :blk result;
         } else blk: {
-            // Error - get error buffer
-            if (libnftables.ctxGetErrorBuffer(ctx)) |buf| {
-                break :blk std.mem.span(buf);
-            } else {
-                // No error message available
-                break :blk "{\"error\": {\"code\": -1, \"message\": \"Unknown error\"}}";
-            }
+            // Handle nftables operation (existing code)
+            // Null-terminate for C string (libnftables expects null-terminated strings)
+            const json_cmd_z = try allocator.dupeZ(u8, json_cmd);
+            defer allocator.free(json_cmd_z);
+
+            // Execute command via libnftables
+            const result = libnftables.runCmdFromBuffer(ctx, json_cmd_z.ptr);
+
+            // Get output or error buffer
+            const nft_response = if (result == 0) response_blk: {
+                // Success - get output buffer
+                if (libnftables.ctxGetOutputBuffer(ctx)) |buf| {
+                    break :response_blk std.mem.span(buf);
+                } else {
+                    // No output (e.g., for add/delete commands with no echo)
+                    break :response_blk "";
+                }
+            } else response_blk: {
+                // Error - get error buffer
+                if (libnftables.ctxGetErrorBuffer(ctx)) |buf| {
+                    break :response_blk std.mem.span(buf);
+                } else {
+                    // No error message available
+                    break :response_blk "{\"error\": {\"code\": -1, \"message\": \"Unknown error\"}}";
+                }
+            };
+
+            // Clear buffers for next iteration
+            _ = libnftables.ctxUnbufferOutput(ctx);
+            _ = libnftables.ctxUnbufferError(ctx);
+            _ = libnftables.ctxBufferOutput(ctx);
+            _ = libnftables.ctxBufferError(ctx);
+
+            break :blk nft_response;
         };
 
         // Send JSON response back to Elixir
         try writePacket(stdout_file, response_json);
 
-        // Clear buffers for next iteration
-        _ = libnftables.ctxUnbufferOutput(ctx);
-        _ = libnftables.ctxUnbufferError(ctx);
-        _ = libnftables.ctxBufferOutput(ctx);
-        _ = libnftables.ctxBufferError(ctx);
+        // Free sysctl response if allocated
+        if (isSysctlMessage(json_cmd)) {
+            allocator.free(response_json);
+        }
     }
 }
