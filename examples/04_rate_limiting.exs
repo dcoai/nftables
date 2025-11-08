@@ -9,15 +9,14 @@
 # - Burst handling
 # - DDoS mitigation patterns
 #
-# **Format**: This example uses ETF format (Elixir maps/terms) with UnifiedPort.
-# See ip_blocklist.exs for JSN: format (JSON strings) demonstration.
+# **Format**: This example uses JSON format for communication with libnftables.
 #
 # Usage:
 #   mix run examples/04_rate_limiting.exs
 #
 # Requirements:
 #   - Root privileges (CAP_NET_ADMIN)
-#   - Run: sudo setcap cap_net_admin=ep priv/libnf_unified
+#   - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 
 Mix.install([{:nftex, path: "."}])
 
@@ -45,9 +44,9 @@ defmodule RateLimiting do
   end
 
   defp setup_rate_limiting do
-    # Use UnifiedPort with ETF format (Elixir maps/terms)
-    {:ok, pid} = NFTex.start_link(port: NFTex.UnifiedPort)
-    IO.puts("✓ NFTex started (UnifiedPort with ETF format)")
+    # Use JSON-based port (Elixir maps/terms)
+    {:ok, pid} = NFTex.start_link()
+    IO.puts("✓ NFTex started (JSON-based port)")
 
     # Clean existing filter table
     case Table.delete(pid, "filter", :inet) do

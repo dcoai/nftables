@@ -17,7 +17,7 @@ defmodule NFTex.JSONBuilder do
       json = Jason.encode!(cmd)
 
       # Send to port
-      {:ok, response_json} = NFTex.JSONPort.call(pid, json)
+      {:ok, response_json} = NFTex.Port.call(pid, json)
 
   ## Reference
 

@@ -28,7 +28,7 @@ defmodule NFTex.Rule do
 
   """
 
-  alias NFTex.JSONPort
+  alias NFTex.Port
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
 
@@ -68,7 +68,7 @@ defmodule NFTex.Rule do
     nft_command = "add rule #{family} #{table} #{chain} #{expr}"
 
     # Send raw nft command to port
-    case JSONPort.call(pid, nft_command) do
+    case Port.call(pid, nft_command) do
       {:ok, ""} ->
         # Empty response means success
         :ok
@@ -100,7 +100,7 @@ defmodule NFTex.Rule do
     nft_command = "delete rule #{family} #{table} #{chain} handle #{handle}"
 
     # Send raw nft command to port
-    case JSONPort.call(pid, nft_command) do
+    case Port.call(pid, nft_command) do
       {:ok, ""} ->
         # Empty response means success
         :ok

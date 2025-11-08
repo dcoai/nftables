@@ -20,15 +20,11 @@ const PR_SET_DUMPABLE: c_int = 4;
 /// This function verifies that CAP_NET_ADMIN is available
 /// (should be inherited from file capabilities set via setcap)
 pub fn setup() !void {
-    std.log.info("Setting up capabilities (CAP_NET_ADMIN)", .{});
-
     // Check if we already have CAP_NET_ADMIN (from file capabilities)
-    if (hasNetAdmin()) {
-        std.log.info("CAP_NET_ADMIN capability is active", .{});
-    } else {
+    if (!hasNetAdmin()) {
         std.log.warn("CAP_NET_ADMIN capability is not active", .{});
         std.log.warn("Note: Netlink operations requiring CAP_NET_ADMIN will fail", .{});
-        std.log.warn("Hint: Run 'sudo setcap cap_net_admin=ep path/to/libnf_ex' to grant capability", .{});
+        std.log.warn("Hint: Run 'sudo setcap cap_net_admin=ep priv/port_nftables' to grant capability", .{});
     }
 
     // Set PR_SET_NO_NEW_PRIVS to prevent gaining additional privileges
@@ -40,14 +36,10 @@ pub fn setup() !void {
     if (c.prctl(PR_SET_DUMPABLE, @as(c_ulong, 0), @as(c_ulong, 0), @as(c_ulong, 0), @as(c_ulong, 0)) != 0) {
         std.log.warn("Failed to set PR_SET_DUMPABLE (non-fatal)", .{});
     }
-
-    std.log.info("Capabilities configured successfully with CAP_NET_ADMIN", .{});
 }
 
 /// Drop all capabilities on shutdown
 pub fn teardown() void {
-    std.log.info("Tearing down capabilities", .{});
-
     // Get current capabilities
     const caps = c.cap_get_proc();
     if (caps == null) {
@@ -67,8 +59,6 @@ pub fn teardown() void {
         std.log.warn("Failed to apply cleared capabilities during teardown", .{});
         return;
     }
-
-    std.log.info("All capabilities dropped", .{});
 }
 
 /// Check if the process has CAP_NET_ADMIN capability

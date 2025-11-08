@@ -14,12 +14,9 @@ defmodule Mix.Tasks.Compile.Zig do
     config = Mix.Project.config()
     app = config[:app]
 
-    # We now build multiple binaries
+    # Build only the unified JSON port
     binaries = [
-      {"native/zig-out/bin/libnf_ex", "priv/libnf_ex"},
-      {"native/zig-out/bin/libnf_json", "priv/libnf_json"},
-      {"native/zig-out/bin/libnf_etf", "priv/libnf_etf"},
-      {"native/zig-out/bin/libnf_unified", "priv/libnf_unified"}
+      {"native/zig-out/bin/port_nftables", "priv/port_nftables"}
     ]
 
     # Check if compilation is needed for any binary
@@ -79,7 +76,7 @@ defmodule Mix.Tasks.Compile.Zig do
     end
   end
 
-  defp needs_compilation?(source, dest) do
+  defp needs_compilation?(_source, dest) do
     # If destination doesn't exist, we need to compile
     if not File.exists?(dest) do
       true
@@ -133,10 +130,7 @@ defmodule Mix.Tasks.Compile.Zig do
     Mix.shell().info("Cleaning Zig build artifacts...")
     File.rm_rf("native/zig-cache")
     File.rm_rf("native/zig-out")
-    File.rm_rf("priv/libnf_ex")
-    File.rm_rf("priv/libnf_json")
-    File.rm_rf("priv/libnf_etf")
-    File.rm_rf("priv/libnf_unified")
+    File.rm_rf("priv/port_nftables")
     :ok
   end
 end

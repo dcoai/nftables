@@ -64,7 +64,7 @@ defmodule NFTex.Table do
   - `NFTex.Query` - Query existing tables and configuration
   """
 
-  alias NFTex.{JSONPort, JSONBuilder}
+  alias NFTex.{Port, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type table_spec :: %{
@@ -104,7 +104,7 @@ defmodule NFTex.Table do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
@@ -144,7 +144,7 @@ defmodule NFTex.Table do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok

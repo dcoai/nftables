@@ -32,10 +32,10 @@ defmodule NFTex do
         elements: []
       })
 
-      # Add IPs to the blocklist
+      # Add IPs to the blocklist (string format)
       NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, [
-        <<192, 168, 1, 100>>,
-        <<10, 0, 0, 50>>
+        "192.168.1.100",
+        "10.0.0.50"
       ])
 
       # Add a rule to drop blocklisted IPs
@@ -58,15 +58,15 @@ defmodule NFTex do
 
   ### Low-Level APIs
 
-  - `NFTex.JSONPort` - Direct port communication
+  - `NFTex.Port` - JSON-based port communication
   - `NFTex.JSONBuilder` - Build raw nftables JSON commands
 
   ## Architecture
 
   NFTex uses a port-based architecture for fault isolation and security:
 
-  - The Zig port process (`priv/libnf_json`) runs with CAP_NET_ADMIN capability
-  - Communication uses JSON over packet-length-prefixed protocol
+  - The Zig port process runs with CAP_NET_ADMIN capability
+  - Port binary: `priv/port_nftables` - JSON-only communication
   - All operations go through `libnftables` library (same as `nft` command)
   - No manual netlink message construction
 
@@ -76,7 +76,7 @@ defmodule NFTex do
   See: https://wiki.nftables.org/wiki-nftables/index.php/JSON_API
 
   For advanced use cases, you can use `NFTex.JSONBuilder` to construct custom
-  JSON commands and send them via `NFTex.JSONPort.call/2`.
+  JSON commands and send them via the port.
 
   ## Migration from v0.3.x
 
@@ -91,12 +91,12 @@ defmodule NFTex do
   module documentation for each API (Table, Chain, Set, Rule) for details.
   """
 
-  alias NFTex.JSONPort
+  alias NFTex.Port
 
   @type nft_family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
 
   @doc """
-  Starts the NFTex JSON port process.
+  Starts the NFTex port process.
 
   ## Options
 
@@ -105,7 +105,7 @@ defmodule NFTex do
 
   ## Examples
 
-      # Default behavior - checks capabilities
+      # Default behavior
       {:ok, pid} = NFTex.start_link()
 
       # Skip capability check (not recommended for production)
@@ -117,7 +117,7 @@ defmodule NFTex do
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
-    JSONPort.start_link(opts)
+    Port.start_link(opts)
   end
 
   @doc """
@@ -133,6 +133,6 @@ defmodule NFTex do
   """
   @spec stop(pid()) :: :ok
   def stop(pid) do
-    JSONPort.stop(pid)
+    GenServer.stop(pid)
   end
 end

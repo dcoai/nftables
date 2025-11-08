@@ -9,8 +9,13 @@ Comprehensive test suite for NFTex nftables bindings.
 Tests require the port binary to have `CAP_NET_ADMIN` capability:
 
 ```bash
-sudo setcap cap_net_admin=ep priv/libnf_ex
-getcap priv/libnf_ex  # Verify
+# For the main port (recommended):
+sudo setcap cap_net_admin=ep priv/port_nftables
+getcap priv/port_nftables  # Verify
+
+# Or for other ports:
+sudo setcap cap_net_admin=ep priv/port_nftables
+sudo setcap cap_net_admin=ep priv/port_nftables
 ```
 
 ### 2. nftables Infrastructure (for integration tests)
@@ -39,10 +44,10 @@ mix test
 ### Run Specific Test File
 
 ```bash
-mix test test/nftex/expression_builder_test.exs
 mix test test/nftex/rule_test.exs
 mix test test/nftex/query_test.exs
 mix test test/nftex/set_operations_test.exs
+mix test test/nftex/policy_test.exs
 ```
 
 ### Run Tests with Tags
@@ -71,7 +76,7 @@ mix test --trace
 ### Run Specific Test by Line Number
 
 ```bash
-mix test test/nftex/expression_builder_test.exs:22
+mix test test/nftex/rule_test.exs:22
 ```
 
 ## Test Organization
@@ -80,20 +85,13 @@ mix test test/nftex/expression_builder_test.exs:22
 
 Located in `test/nftex/`:
 
-- **expression_builder_test.exs** - Tests for NFTex.ExpressionBuilder
-  - Payload expressions (IPv4 saddr, daddr, protocol)
-  - Comparison expressions (eq, neq, generic)
-  - Counter expressions
-  - Verdict expressions (DROP, ACCEPT)
-  - Expression combinations
-
 - **rule_test.exs** - Tests for NFTex.Rule
   - `block_ip/4` - Blocking IP addresses
   - `accept_ip/4` - Allowing IP addresses
   - `list/4` - Listing rules in chains
   - Integration workflows
 
-- **query_test.exs** - Tests for NFTex.Query
+- **query_test.exs** - Tests for NFTex.Query (currently disabled)
   - `list_tables/2` - Query tables
   - `list_chains/2` - Query chains
   - `list_rules/2` - Query rules
@@ -107,18 +105,17 @@ Located in `test/nftex/`:
   - `exists?/4` - Check if set exists
   - `list/2` - List all sets
 
-### Low-Level API Tests
+- **policy_test.exs** - Tests for NFTex.Policy
+  - Pre-built firewall policies
+  - Security baseline configurations
 
-Located in `test/` root:
+### Port Tests
 
-- **ping_test.exs** - Basic port communication
-- **table_attr_test.exs** - Table attribute operations
-- **chain_attr_test.exs** - Chain attribute operations
-- **rule_attr_test.exs** - Rule attribute operations
-- **expr_test.exs** - Expression operations
-- **set_test.exs** - Set operations
-- **batch_test.exs** - Batch operations
-- **resource_test.exs** - Resource management
+Located in `test/nftex/`:
+
+- **json_port_test.exs** - JSON port communication tests
+- **etf_port_test.exs** - ETF port communication tests
+- **port_test.exs** - Port format detection tests
 
 ## Test Tags
 
@@ -130,22 +127,24 @@ Tests use ExUnit tags for categorization:
 
 ## Test Status
 
-### ✅ Fully Tested (100% Coverage)
+### ✅ Fully Tested
 
-- **NFTex.ExpressionBuilder** - 12/12 tests passing
-  - All payload, comparison, counter, verdict expressions
-  - Expression combination patterns
+- **NFTex.Port** - Format detection and communication
+- **NFTex.Port** - JSON string communication
+- **NFTex.Port** - ETF term communication
+- **NFTex.Policy** - Pre-built firewall policies
 
 ### 🚧 Partial Coverage
 
-- **NFTex.Rule** - Tests created, require kernel infrastructure
-- **NFTex.Query** - Tests created, require kernel infrastructure
-- **NFTex.Set** - Tests created, require kernel infrastructure
+- **NFTex.Rule** - Basic functionality tested
+- **NFTex.Query** - Currently disabled, needs updates for v0.4.0
+- **NFTex.Set** - Basic operations tested
+- **NFTex.Table** - Table operations tested
+- **NFTex.Chain** - Chain operations tested
 
 ### 📋 Planned
 
-- **NFTex.Table** - Table creation/deletion
-- **NFTex.Chain** - Chain creation/deletion
+- **Integration test suite** - End-to-end firewall scenarios
 - **Error handling** - Edge cases and error conditions
 - **Performance** - Benchmarking and stress tests
 
@@ -161,7 +160,7 @@ For CI environments:
 2. **With kernel access** - Run all tests:
    ```bash
    # Setup infrastructure
-   sudo setcap cap_net_admin=ep priv/libnf_ex
+   sudo setcap cap_net_admin=ep priv/port_nftables  # or port_nftables, port_nftables
    sudo nft add table filter
    sudo nft add chain filter INPUT '{ type filter hook input priority 0; }'
    sudo nft add set filter test_blocklist '{ type ipv4_addr; }'
@@ -176,7 +175,7 @@ For CI environments:
 
 Ensure CAP_NET_ADMIN is set:
 ```bash
-sudo setcap cap_net_admin=ep priv/libnf_ex
+sudo setcap cap_net_admin=ep priv/port_nftables  # or port_nftables, port_nftables
 ```
 
 ### "No such file or directory" for tables/chains

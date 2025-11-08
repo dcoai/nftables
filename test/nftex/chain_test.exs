@@ -5,7 +5,7 @@ defmodule NFTex.ChainTest do
 
   setup do
     # Note: These tests require CAP_NET_ADMIN capability
-    # Run: sudo setcap cap_net_admin=ep priv/libnf_ex
+    # Run: sudo setcap cap_net_admin=ep priv/port_nftables
     {:ok, pid} = NFTex.start_link()
 
     # Clean up test table if it exists (using nftex_test_ prefix)

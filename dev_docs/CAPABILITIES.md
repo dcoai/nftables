@@ -36,17 +36,17 @@ The fastest way to get NFTex working with kernel operations:
 mix compile
 
 # Set capabilities on the binary you're using
-# For the recommended unified port:
-sudo setcap cap_net_admin+ep priv/libnf_unified
+# For the recommended main port:
+sudo setcap cap_net_admin+ep priv/port_nftables
 
 # Or for other ports:
-sudo setcap cap_net_admin+ep priv/libnf_json   # JSON strings only
-sudo setcap cap_net_admin+ep priv/libnf_etf    # Elixir terms only
-sudo setcap cap_net_admin+ep priv/libnf_ex     # Legacy libnftnl
+sudo setcap cap_net_admin+ep priv/port_nftables   # JSON strings only
+sudo setcap cap_net_admin+ep priv/port_nftables    # Elixir terms only
+sudo setcap cap_net_admin+ep priv/port_nftables     # Legacy libnftables
 
 # Verify capabilities are set
-getcap priv/libnf_unified
-# Should show: priv/libnf_unified cap_net_admin=ep
+getcap priv/port_nftables
+# Should show: priv/port_nftables cap_net_admin=ep
 
 # Run your application (no sudo needed!)
 iex -S mix
@@ -64,11 +64,11 @@ File capabilities are stored in the binary's extended attributes and are the mos
 
 ```bash
 # After compilation, set capabilities on the binary
-sudo setcap cap_net_admin+ep /path/to/nftables/priv/libnf_ex
+sudo setcap cap_net_admin+ep /path/to/nftables/priv/port_nftables
 
 # Verify it worked
-getcap /path/to/nftables/priv/libnf_ex
-# Output: /path/to/nftables/priv/libnf_ex cap_net_admin=ep
+getcap /path/to/nftables/priv/port_nftables
+# Output: /path/to/nftables/priv/port_nftables cap_net_admin=ep
 ```
 
 #### Capability Flags Explained
@@ -103,10 +103,10 @@ You can automate this in your deployment scripts:
 MIX_ENV=prod mix release
 
 # Set capabilities
-sudo setcap cap_net_admin+ep _build/prod/rel/my_app/lib/nftables-0.1.0/priv/libnf_ex
+sudo setcap cap_net_admin+ep _build/prod/rel/my_app/lib/nftables-0.1.0/priv/port_nftables
 
 # Verify
-getcap _build/prod/rel/my_app/lib/nftables-0.1.0/priv/libnf_ex || {
+getcap _build/prod/rel/my_app/lib/nftables-0.1.0/priv/port_nftables || {
     echo "Failed to set capabilities!"
     exit 1
 }
@@ -196,12 +196,12 @@ And operations will fail with:
 ### Check if Capabilities are Set on Binary
 
 ```bash
-getcap priv/libnf_ex
+getcap priv/port_nftables
 ```
 
 **Expected output**:
 ```
-priv/libnf_ex cap_net_admin=ep
+priv/port_nftables cap_net_admin=ep
 ```
 
 **If not set**:
@@ -215,7 +215,7 @@ While NFTex is running:
 
 ```bash
 # Find the process ID
-ps aux | grep libnf_ex
+ps aux | grep port_nftables
 
 # Check its capabilities
 grep Cap /proc/<PID>/status
@@ -252,10 +252,10 @@ end
 **Cause**: Process doesn't have CAP_NET_ADMIN.
 
 **Solutions**:
-1. Check if capabilities are set on binary: `getcap priv/libnf_ex`
-2. If not set, run: `sudo setcap cap_net_admin+ep priv/libnf_ex`
+1. Check if capabilities are set on binary: `getcap priv/port_nftables`
+2. If not set, run: `sudo setcap cap_net_admin+ep priv/port_nftables`
 3. If you just recompiled, capabilities were removed - set them again
-4. Check filesystem supports extended attributes: `mount | grep "$(df priv/libnf_ex | tail -1 | awk '{print $1}')"`
+4. Check filesystem supports extended attributes: `mount | grep "$(df priv/port_nftables | tail -1 | awk '{print $1}')"`
 
 ### Error: "Failed to set capabilities on process"
 
@@ -278,7 +278,7 @@ end
 
 ```bash
 # Add to your workflow
-mix compile && sudo setcap cap_net_admin+ep priv/libnf_ex
+mix compile && sudo setcap cap_net_admin+ep priv/port_nftables
 ```
 
 ### Capabilities Not Supported on Filesystem
@@ -310,7 +310,7 @@ COPY . .
 RUN mix deps.get && mix compile
 
 # Set capabilities (requires --cap-add=SETFCAP when running)
-RUN setcap cap_net_admin+ep priv/libnf_ex
+RUN setcap cap_net_admin+ep priv/port_nftables
 
 # Run as non-root user
 USER nobody
@@ -342,7 +342,7 @@ WorkingDirectory=/opt/nftex
 Environment="MIX_ENV=prod"
 
 # Set capabilities before starting
-ExecStartPre=/usr/sbin/setcap cap_net_admin+ep /opt/nftex/priv/libnf_ex
+ExecStartPre=/usr/sbin/setcap cap_net_admin+ep /opt/nftex/priv/port_nftables
 
 # Start the application
 ExecStart=/opt/nftex/bin/my_app start
@@ -367,7 +367,7 @@ When building an Elixir release:
 MIX_ENV=prod mix release
 
 # Set capabilities on the port binary in the release
-sudo setcap cap_net_admin+ep _build/prod/rel/my_app/lib/nftables-0.1.0/priv/libnf_ex
+sudo setcap cap_net_admin+ep _build/prod/rel/my_app/lib/nftables-0.1.0/priv/port_nftables
 
 # The release can now run as a regular user
 _build/prod/rel/my_app/bin/my_app start
@@ -395,13 +395,13 @@ _build/prod/rel/my_app/bin/my_app start
 **For Development**:
 ```bash
 mix compile
-sudo setcap cap_net_admin+ep priv/libnf_ex
+sudo setcap cap_net_admin+ep priv/port_nftables
 iex -S mix
 ```
 
 **For Production**:
 - Build release
-- Set file capabilities on `priv/libnf_ex`
+- Set file capabilities on `priv/port_nftables`
 - Run as non-root user with systemd
 - Monitor for permission errors
 

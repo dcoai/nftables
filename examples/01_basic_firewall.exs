@@ -10,8 +10,7 @@
 # - Allow SSH with rate limiting (10/minute)
 # - Optional HTTP/HTTPS services
 #
-# **Format**: This example uses ETF format (Elixir maps/terms) with UnifiedPort.
-# See ip_blocklist.exs for JSN: format (JSON strings) demonstration.
+# **Format**: This example uses JSON format for communication with libnftables.
 #
 # Usage:
 #   mix run examples/01_basic_firewall.exs
@@ -19,7 +18,7 @@
 # Requirements:
 #   - Root privileges (CAP_NET_ADMIN)
 #   - libnftables installed
-#   - Run: sudo setcap cap_net_admin=ep priv/libnf_unified
+#   - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 
 Mix.install([{:nftex, path: "."}])
 
@@ -48,10 +47,10 @@ defmodule BasicFirewall do
   end
 
   defp setup_firewall do
-    # Use UnifiedPort with ETF format (Elixir maps)
-    {:ok, pid} = NFTex.start_link(port: NFTex.UnifiedPort)
+    # Start NFTex (JSON-based port)
+    {:ok, pid} = NFTex.start_link()
 
-    IO.puts("✓ NFTex started (UnifiedPort with ETF format)")
+    IO.puts("✓ NFTex started (JSON-based port)")
 
     # Clean slate - delete existing filter table if it exists
     case Table.delete(pid, "filter", :inet) do

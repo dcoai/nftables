@@ -30,7 +30,7 @@ defmodule NFTex.Supervisor do
     port_name = opts[:name] || NFTex
 
     children = [
-      {NFTex.JSONPort, [name: port_name]}
+      {NFTex.Port, [name: port_name]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

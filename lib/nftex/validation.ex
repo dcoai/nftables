@@ -211,7 +211,7 @@ defmodule NFTex.Validation do
       "Failed to add rule to filter/INPUT: Table or chain not found. Ensure the table and chain exist (e.g., 'nft add table filter' and 'nft add chain filter INPUT ...')"
 
       iex> NFTex.Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{operation: :rule_add})
-      "Failed to add rule: Permission denied. NFTex requires CAP_NET_ADMIN capability. Run: sudo setcap cap_net_admin=ep path/to/priv/libnf_ex"
+      "Failed to add rule: Permission denied. NFTex requires CAP_NET_ADMIN capability. Run: sudo setcap cap_net_admin=ep path/to/priv/port_nftables"
   """
   @spec enhance_netlink_error(String.t() | integer(), map()) :: String.t()
   def enhance_netlink_error(error, context \\ %{})
@@ -249,7 +249,7 @@ defmodule NFTex.Validation do
 
     "#{base_msg}: Permission denied. " <>
       "NFTex requires CAP_NET_ADMIN capability. " <>
-      "Run: sudo setcap cap_net_admin=ep path/to/priv/libnf_ex"
+      "Run: sudo setcap cap_net_admin=ep path/to/priv/port_nftables"
   end
 
   # EACCES - Permission denied

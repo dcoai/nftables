@@ -7,19 +7,14 @@ This directory contains practical examples demonstrating how to use NFTex for co
 Before running these examples, ensure the NFTex port binary has the required capability:
 
 ```bash
-# For the recommended unified port (supports both JSON and ETF):
-sudo setcap cap_net_admin=ep priv/libnf_unified
-
-# Or for other ports:
-sudo setcap cap_net_admin=ep priv/libnf_json    # JSON strings only
-sudo setcap cap_net_admin=ep priv/libnf_etf     # Elixir terms only
+sudo setcap cap_net_admin=ep priv/port_nftables
 ```
 
 Verify it's set correctly:
 
 ```bash
-getcap priv/libnf_unified
-# Should show: priv/libnf_unified = cap_net_admin+ep
+getcap priv/port_nftables
+# Should show: priv/port_nftables = cap_net_admin+ep
 ```
 
 ## Running Examples
@@ -107,16 +102,16 @@ Shows how to query and inspect your current nftables configuration.
 
 **Use case:** Auditing firewall configuration, building management dashboards
 
-### Legacy Examples
+### Future Examples
 
-Advanced examples using the old libnftnl API (v0.3.x) have been moved to the `legacy/` directory:
+Additional examples for advanced features are planned:
 
-- `legacy/02_nat_gateway.exs` - NAT Gateway and port forwarding
-- `legacy/03_anti_spoofing.exs` - Anti-spoofing with FIB expressions
-- `legacy/05_advanced_logging.exs` - Advanced logging configurations
-- `legacy/06_load_balancing.exs` - Load balancing with DNAT
+- NAT Gateway and port forwarding
+- Anti-spoofing with FIB expressions
+- Advanced logging configurations
+- Load balancing with DNAT
 
-**Note:** These examples use the old `NFTex.Port` and `ExpressionBuilder` API with resource management. For current API usage, see the examples above or consult `legacy/README.md` for migration guidance.
+These will be implemented using the current v0.4.0 API (`JSONBuilder` with nft syntax strings).
 
 ## API Quick Reference
 
@@ -276,11 +271,6 @@ exists = NFTex.Set.exists?(pid, "filter", "blocklist", :inet)
 {:ok, sets} = NFTex.Set.list(pid, family: :inet)
 ```
 
-### NFTex.ExpressionBuilder - Low-level expression helpers (Legacy)
-
-**Note:** This module is part of the legacy libnftnl API. For current v0.4.0+ code, use `NFTex.RuleBuilder` or `NFTex.JSONBuilder` instead.
-
-See `legacy/` examples for usage patterns.
 
 ### NFTex.Query - Query operations
 
@@ -362,7 +352,7 @@ nft add rule filter input drop
 
 Ensure CAP_NET_ADMIN capability is set:
 ```bash
-sudo setcap cap_net_admin=ep priv/libnf_ex
+sudo setcap cap_net_admin=ep priv/port_nftables
 ```
 
 ### "Set not found"

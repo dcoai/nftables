@@ -34,7 +34,7 @@ defmodule NFTex.PolicyTest do
   end
 
   describe "accept_loopback/1" do
-    test "creates loopback acceptance rule with defaults", %{pid: pid, test_table: test_table} do
+    test "creates loopback acceptance rule with defaults", %{pid: pid, test_table: _test_table} do
       # Create isolated test infrastructure for this test
       filter_test = "nftex_test_filter_default"
       Table.delete(pid, filter_test, :inet)
@@ -292,7 +292,7 @@ defmodule NFTex.PolicyTest do
   end
 
   describe "complete firewall scenarios" do
-    test "builds secure server baseline", %{pid: pid, test_table: test_table} do
+    test "builds secure server baseline", %{pid: pid, test_table: _test_table} do
       # Use isolated test table
       filter_test = "nftex_test_filter_baseline"
       Table.delete(pid, filter_test, :inet)

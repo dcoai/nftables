@@ -5,19 +5,18 @@
 # This example demonstrates how to use NFTex.Query to inspect
 # your current nftables configuration.
 #
-# **Format**: This example uses ETF format (Elixir maps/terms) with UnifiedPort.
-# See ip_blocklist.exs for JSN: format (JSON strings) demonstration.
+# **Format**: This example uses JSON format for communication with libnftables.
 #
 # Requirements:
 # - The NFTex port binary must have CAP_NET_ADMIN capability
-# - Run: sudo setcap cap_net_admin=ep priv/libnf_unified
+# - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 #
 # Usage:
 #   mix run examples/query_tables.exs
 
-# Start NFTex with UnifiedPort (ETF format - Elixir maps/terms)
-{:ok, pid} = NFTex.start_link(port: NFTex.UnifiedPort)
-IO.puts("NFTex Query Examples (UnifiedPort with ETF format)\n")
+# Start NFTex (JSON-based port)
+{:ok, pid} = NFTex.start_link()
+IO.puts("NFTex Query Examples (JSON-based port)\n")
 IO.puts(String.duplicate("=", 60))
 
 # Query 1: List all tables

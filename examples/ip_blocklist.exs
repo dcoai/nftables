@@ -5,20 +5,18 @@
 # This example demonstrates how to use NFTex to create and manage
 # an IP address blocklist using nftables sets.
 #
-# **Format Demonstration**: This example uses the JSN: format (JSON strings)
-# with UnifiedPort to explicitly show JSON-based communication.
-# Other examples use ETF: format (Elixir maps/terms).
+# **Format**: This example uses JSON format for communication with libnftables.
 #
 # Requirements:
 # - The NFTex port binary must have CAP_NET_ADMIN capability
-# - Run: sudo setcap cap_net_admin=ep priv/libnf_unified
+# - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 #
 # Usage:
 #   mix run examples/ip_blocklist.exs
 
-# Start NFTex with UnifiedPort (demonstrating JSN: format with JSON strings)
-{:ok, pid} = NFTex.start_link(port: NFTex.UnifiedPort)
-IO.puts("✓ NFTex started (UnifiedPort with JSN: format - JSON strings)\n")
+# Start NFTex (JSON-based port)
+{:ok, pid} = NFTex.start_link()
+IO.puts("✓ NFTex started (JSON-based port)\n")
 
 # Configuration
 table = "filter"
@@ -28,26 +26,16 @@ blocklist_name = "banned_ips"
 IO.puts("Creating blocklist set...")
 
 # Try to create the set (will fail if it already exists, which is fine)
-# Demonstrate JSN: format - send JSON string prefixed with "JSN:"
-json_cmd = Jason.encode!(%{
-  "nftables" => [
-    %{
-      "add" => %{
-        "set" => %{
-          "family" => "inet",
-          "table" => table,
-          "name" => blocklist_name,
-          "type" => "ipv4_addr"
-        }
-      }
-    }
-  ]
-})
-
-# Send with JSN: prefix to explicitly indicate JSON format
-case NFTex.UnifiedPort.call(pid, "JSN:#{json_cmd}") do
-  {:ok, _response} ->
-    IO.puts("✓ Created set '#{blocklist_name}' in table '#{table}' (via JSN: format)")
+# Use the high-level Set API instead of raw JSON
+case NFTex.Set.create(pid, %{
+  name: blocklist_name,
+  table: table,
+  family: :inet,
+  key_type: :ipv4_addr,
+  elements: []
+}) do
+  :ok ->
+    IO.puts("✓ Created set '#{blocklist_name}' in table '#{table}'")
 
   {:error, reason} ->
     # Set might already exist

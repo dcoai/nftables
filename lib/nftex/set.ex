@@ -32,7 +32,7 @@ defmodule NFTex.Set do
 
   """
 
-  alias NFTex.{JSONPort, JSONBuilder}
+  alias NFTex.{Port, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type key_type :: :ipv4_addr | :ipv6_addr | :ether_addr | :inet_protocol | :inet_service
@@ -78,7 +78,7 @@ defmodule NFTex.Set do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
@@ -116,7 +116,7 @@ defmodule NFTex.Set do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
@@ -165,7 +165,7 @@ defmodule NFTex.Set do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
@@ -206,7 +206,7 @@ defmodule NFTex.Set do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok

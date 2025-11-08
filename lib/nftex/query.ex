@@ -20,7 +20,7 @@ defmodule NFTex.Query do
 
   """
 
-  alias NFTex.{JSONPort, JSONBuilder}
+  alias NFTex.{Port, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type result(t) :: {:ok, t} | {:error, term()}
@@ -52,7 +52,7 @@ defmodule NFTex.Query do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
@@ -109,7 +109,7 @@ defmodule NFTex.Query do
     cmd = JSONBuilder.list_ruleset(family: family)
     json = Jason.encode!(cmd)
 
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
@@ -179,7 +179,7 @@ defmodule NFTex.Query do
     cmd = JSONBuilder.list_ruleset(family: family)
     json = Jason.encode!(cmd)
 
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         {:ok, []}
 
@@ -221,7 +221,7 @@ defmodule NFTex.Query do
     cmd = JSONBuilder.list_chain(family, table, chain)
     json = Jason.encode!(cmd)
 
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
@@ -280,7 +280,7 @@ defmodule NFTex.Query do
     cmd = JSONBuilder.list_ruleset(family: family)
     json = Jason.encode!(cmd)
 
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
@@ -342,7 +342,7 @@ defmodule NFTex.Query do
     cmd = JSONBuilder.list_set(family, table, set_name)
     json = Jason.encode!(cmd)
 
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
@@ -407,7 +407,7 @@ defmodule NFTex.Query do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json, timeout) do
+    case Port.call(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response means success
         :ok

@@ -124,7 +124,7 @@ defmodule NFTex.Chain do
   - `NFTex.Query` - Query existing chains
   """
 
-  alias NFTex.{JSONPort, JSONBuilder}
+  alias NFTex.{Port, JSONBuilder}
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type chain_type :: :filter | :nat | :route
@@ -222,7 +222,7 @@ defmodule NFTex.Chain do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
@@ -260,7 +260,7 @@ defmodule NFTex.Chain do
     json = Jason.encode!(cmd)
 
     # Send to port
-    case JSONPort.call(pid, json) do
+    case Port.call(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok

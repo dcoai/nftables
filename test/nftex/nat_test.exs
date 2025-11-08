@@ -1,0 +1,150 @@
+defmodule NFTex.NATTest do
+  use ExUnit.Case, async: false
+  require Logger
+
+  @moduletag :integration
+  @moduletag :nat
+
+  alias NFTex.{Table, Chain, NAT, Query}
+
+  setup do
+    # Start NFTex
+    {:ok, pid} = NFTex.start_link(port: NFTex.Port, check_capabilities: false)
+
+    # Clean up any existing test tables
+    cleanup_tables(pid)
+
+    # Create NAT table and chains
+    :ok = Table.create(pid, %{name: "nftex_test_nat", family: :inet})
+
+    :ok =
+      Chain.create(pid, %{
+        table: "nftex_test_nat",
+        name: "prerouting",
+        family: :inet
+      })
+
+    :ok =
+      Chain.create(pid, %{
+        table: "nftex_test_nat",
+        name: "postrouting",
+        family: :inet
+      })
+
+    on_exit(fn ->
+      if Process.alive?(pid) do
+        cleanup_tables(pid)
+        NFTex.stop(pid)
+      end
+    end)
+
+    {:ok, pid: pid}
+  end
+
+  describe "masquerade/2" do
+    test "sets up masquerade on interface", %{pid: pid} do
+      assert :ok = NAT.setup_masquerade(pid, "eth0", table: "nftex_test_nat")
+
+      # Verify rule was created
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      assert length(rules) > 0
+    end
+  end
+
+  describe "port_forward/5" do
+    test "creates port forwarding rule", %{pid: pid} do
+      assert :ok = NAT.port_forward(pid, 80, "192.168.1.100", 8080, table: "nftex_test_nat")
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      assert length(rules) > 0
+    end
+
+    test "supports UDP protocol", %{pid: pid} do
+      assert :ok =
+               NAT.port_forward(pid, 53, "192.168.1.1", 53,
+                 protocol: :udp,
+                 table: "nftex_test_nat"
+               )
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      assert length(rules) > 0
+    end
+
+    test "supports interface filtering", %{pid: pid} do
+      assert :ok =
+               NAT.port_forward(pid, 22, "192.168.1.10", 22,
+                 interface: "wan0",
+                 table: "nftex_test_nat"
+               )
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      assert length(rules) > 0
+    end
+  end
+
+  describe "static_nat/4" do
+    test "creates bidirectional NAT", %{pid: pid} do
+      assert :ok = NAT.static_nat(pid, "203.0.113.1", "192.168.1.100", table: "nftex_test_nat")
+
+      # Should create rules in both directions
+      {:ok, pre_rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, post_rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+
+      assert length(pre_rules) > 0
+      assert length(post_rules) > 0
+    end
+  end
+
+  describe "source_nat/4" do
+    test "creates SNAT rule", %{pid: pid} do
+      assert :ok = NAT.source_nat(pid, "192.168.1.0/24", "203.0.113.1", table: "nftex_test_nat")
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      assert length(rules) > 0
+    end
+
+    test "supports single IP", %{pid: pid} do
+      assert :ok = NAT.source_nat(pid, "192.168.1.100", "203.0.113.1", table: "nftex_test_nat")
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      assert length(rules) > 0
+    end
+  end
+
+  describe "destination_nat/4" do
+    test "creates DNAT rule", %{pid: pid} do
+      assert :ok = NAT.destination_nat(pid, "203.0.113.1", "192.168.1.100", table: "nftex_test_nat")
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      assert length(rules) > 0
+    end
+  end
+
+  describe "redirect_port/4" do
+    test "creates port redirect rule", %{pid: pid} do
+      assert :ok = NAT.redirect_port(pid, 80, 3128, table: "nftex_test_nat")
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      assert length(rules) > 0
+    end
+
+    test "supports UDP protocol", %{pid: pid} do
+      assert :ok = NAT.redirect_port(pid, 53, 5353, protocol: :udp, table: "nftex_test_nat")
+
+      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      assert length(rules) > 0
+    end
+  end
+
+  # Helper functions
+
+  defp cleanup_tables(pid) do
+    try do
+      Table.delete(pid, "nftex_test_nat", :inet)
+    rescue
+      _ -> :ok
+    catch
+      :exit, _ -> :ok
+    end
+  end
+end

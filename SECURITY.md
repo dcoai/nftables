@@ -2,7 +2,7 @@
 
 ## Overview
 
-NFTex provides Elixir bindings to Linux nftables via libnftnl. As firewall management is a security-critical operation, this document outlines security considerations, best practices, and the vulnerability disclosure policy.
+NFTex provides Elixir bindings to Linux nftables via libnftables. As firewall management is a security-critical operation, this document outlines security considerations, best practices, and the vulnerability disclosure policy.
 
 ## Privilege Requirements
 
@@ -12,12 +12,12 @@ NFTex requires the `CAP_NET_ADMIN` Linux capability to modify firewall rules. Th
 
 **Required Setup:**
 ```bash
-# For the recommended unified port:
-sudo setcap cap_net_admin=ep priv/libnf_unified
+# For the recommended main port:
+sudo setcap cap_net_admin=ep priv/port_nftables
 
 # Or for other ports:
-sudo setcap cap_net_admin=ep priv/libnf_json
-sudo setcap cap_net_admin=ep priv/libnf_etf
+sudo setcap cap_net_admin=ep priv/port_nftables
+sudo setcap cap_net_admin=ep priv/port_nftables
 ```
 
 **Security Implications:**
@@ -212,8 +212,8 @@ end
 
 ```bash
 # GOOD: Set capability, run as unprivileged user
-sudo setcap cap_net_admin=ep priv/libnf_unified
-chmod 750 priv/libnf_unified
+sudo setcap cap_net_admin=ep priv/port_nftables
+chmod 750 priv/port_nftables
 # Now run as regular user
 ```
 
