@@ -6,6 +6,7 @@ High-performance Elixir bindings for Linux nftables via the official libnftables
 
 - **Official API** - Uses libnftables JSON API (no manual netlink messages)
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
+- **Sysctl Management** - Safe read/write access to network kernel parameters
 - **Hybrid Approach** - JSON for data operations, nft syntax for complex rules
 - **Distributed Firewall Support** - Build commands centrally, execute on multiple nodes
 - **Command/Execution Separation** - Build JSON/nft commands without executing
@@ -341,6 +342,59 @@ See the [RuleBuilder documentation](lib/nftex/rule_builder.ex) for the full API.
 :ok = NFTex.Policy.allow_http(pid)
 :ok = NFTex.Policy.allow_https(pid)
 ```
+
+### NFTex.Sysctl - Network Parameter Management
+
+NFTex provides safe, whitelist-based access to kernel network parameters via `/proc/sys/net/*`. All operations use the existing CAP_NET_ADMIN capability.
+
+```elixir
+alias NFTex.{Sysctl, Sysctl.Network}
+
+# Low-level API - direct parameter access
+{:ok, "0"} = Sysctl.get(pid, "net.ipv4.ip_forward")
+:ok = Sysctl.set(pid, "net.ipv4.ip_forward", "1")
+
+# High-level helpers for common operations
+:ok = Network.enable_ipv4_forwarding(pid)
+:ok = Network.enable_ipv6_forwarding(pid)
+:ok = Network.enable_syncookies(pid)
+
+# Check forwarding status
+{:ok, true} = Network.ipv4_forwarding_enabled?(pid)
+
+# Connection tracking configuration
+:ok = Network.set_conntrack_max(pid, 131072)
+{:ok, 131072} = Network.get_conntrack_max(pid)
+
+# ICMP configuration
+:ok = Network.ignore_ping(pid)  # Stealth mode
+:ok = Network.allow_ping(pid)   # Normal mode
+
+# Composite operations
+:ok = Network.configure_router(pid,
+  ipv4_forwarding: true,
+  ipv6_forwarding: true,
+  syncookies: true,
+  send_redirects: false
+)
+
+:ok = Network.harden_security(pid)
+```
+
+**Security Features:**
+- Parameter whitelist (44 network-related parameters)
+- Value validation per parameter type
+- Limited to `/proc/sys/net/*` only
+- Uses existing CAP_NET_ADMIN capability
+
+**Supported Parameters:**
+- IPv4/IPv6 forwarding and configuration
+- TCP settings (syncookies, timestamps, keepalive, etc.)
+- Connection tracking (nf_conntrack)
+- ICMP settings
+- Security parameters (rp_filter, source routing, redirects)
+
+See `NFTex.Sysctl` and `NFTex.Sysctl.Network` documentation for the complete parameter list.
 
 ## Advanced Usage
 
