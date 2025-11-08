@@ -312,6 +312,129 @@ defmodule NFTex.Set do
     end
   end
 
+  @doc """
+  Build a JSON command to create a set (without executing).
+
+  Returns the JSON string that would be sent to create a set.
+  Useful for batching, remote execution, or inspection.
+
+  ## Parameters
+
+  - `spec` - Set specification map (same as `create/2`)
+
+  ## Returns
+
+  JSON string containing the set create command
+
+  ## Examples
+
+      json = NFTex.Set.build_create(%{
+        name: "blocklist",
+        table: "filter",
+        family: :inet,
+        key_type: :ipv4_addr
+      })
+      #=> "{\\\"nftables\\\":[{\\\"add\\\":{\\\"set\\\":{...}}}]}"
+
+      # Use in batch
+      batch =
+        Batch.new()
+        |> Batch.add(Set.build_create(%{...}))
+        |> Batch.add(Set.build_add_elements("filter", "blocklist", :inet, ["1.2.3.4"]))
+  """
+  @spec build_create(set_spec()) :: binary()
+  def build_create(%{name: name, table: table, family: family, key_type: key_type}) do
+    cmd = JSONBuilder.add_set(family, table, name, type: key_type_to_string(key_type))
+    Jason.encode!(cmd)
+  end
+
+  @doc """
+  Build a JSON command to delete a set (without executing).
+
+  Returns the JSON string that would be sent to delete a set.
+
+  ## Parameters
+
+  - `table` - Table name
+  - `name` - Set name
+  - `family` - Protocol family
+
+  ## Returns
+
+  JSON string containing the set delete command
+
+  ## Examples
+
+      json = NFTex.Set.build_delete("filter", "blocklist", :inet)
+      NFTex.Executor.execute(json)
+  """
+  @spec build_delete(String.t(), String.t(), family()) :: binary()
+  def build_delete(table, name, family) do
+    cmd = JSONBuilder.delete_set(family, table, name)
+    Jason.encode!(cmd)
+  end
+
+  @doc """
+  Build a JSON command to add elements to a set (without executing).
+
+  Returns the JSON string that would be sent to add elements to a set.
+
+  ## Parameters
+
+  - `table` - Table name
+  - `name` - Set name
+  - `family` - Protocol family
+  - `elements` - List of element strings
+
+  ## Returns
+
+  JSON string containing the add elements command
+
+  ## Examples
+
+      json = NFTex.Set.build_add_elements("filter", "blocklist", :inet, [
+        "192.168.1.100",
+        "10.0.0.50"
+      ])
+
+      NFTex.Executor.execute(json)
+  """
+  @spec build_add_elements(String.t(), String.t(), family(), [String.t()]) :: binary()
+  def build_add_elements(table, name, family, elements) when is_list(elements) do
+    cmd = JSONBuilder.add_element(family, table, name, elements)
+    Jason.encode!(cmd)
+  end
+
+  @doc """
+  Build a JSON command to delete elements from a set (without executing).
+
+  Returns the JSON string that would be sent to delete elements from a set.
+
+  ## Parameters
+
+  - `table` - Table name
+  - `name` - Set name
+  - `family` - Protocol family
+  - `elements` - List of element strings
+
+  ## Returns
+
+  JSON string containing the delete elements command
+
+  ## Examples
+
+      json = NFTex.Set.build_delete_elements("filter", "blocklist", :inet, [
+        "192.168.1.100"
+      ])
+
+      NFTex.Executor.execute(json)
+  """
+  @spec build_delete_elements(String.t(), String.t(), family(), [String.t()]) :: binary()
+  def build_delete_elements(table, name, family, elements) when is_list(elements) do
+    cmd = JSONBuilder.delete_element(family, table, name, elements)
+    Jason.encode!(cmd)
+  end
+
   # Private helpers
 
   defp key_type_to_string(:ipv4_addr), do: "ipv4_addr"

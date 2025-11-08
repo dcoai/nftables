@@ -369,4 +369,96 @@ defmodule NFTex.Chain do
     # To change a policy, you need to delete and recreate the chain
     {:error, :policy_change_requires_recreation}
   end
+
+  @doc """
+  Build a JSON command to create a chain (without executing).
+
+  Returns the JSON string that would be sent to create a chain.
+  Useful for batching, remote execution, or inspection.
+
+  ## Parameters
+
+  - `spec` - Chain specification map (same as `create/2`)
+
+  ## Returns
+
+  JSON string containing the chain create command
+
+  ## Examples
+
+      # Build base chain command
+      json = NFTex.Chain.build_create(%{
+        table: "filter",
+        name: "input",
+        family: :inet,
+        type: :filter,
+        hook: :input,
+        priority: 0,
+        policy: :accept
+      })
+      #=> "{\\\"nftables\\\":[{\\\"add\\\":{\\\"chain\\\":{...}}}]}"
+
+      # Build regular chain command
+      json = NFTex.Chain.build_create(%{
+        table: "filter",
+        name: "my_rules",
+        family: :inet
+      })
+
+      # Use in batch
+      batch =
+        Batch.new()
+        |> Batch.add(Chain.build_create(%{...}))
+        |> Batch.add(Chain.build_create(%{...}))
+
+      # Execute later
+      NFTex.Executor.execute(json)
+  """
+  @spec build_create(chain_spec()) :: binary()
+  def build_create(spec) do
+    is_base_chain = Map.has_key?(spec, :hook)
+
+    # Build chain options
+    opts =
+      if is_base_chain do
+        [
+          type: to_string(spec.type),
+          hook: to_string(spec.hook),
+          prio: spec.priority,
+          policy: to_string(spec.policy)
+        ]
+      else
+        []
+      end
+
+    # Build JSON command
+    cmd = JSONBuilder.add_chain(spec.family, spec.table, spec.name, opts)
+    Jason.encode!(cmd)
+  end
+
+  @doc """
+  Build a JSON command to delete a chain (without executing).
+
+  Returns the JSON string that would be sent to delete a chain.
+
+  ## Parameters
+
+  - `table` - Table name
+  - `name` - Chain name
+  - `family` - Protocol family
+
+  ## Returns
+
+  JSON string containing the chain delete command
+
+  ## Examples
+
+      json = NFTex.Chain.build_delete("filter", "input", :inet)
+      NFTex.Executor.execute(json)
+  """
+  @spec build_delete(String.t(), String.t(), family()) :: binary()
+  def build_delete(table, name, family) do
+    cmd = JSONBuilder.delete_chain(family, table, name)
+    Jason.encode!(cmd)
+  end
 end

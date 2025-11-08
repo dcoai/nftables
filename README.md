@@ -7,6 +7,9 @@ High-performance Elixir bindings for Linux nftables via the official libnftables
 - **Official API** - Uses libnftables JSON API (no manual netlink messages)
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
 - **Hybrid Approach** - JSON for data operations, nft syntax for complex rules
+- **Distributed Firewall Support** - Build commands centrally, execute on multiple nodes
+- **Command/Execution Separation** - Build JSON/nft commands without executing
+- **Batch Operations** - Atomic multi-command execution
 - **Dynamic Firewall Management** - Modify firewall rules from your Elixir application
 - **IP Blocklist Management** - Add/remove IPs from blocklists with one function call
 - **Query Operations** - List tables, chains, rules, sets, and elements
@@ -434,6 +437,255 @@ nft_command = "add table inet custom"
 ```
 
 Both are processed by `libnftables.nft_run_cmd_from_buffer()`.
+
+## Distributed Firewall Support
+
+NFTex supports distributed firewall architectures where a central command & control node generates firewall rules and sends them to multiple firewall nodes for execution. This is achieved through separation of command building and execution.
+
+### Architecture
+
+```
+┌──────────────────────────────┐
+│  C&C Node                    │
+│  (NFTex Library)             │
+│                              │
+│  - Builds firewall rules     │
+│  - Generates JSON/nft cmds   │
+│  - Sends to firewall nodes   │
+└──────────┬───────────────────┘
+           │
+           │ JSON/nft commands over network
+           │ (your transport)
+           │
+           ▼
+┌──────────────────────────────┐
+│  Firewall Node 1, 2, 3...    │
+│  (Minimal Shim + Port)       │
+│                              │
+│  - Receives commands         │
+│  - Executes via port         │
+│  - Returns results           │
+└──────────────────────────────┘
+```
+
+### Command Building Without Execution
+
+All high-level modules now provide `build_*` functions that generate commands without executing them:
+
+```elixir
+# Build commands without executing
+table_cmd = NFTex.Table.build_create(%{name: "filter", family: :inet})
+chain_cmd = NFTex.Chain.build_create(%{
+  table: "filter",
+  name: "INPUT",
+  family: :inet,
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+})
+rule_cmd = NFTex.Rule.build_block_ip("filter", "INPUT", "192.168.1.100")
+
+# Each command is a JSON or nft syntax string ready to execute
+```
+
+### Batch Operations
+
+Combine multiple commands into atomic batches:
+
+```elixir
+alias NFTex.Batch
+
+# Build a batch of operations
+batch = Batch.new()
+|> Batch.add(NFTex.Table.build_create(%{name: "filter", family: :inet}))
+|> Batch.add(NFTex.Chain.build_create(%{
+  table: "filter",
+  name: "INPUT",
+  family: :inet,
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+}))
+|> Batch.add(NFTex.Rule.build_block_ip("filter", "INPUT", "1.2.3.4"))
+|> Batch.add(NFTex.Rule.build_block_ip("filter", "INPUT", "5.6.7.8"))
+
+# Execute locally
+{:ok, response} = Batch.execute(batch, pid: pid)
+
+# Or convert to JSON for remote execution
+json = Batch.to_json(batch)
+MyTransport.send_to_node("firewall-1", json)
+```
+
+### Execution Abstraction
+
+The `NFTex.Executor` module provides clean command execution:
+
+```elixir
+# Local execution
+json_cmd = NFTex.Table.build_create(%{name: "filter", family: :inet})
+{:ok, response} = NFTex.Executor.execute(json_cmd, pid: pid)
+
+# Or use execute! for exceptions instead of tuples
+response = NFTex.Executor.execute!(json_cmd, pid: pid)
+```
+
+### RuleBuilder for Remote Execution
+
+The fluent RuleBuilder API can generate commands without committing:
+
+```elixir
+alias NFTex.RuleBuilder
+
+# Build complex rule without executing
+cmd = RuleBuilder.new(pid, "filter", "INPUT")
+|> RuleBuilder.match_source_ip("192.168.1.100")
+|> RuleBuilder.match_dest_port(22)
+|> RuleBuilder.rate_limit(10, :minute)
+|> RuleBuilder.log("SSH_ATTACK: ")
+|> RuleBuilder.drop()
+|> RuleBuilder.to_nft_command()  # Returns nft command string
+
+# Send to remote nodes
+MyTransport.send_to_node("firewall-1", cmd)
+MyTransport.send_to_node("firewall-2", cmd)
+MyTransport.send_to_node("firewall-3", cmd)
+```
+
+### Build Functions Reference
+
+#### Table Operations
+
+```elixir
+# Build table commands
+table_create = NFTex.Table.build_create(%{name: "filter", family: :inet})
+table_delete = NFTex.Table.build_delete("filter", :inet)
+```
+
+#### Chain Operations
+
+```elixir
+# Build chain commands
+chain_create = NFTex.Chain.build_create(%{
+  table: "filter",
+  name: "INPUT",
+  family: :inet,
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+})
+chain_delete = NFTex.Chain.build_delete("filter", "INPUT", :inet)
+```
+
+#### Set Operations
+
+```elixir
+# Build set commands
+set_create = NFTex.Set.build_create(%{
+  name: "blocklist",
+  table: "filter",
+  family: :inet,
+  key_type: :ipv4_addr
+})
+set_add = NFTex.Set.build_add_elements("filter", "blocklist", :inet, [
+  "192.168.1.100",
+  "10.0.0.50"
+])
+set_delete_elem = NFTex.Set.build_delete_elements("filter", "blocklist", :inet, [
+  "192.168.1.100"
+])
+set_delete = NFTex.Set.build_delete("filter", "blocklist", :inet)
+```
+
+#### Rule Operations
+
+```elixir
+# Build rule commands
+block_ip = NFTex.Rule.build_block_ip("filter", "INPUT", "192.168.1.100")
+accept_ip = NFTex.Rule.build_accept_ip("filter", "INPUT", "10.0.0.1")
+block_ipv6 = NFTex.Rule.build_block_ipv6("filter", "INPUT", "2001:db8::1")
+rate_limit = NFTex.Rule.build_rate_limit("filter", "INPUT", 10, :second)
+```
+
+### Complete Distributed Firewall Example
+
+```elixir
+defmodule MyApp.DistributedFirewall do
+  alias NFTex.{Batch, Table, Chain, Rule, Set, Executor}
+
+  # On C&C node - build firewall configuration
+  def build_firewall_config() do
+    Batch.new()
+    # Create table
+    |> Batch.add(Table.build_create(%{name: "filter", family: :inet}))
+    # Create INPUT chain
+    |> Batch.add(Chain.build_create(%{
+      table: "filter",
+      name: "INPUT",
+      family: :inet,
+      type: :filter,
+      hook: :input,
+      priority: 0,
+      policy: :drop
+    }))
+    # Create blocklist set
+    |> Batch.add(Set.build_create(%{
+      name: "blocklist",
+      table: "filter",
+      family: :inet,
+      key_type: :ipv4_addr
+    }))
+    # Add malicious IPs to blocklist
+    |> Batch.add(Set.build_add_elements("filter", "blocklist", :inet, [
+      "1.2.3.4",
+      "5.6.7.8"
+    ]))
+    # Allow loopback
+    |> Batch.add(Rule.build_accept_ip("filter", "INPUT", "127.0.0.1"))
+    # Rate limit SSH
+    |> Batch.add(Rule.build_rate_limit("filter", "INPUT", 10, :minute))
+  end
+
+  # On C&C node - deploy to multiple firewalls
+  def deploy_to_firewalls(firewall_nodes) do
+    config_batch = build_firewall_config()
+    json_cmd = Batch.to_json(config_batch)
+
+    # Send to all firewall nodes
+    Enum.map(firewall_nodes, fn node ->
+      Task.async(fn ->
+        MyTransport.send_to_node(node, json_cmd)
+      end)
+    end)
+    |> Task.await_many(timeout: 10_000)
+  end
+
+  # On firewall nodes - minimal shim
+  def execute_received_command(json_cmd) do
+    {:ok, pid} = NFTex.start_link()
+    Executor.execute(json_cmd, pid: pid)
+  end
+end
+
+# Deploy firewall rules to 3 nodes
+MyApp.DistributedFirewall.deploy_to_firewalls([
+  "firewall-1.local",
+  "firewall-2.local",
+  "firewall-3.local"
+])
+```
+
+### Key Benefits
+
+- **Incremental Updates** - Each operation generates one minimal command
+- **Atomic Batches** - Multiple commands executed atomically (all-or-nothing)
+- **Transport Agnostic** - Use any network transport (Phoenix PubSub, gRPC, etc.)
+- **Centralized Logic** - Firewall policy managed from single C&C node
+- **Minimal Remote Footprint** - Firewall nodes only need port + minimal shim
+- **Fault Tolerant** - Port crashes isolated from BEAM VM
 
 ## Examples
 

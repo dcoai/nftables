@@ -168,6 +168,69 @@ defmodule NFTex.Table do
   end
 
   @doc """
+  Build a JSON command to create a table (without executing).
+
+  Returns the JSON string that would be sent to create a table.
+  Useful for batching, remote execution, or inspection.
+
+  ## Parameters
+
+  - `table_spec` - Map with `:name` and `:family` keys
+
+  ## Returns
+
+  JSON string containing the table create command
+
+  ## Examples
+
+      # Build command
+      json = NFTex.Table.build_create(%{name: "filter", family: :inet})
+      #=> "{\"nftables\":[{\"add\":{\"table\":{...}}}]}"
+
+      # Use in batch
+      batch =
+        Batch.new()
+        |> Batch.add(Table.build_create(%{name: "filter", family: :inet}))
+        |> Batch.add(Table.build_create(%{name: "nat", family: :inet}))
+
+      # Execute later
+      NFTex.Executor.execute(json)
+
+      # Send to remote node
+      MyTransport.send_to_node("firewall-1", json)
+  """
+  @spec build_create(table_spec()) :: binary()
+  def build_create(%{name: name, family: family}) when is_binary(name) do
+    cmd = JSONBuilder.add_table(family, name)
+    Jason.encode!(cmd)
+  end
+
+  @doc """
+  Build a JSON command to delete a table (without executing).
+
+  Returns the JSON string that would be sent to delete a table.
+
+  ## Parameters
+
+  - `name` - Table name
+  - `family` - Protocol family
+
+  ## Returns
+
+  JSON string containing the table delete command
+
+  ## Examples
+
+      json = NFTex.Table.build_delete("filter", :inet)
+      NFTex.Executor.execute(json)
+  """
+  @spec build_delete(String.t(), family()) :: binary()
+  def build_delete(name, family) when is_binary(name) do
+    cmd = JSONBuilder.delete_table(family, name)
+    Jason.encode!(cmd)
+  end
+
+  @doc """
   Check if a table exists.
 
   ## Parameters
