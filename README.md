@@ -201,23 +201,16 @@ malicious_ips = [
 ### Build Complex Rules with RuleBuilder
 
 ```elixir
-use NFTex.RuleBuilder
+alias NFTex.RuleBuilder
 
 # Build a sophisticated firewall rule
-rule = new_rule()
-  |> match_source_ip("10.0.0.0/8")
-  |> match_tcp_dport(22)
-  |> limit_rate(10, :minute, burst: 5)
-  |> log("SSH_ACCESS", level: :info)
-  |> accept()
-  |> build!()
-
-:ok = NFTex.Rule.add(pid, %{
-  family: :inet,
-  table: "filter",
-  chain: "INPUT",
-  expr: rule
-})
+:ok = RuleBuilder.new(pid, "filter", "INPUT")
+  |> RuleBuilder.match_source_ip("10.0.0.0/8")
+  |> RuleBuilder.match_dest_port(22)
+  |> RuleBuilder.rate_limit(10, :minute, burst: 5)
+  |> RuleBuilder.log("SSH_ACCESS: ", level: :info)
+  |> RuleBuilder.accept()
+  |> RuleBuilder.commit()
 ```
 
 ### Setup Basic Firewall
@@ -317,24 +310,16 @@ rule = new_rule()
 ### NFTex.RuleBuilder - Fluent Rule Construction
 
 ```elixir
-use NFTex.RuleBuilder
+alias NFTex.RuleBuilder
 
 # Build complex rules with chainable API
-rule = new_rule()
-  |> comment("Block scanner")
-  |> match_source_ip("192.168.1.100")
-  |> match_tcp_dport(22)
-  |> limit_rate(5, :minute)
-  |> counter()
-  |> drop()
-  |> build!()
-
-:ok = NFTex.Rule.add(pid, %{
-  family: :inet,
-  table: "filter",
-  chain: "INPUT",
-  expr: rule
-})
+:ok = RuleBuilder.new(pid, "filter", "INPUT")
+  |> RuleBuilder.match_source_ip("192.168.1.100")
+  |> RuleBuilder.match_dest_port(22)
+  |> RuleBuilder.rate_limit(5, :minute)
+  |> RuleBuilder.counter()
+  |> RuleBuilder.drop()
+  |> RuleBuilder.commit()
 ```
 
 See the [RuleBuilder documentation](lib/nftex/rule_builder.ex) for the full API.
@@ -384,27 +369,28 @@ alias NFTex.NAT
 ### Connection Tracking
 
 ```elixir
-use NFTex.RuleBuilder
+alias NFTex.RuleBuilder
 
 # Track connection state
-rule = new_rule()
-  |> match_ct_state([:established, :related])
-  |> accept()
-  |> build!()
+:ok = RuleBuilder.new(pid, "filter", "INPUT")
+  |> RuleBuilder.match_ct_state([:established, :related])
+  |> RuleBuilder.accept()
+  |> RuleBuilder.commit()
 
 # Connection limits
-rule = new_rule()
-  |> match_tcp_dport(80)
-  |> limit_connections(100)  # Max 100 concurrent connections
-  |> accept()
-  |> build!()
+:ok = RuleBuilder.new(pid, "filter", "INPUT")
+  |> RuleBuilder.match_dest_port(80)
+  |> RuleBuilder.match_ct_state([:new])
+  |> RuleBuilder.limit_connections(100)  # Max 100 concurrent connections
+  |> RuleBuilder.drop()
+  |> RuleBuilder.commit()
 
 # Track connection bytes
-rule = new_rule()
-  |> match_ct_bytes(:>, 1_000_000)  # Over 1MB
-  |> log("LARGE_TRANSFER")
-  |> accept()
-  |> build!()
+:ok = RuleBuilder.new(pid, "filter", "FORWARD")
+  |> RuleBuilder.match_ct_bytes(:gt, 1_000_000)  # Over 1MB
+  |> RuleBuilder.log("LARGE_TRANSFER: ")
+  |> RuleBuilder.accept()
+  |> RuleBuilder.commit()
 ```
 
 ### Raw JSON Commands
