@@ -123,10 +123,10 @@ pub fn main() !void {
     const stdin_file = std.fs.File{ .handle = std.posix.STDIN_FILENO };
     const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
 
-    // Main loop: Read commands, execute, send responses
+    // Main loop: Read JSON packets, execute, respond with JSON
     while (true) {
-        // Read packet-length-prefixed JSON command
-        const cmd_json = readPacket(allocator, stdin_file) catch |err| {
+        // Read packet (JSON command)
+        const json_cmd = readPacket(allocator, stdin_file) catch |err| {
             if (err == error.EndOfStream) {
                 // Clean shutdown when stdin closes
                 break;
@@ -134,17 +134,17 @@ pub fn main() !void {
             std.debug.print("ERROR: Failed to read packet: {}\n", .{err});
             return err;
         };
-        defer allocator.free(cmd_json);
+        defer allocator.free(json_cmd);
 
         // Null-terminate for C string (libnftables expects null-terminated strings)
-        const cmd_json_z = try allocator.dupeZ(u8, cmd_json);
-        defer allocator.free(cmd_json_z);
+        const json_cmd_z = try allocator.dupeZ(u8, json_cmd);
+        defer allocator.free(json_cmd_z);
 
-        // Execute command
-        const result = libnftables.runCmdFromBuffer(ctx, cmd_json_z.ptr);
+        // Execute command via libnftables
+        const result = libnftables.runCmdFromBuffer(ctx, json_cmd_z.ptr);
 
         // Get output or error buffer
-        const response = if (result == 0) blk: {
+        const response_json = if (result == 0) blk: {
             // Success - get output buffer
             if (libnftables.ctxGetOutputBuffer(ctx)) |buf| {
                 break :blk std.mem.span(buf);
@@ -162,8 +162,8 @@ pub fn main() !void {
             }
         };
 
-        // Send response back to Elixir
-        try writePacket(stdout_file, response);
+        // Send JSON response back to Elixir
+        try writePacket(stdout_file, response_json);
 
         // Clear buffers for next iteration
         _ = libnftables.ctxUnbufferOutput(ctx);
