@@ -13,7 +13,7 @@
 # **Format**: This example uses JSON format for communication with libnftables.
 #
 # Usage:
-#   mix run examples/01_basic_firewall.exs
+#   mix run examples/02_basic_firewall.exs
 #
 # Requirements:
 #   - Root privileges (CAP_NET_ADMIN)

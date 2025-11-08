@@ -12,7 +12,7 @@
 # - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 #
 # Usage:
-#   mix run examples/ip_blocklist.exs
+#   mix run examples/04_ip_blocklist.exs
 
 # Start NFTex (JSON-based port)
 {:ok, pid} = NFTex.start_link()

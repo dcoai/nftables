@@ -22,21 +22,45 @@ getcap priv/port_nftables
 From the project root directory:
 
 ```bash
-# Run a specific example
-mix run examples/ip_blocklist.exs
+# Run examples in order (recommended for first-time setup)
+mix run examples/01_sysctl_management.exs
+mix run examples/02_basic_firewall.exs
+mix run examples/03_firewall_rules.exs
+# ... etc
+
+# Or run a specific example
+mix run examples/04_ip_blocklist.exs
 
 # Or make executable and run directly
-chmod +x examples/ip_blocklist.exs
-./examples/ip_blocklist.exs
+chmod +x examples/04_ip_blocklist.exs
+./examples/04_ip_blocklist.exs
 ```
 
 ## Available Examples
 
 ### Current API Examples (v0.4.0+)
 
-These examples use the current JSON-based API (libnftables):
+These examples use the current JSON-based API (libnftables) and are ordered in the logical sequence for setting up a complete firewall from scratch:
 
-#### 1. Basic Firewall (`01_basic_firewall.exs`)
+#### 1. Sysctl Management (`01_sysctl_management.exs`)
+
+**First Step:** Configure kernel network parameters before setting up firewall rules.
+
+Demonstrates safe management of Linux kernel network parameters via NFTex's sysctl API.
+
+**Topics covered:**
+- Reading current network parameters (IPv4/IPv6 forwarding, TCP settings, etc.)
+- Writing network parameters with validation
+- High-level helpers (`Network.enable_ipv4_forwarding/1`, etc.)
+- Composite operations (`configure_router/2`, `harden_security/1`)
+- Parameter whitelist security
+- Value validation and restoration
+
+**Use case:** Router/gateway configuration, security hardening, network optimization, connection tracking tuning
+
+#### 2. Basic Firewall (`02_basic_firewall.exs`)
+
+**Second Step:** Set up the foundational firewall structure with secure defaults.
 
 Complete secure firewall setup with defense-in-depth approach.
 
@@ -50,33 +74,9 @@ Complete secure firewall setup with defense-in-depth approach.
 
 **Use case:** Secure server baseline, VPS hardening
 
-#### 2. Rate Limiting (`04_rate_limiting.exs`)
+#### 3. Firewall Rules (`03_firewall_rules.exs`)
 
-DDoS protection and resource management through rate limiting.
-
-**Topics covered:**
-- Per-service rate limits (SSH, HTTP, ICMP)
-- New connection rate limiting
-- Burst handling
-- SYN flood protection
-- RuleBuilder API usage
-
-**Use case:** Public-facing servers, API endpoints, DDoS mitigation
-
-#### 3. IP Blocklist (`ip_blocklist.exs`)
-
-Demonstrates how to create and manage an IP address blocklist using nftables sets.
-
-**Topics covered:**
-- Creating sets in the kernel
-- Adding multiple IP addresses (string format)
-- Listing blocked IPs
-- Removing IPs from blocklist
-- Checking if sets exist
-
-**Use case:** Dynamic IP blocklisting for firewall applications
-
-#### 4. Firewall Rules (`firewall_rules.exs`)
+**Third Step:** Add specific allow/block rules for trusted or malicious IPs.
 
 Demonstrates creating dynamic firewall rules to block malicious IPs and allow trusted sources.
 
@@ -89,7 +89,39 @@ Demonstrates creating dynamic firewall rules to block malicious IPs and allow tr
 
 **Use case:** IDS integration, dynamic IP blocking, security incident response
 
-#### 5. Query Tables (`query_tables.exs`)
+#### 4. IP Blocklist (`04_ip_blocklist.exs`)
+
+**Fourth Step:** Set up efficient dynamic IP blocking using nftables sets.
+
+Demonstrates how to create and manage an IP address blocklist using nftables sets.
+
+**Topics covered:**
+- Creating sets in the kernel
+- Adding multiple IP addresses (string format)
+- Listing blocked IPs
+- Removing IPs from blocklist
+- Checking if sets exist
+
+**Use case:** Dynamic IP blocklisting for firewall applications
+
+#### 5. Rate Limiting (`05_rate_limiting.exs`)
+
+**Fifth Step:** Add DDoS protection through rate limiting.
+
+DDoS protection and resource management through rate limiting.
+
+**Topics covered:**
+- Per-service rate limits (SSH, HTTP, ICMP)
+- New connection rate limiting
+- Burst handling
+- SYN flood protection
+- RuleBuilder API usage
+
+**Use case:** Public-facing servers, API endpoints, DDoS mitigation
+
+#### 6. Query Tables (`06_query_tables.exs`)
+
+**Sixth Step:** Query and inspect your firewall configuration.
 
 Shows how to query and inspect your current nftables configuration.
 
@@ -292,6 +324,59 @@ exists = NFTex.Set.exists?(pid, "filter", "blocklist", :inet)
 # List set elements
 {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocklist")
 ```
+
+### NFTex.Sysctl - Network Parameter Management (New in 0.5.0)
+
+Safe, whitelist-based access to kernel network parameters:
+
+```elixir
+alias NFTex.{Sysctl, Sysctl.Network}
+
+{:ok, pid} = NFTex.start_link()
+
+# Low-level API - Direct parameter access
+{:ok, "0"} = Sysctl.get(pid, "net.ipv4.ip_forward")
+:ok = Sysctl.set(pid, "net.ipv4.ip_forward", "1")
+
+# High-level helpers for common operations
+:ok = Network.enable_ipv4_forwarding(pid)
+:ok = Network.enable_ipv6_forwarding(pid)
+:ok = Network.enable_syncookies(pid)
+
+# Check status
+{:ok, true} = Network.ipv4_forwarding_enabled?(pid)
+
+# Connection tracking
+:ok = Network.set_conntrack_max(pid, 131072)
+{:ok, 131072} = Network.get_conntrack_max(pid)
+
+# ICMP configuration
+:ok = Network.ignore_ping(pid)  # Stealth mode
+:ok = Network.allow_ping(pid)   # Normal mode
+
+# Composite operations
+:ok = Network.configure_router(pid,
+  ipv4_forwarding: true,
+  ipv6_forwarding: true,
+  syncookies: true,
+  send_redirects: false
+)
+
+:ok = Network.harden_security(pid)
+```
+
+**Security Features:**
+- 44 whitelisted network parameters only
+- Value validation per parameter type
+- Limited to `/proc/sys/net/*`
+- Uses existing CAP_NET_ADMIN capability
+
+**Supported Parameter Categories:**
+- IPv4/IPv6 forwarding and configuration
+- TCP settings (syncookies, timestamps, keepalive, port ranges)
+- Connection tracking (nf_conntrack_max, timeouts)
+- ICMP settings (echo ignore, rate limits)
+- Security parameters (rp_filter, source routing, ICMP redirects)
 
 ## Common Patterns
 

@@ -12,7 +12,7 @@
 # - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 #
 # Usage:
-#   mix run examples/query_tables.exs
+#   mix run examples/06_query_tables.exs
 
 # Start NFTex (JSON-based port)
 {:ok, pid} = NFTex.start_link()

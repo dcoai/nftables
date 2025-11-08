@@ -13,7 +13,7 @@
 # - A base chain must exist: nft add chain filter INPUT '{ type filter hook input priority 0; }'
 #
 # Usage:
-#   mix run examples/firewall_rules.exs
+#   mix run examples/03_firewall_rules.exs
 
 # Start NFTex (JSON-based port)
 {:ok, pid} = NFTex.start_link()

@@ -12,7 +12,7 @@
 # **Format**: This example uses JSON format for communication with libnftables.
 #
 # Usage:
-#   mix run examples/04_rate_limiting.exs
+#   mix run examples/05_rate_limiting.exs
 #
 # Requirements:
 #   - Root privileges (CAP_NET_ADMIN)
