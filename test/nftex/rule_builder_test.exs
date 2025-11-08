@@ -8,10 +8,10 @@ defmodule NFTex.RuleBuilderTest do
 
     # Clean up and create test table and chain
     Table.delete(pid, "nftex_test_rule_builder", :inet)
-    :ok = Table.create(pid, %{name: "nftex_test_rule_builder", family: :inet})
+    :ok = Table.add(pid, %{name: "nftex_test_rule_builder", family: :inet})
 
     # Create regular chain WITHOUT hook (safe - won't filter traffic)
-    :ok = Chain.create(pid, %{
+    :ok = Chain.add(pid, %{
       table: "nftex_test_rule_builder",
       name: "test_rb_chain",
       family: :inet

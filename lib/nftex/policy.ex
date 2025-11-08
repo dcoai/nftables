@@ -10,8 +10,8 @@ defmodule NFTex.Policy do
       {:ok, pid} = NFTex.start_link()
 
       # Create table and chain
-      :ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
+      :ok = NFTex.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -260,8 +260,8 @@ defmodule NFTex.Policy do
       }
     end
 
-    with :ok <- NFTex.Table.create(pid, %{name: table, family: family}),
-         :ok <- NFTex.Chain.create(pid, chain_attrs),
+    with :ok <- NFTex.Table.add(pid, %{name: table, family: family}),
+         :ok <- NFTex.Chain.add(pid, chain_attrs),
          :ok <- accept_loopback(pid, table: table, family: family),
          :ok <- accept_established(pid, table: table, family: family),
          :ok <- drop_invalid(pid, table: table, family: family),

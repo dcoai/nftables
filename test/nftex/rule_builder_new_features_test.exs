@@ -12,10 +12,10 @@ defmodule NFTex.RuleBuilderNewFeaturesTest do
 
     cleanup_tables(pid)
 
-    :ok = Table.create(pid, %{name: "nftex_test_features", family: :inet})
+    :ok = Table.add(pid, %{name: "nftex_test_features", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "nftex_test_features",
         name: "INPUT",
         family: :inet

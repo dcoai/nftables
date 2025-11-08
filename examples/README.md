@@ -233,7 +233,7 @@ High-level chain operations with automatic resource management:
 
 ```elixir
 # Create base chain (hooked into netfilter)
-:ok = NFTex.Chain.create(pid, %{
+:ok = NFTex.Chain.add(pid, %{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -244,7 +244,7 @@ High-level chain operations with automatic resource management:
 })
 
 # Create regular chain (for organizing rules)
-:ok = NFTex.Chain.create(pid, %{
+:ok = NFTex.Chain.add(pid, %{
   table: "filter",
   name: "my_custom_rules",
   family: :inet

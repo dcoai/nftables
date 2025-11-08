@@ -366,9 +366,9 @@ defmodule MatchExpressionsExample do
   defp setup_infrastructure(pid) do
     IO.puts("Setting up firewall infrastructure...")
 
-    :ok = Table.create(pid, %{name: "security_filter", family: :inet})
+    :ok = Table.add(pid, %{name: "security_filter", family: :inet})
 
-    :ok = Chain.create(pid, %{
+    :ok = Chain.add(pid, %{
       table: "security_filter",
       name: "INPUT",
       family: :inet

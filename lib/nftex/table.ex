@@ -22,8 +22,8 @@ defmodule NFTex.Table do
 
       {:ok, pid} = NFTex.start_link()
 
-      # Create a table for IPv4/IPv6 filtering
-      :ok = NFTex.Table.create(pid, %{
+      # Add a table for IPv4/IPv6 filtering
+      :ok = NFTex.Table.add(pid, %{
         name: "filter",
         family: :inet
       })
@@ -51,7 +51,7 @@ defmodule NFTex.Table do
   Tables created with NFTex are immediately visible via the `nft` command:
 
       # Create with NFTex
-      NFTex.Table.create(pid, %{name: "filter", family: :inet})
+      NFTex.Table.add(pid, %{name: "filter", family: :inet})
 
       # View with nft
       $ nft list tables
@@ -73,7 +73,7 @@ defmodule NFTex.Table do
         }
 
   @doc """
-  Create a table.
+  Add a table.
 
   ## Parameters
 
@@ -91,14 +91,14 @@ defmodule NFTex.Table do
 
   ## Example
 
-      NFTex.Table.create(pid, %{
+      NFTex.Table.add(pid, %{
         name: "filter",
         family: :inet
       })
 
   """
-  @spec create(pid(), table_spec()) :: :ok | {:error, term()}
-  def create(pid, %{name: name, family: family}) when is_binary(name) do
+  @spec add(pid(), table_spec()) :: :ok | {:error, term()}
+  def add(pid, %{name: name, family: family}) when is_binary(name) do
     # Build JSON command
     cmd = JSONBuilder.add_table(family, name)
     json = Jason.encode!(cmd)
@@ -168,9 +168,9 @@ defmodule NFTex.Table do
   end
 
   @doc """
-  Build a JSON command to create a table (without executing).
+  Build a JSON command to add a table (without executing).
 
-  Returns the JSON string that would be sent to create a table.
+  Returns the JSON string that would be sent to add a table.
   Useful for batching, remote execution, or inspection.
 
   ## Parameters
@@ -179,19 +179,19 @@ defmodule NFTex.Table do
 
   ## Returns
 
-  JSON string containing the table create command
+  JSON string containing the table add command
 
   ## Examples
 
       # Build command
-      json = NFTex.Table.build_create(%{name: "filter", family: :inet})
+      json = NFTex.Table.build_add(%{name: "filter", family: :inet})
       #=> "{\"nftables\":[{\"add\":{\"table\":{...}}}]}"
 
       # Use in batch
       batch =
         Batch.new()
-        |> Batch.add(Table.build_create(%{name: "filter", family: :inet}))
-        |> Batch.add(Table.build_create(%{name: "nat", family: :inet}))
+        |> Batch.add(Table.build_add(%{name: "filter", family: :inet}))
+        |> Batch.add(Table.build_add(%{name: "nat", family: :inet}))
 
       # Execute later
       NFTex.Executor.execute(json)
@@ -199,8 +199,8 @@ defmodule NFTex.Table do
       # Send to remote node
       MyTransport.send_to_node("firewall-1", json)
   """
-  @spec build_create(table_spec()) :: binary()
-  def build_create(%{name: name, family: family}) when is_binary(name) do
+  @spec build_add(table_spec()) :: binary()
+  def build_add(%{name: name, family: family}) when is_binary(name) do
     cmd = JSONBuilder.add_table(family, name)
     Jason.encode!(cmd)
   end

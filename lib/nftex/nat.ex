@@ -23,10 +23,10 @@ defmodule NFTex.NAT do
   NAT operations require a NAT table and appropriate chains:
 
       # Create NAT table
-      :ok = NFTex.Table.create(pid, %{name: "nat", family: :inet})
+      :ok = NFTex.Table.add(pid, %{name: "nat", family: :inet})
 
       # Create PREROUTING chain (for DNAT)
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Chain.add(pid, %{
         table: "nat",
         name: "prerouting",
         family: :inet,
@@ -37,7 +37,7 @@ defmodule NFTex.NAT do
       })
 
       # Create POSTROUTING chain (for SNAT/masquerade)
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Chain.add(pid, %{
         table: "nat",
         name: "postrouting",
         family: :inet,

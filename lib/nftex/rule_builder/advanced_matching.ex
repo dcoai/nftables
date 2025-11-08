@@ -386,7 +386,7 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   ## Example
 
       # Create set first
-      :ok = NFTex.Set.create(pid, %{
+      :ok = NFTex.Set.add(pid, %{
         name: "blocklist",
         table: "filter",
         family: :inet,

@@ -587,10 +587,10 @@ defmodule PacketModificationExample do
     IO.puts("Setting up QoS infrastructure...\n")
 
     # QoS table for marking
-    :ok = Table.create(pid, %{name: "qos", family: :inet})
+    :ok = Table.add(pid, %{name: "qos", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "qos",
         name: "PREROUTING",
         family: :inet,
@@ -600,7 +600,7 @@ defmodule PacketModificationExample do
       })
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "qos",
         name: "FORWARD",
         family: :inet,

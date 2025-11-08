@@ -24,10 +24,10 @@ defmodule NFTex.SetOperationsTest do
 
       # Clean up and create test infrastructure
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create the set using new JSON API
-      :ok = Set.create(pid, %{
+      :ok = Set.add(pid, %{
         name: test_set,
         table: test_table,
         family: :inet,
@@ -96,10 +96,10 @@ defmodule NFTex.SetOperationsTest do
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      :ok = Set.create(pid, %{
+      :ok = Set.add(pid, %{
         name: test_set,
         table: test_table,
         family: :inet,
@@ -159,10 +159,10 @@ defmodule NFTex.SetOperationsTest do
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      :ok = Set.create(pid, %{
+      :ok = Set.add(pid, %{
         name: test_set,
         table: test_table,
         family: :inet,
@@ -232,10 +232,10 @@ defmodule NFTex.SetOperationsTest do
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      :ok = Set.create(pid, %{
+      :ok = Set.add(pid, %{
         name: test_set,
         table: test_table,
         family: :inet,
@@ -275,7 +275,7 @@ defmodule NFTex.SetOperationsTest do
 
       test_table = "nftex_test_set"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -306,10 +306,10 @@ defmodule NFTex.SetOperationsTest do
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create the set in the kernel
-      :ok = Set.create(pid, %{
+      :ok = Set.add(pid, %{
         name: test_set,
         table: test_table,
         family: :inet,

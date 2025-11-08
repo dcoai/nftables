@@ -55,11 +55,11 @@ defmodule RateLimiting do
     end
 
     # Create filter table
-    :ok = Table.create(pid, %{name: "filter", family: :inet})
+    :ok = Table.add(pid, %{name: "filter", family: :inet})
     IO.puts("✓ Created filter table")
 
     # Create INPUT chain
-    :ok = Chain.create(pid, %{
+    :ok = Chain.add(pid, %{
       table: "filter",
       name: "INPUT",
       family: :inet,

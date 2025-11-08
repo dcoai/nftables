@@ -13,7 +13,7 @@ defmodule NFTex.Executor do
   ## Examples
 
       # Local execution (default)
-      json = Table.build_create(%{name: "filter", family: :inet})
+      json = Table.build_add(%{name: "filter", family: :inet})
       {:ok, response} = Executor.execute(json)
 
       # With specific port process
@@ -84,7 +84,7 @@ defmodule NFTex.Executor do
 
   ## Examples
 
-      json = Table.build_create(%{name: "filter", family: :inet})
+      json = Table.build_add(%{name: "filter", family: :inet})
       response = Executor.execute!(json)
   """
   @spec execute!(binary(), keyword()) :: binary()

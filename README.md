@@ -75,7 +75,7 @@ json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
 {:ok, json_response} = NFTex.Port.call(pid, json_cmd)
 
 # Or use high-level APIs that handle JSON internally
-:ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
+:ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
 ```
 
 **Benefits:**
@@ -240,7 +240,7 @@ alias NFTex.RuleBuilder
 
 ```elixir
 # Create a table
-:ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
+:ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
 
 # Delete a table
 :ok = NFTex.Table.delete(pid, "filter", :inet)
@@ -253,7 +253,7 @@ alias NFTex.RuleBuilder
 
 ```elixir
 # Create a base chain with hook
-:ok = NFTex.Chain.create(pid, %{
+:ok = NFTex.Chain.add(pid, %{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -271,7 +271,7 @@ alias NFTex.RuleBuilder
 
 ```elixir
 # Create a set
-:ok = NFTex.Set.create(pid, %{
+:ok = NFTex.Set.add(pid, %{
   name: "blocklist",
   table: "filter",
   family: :inet,
@@ -514,8 +514,8 @@ All high-level modules now provide `build_*` functions that generate commands wi
 
 ```elixir
 # Build commands without executing
-table_cmd = NFTex.Table.build_create(%{name: "filter", family: :inet})
-chain_cmd = NFTex.Chain.build_create(%{
+table_cmd = NFTex.Table.build_add(%{name: "filter", family: :inet})
+chain_cmd = NFTex.Chain.build_add(%{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -538,8 +538,8 @@ alias NFTex.Batch
 
 # Build a batch of operations
 batch = Batch.new()
-|> Batch.add(NFTex.Table.build_create(%{name: "filter", family: :inet}))
-|> Batch.add(NFTex.Chain.build_create(%{
+|> Batch.add(NFTex.Table.build_add(%{name: "filter", family: :inet}))
+|> Batch.add(NFTex.Chain.build_add(%{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -565,7 +565,7 @@ The `NFTex.Executor` module provides clean command execution:
 
 ```elixir
 # Local execution
-json_cmd = NFTex.Table.build_create(%{name: "filter", family: :inet})
+json_cmd = NFTex.Table.build_add(%{name: "filter", family: :inet})
 {:ok, response} = NFTex.Executor.execute(json_cmd, pid: pid)
 
 # Or use execute! for exceptions instead of tuples
@@ -600,7 +600,7 @@ MyTransport.send_to_node("firewall-3", cmd)
 
 ```elixir
 # Build table commands
-table_create = NFTex.Table.build_create(%{name: "filter", family: :inet})
+table_create = NFTex.Table.build_add(%{name: "filter", family: :inet})
 table_delete = NFTex.Table.build_delete("filter", :inet)
 ```
 
@@ -608,7 +608,7 @@ table_delete = NFTex.Table.build_delete("filter", :inet)
 
 ```elixir
 # Build chain commands
-chain_create = NFTex.Chain.build_create(%{
+chain_create = NFTex.Chain.build_add(%{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -624,7 +624,7 @@ chain_delete = NFTex.Chain.build_delete("filter", "INPUT", :inet)
 
 ```elixir
 # Build set commands
-set_create = NFTex.Set.build_create(%{
+set_create = NFTex.Set.build_add(%{
   name: "blocklist",
   table: "filter",
   family: :inet,
@@ -660,9 +660,9 @@ defmodule MyApp.DistributedFirewall do
   def build_firewall_config() do
     Batch.new()
     # Create table
-    |> Batch.add(Table.build_create(%{name: "filter", family: :inet}))
+    |> Batch.add(Table.build_add(%{name: "filter", family: :inet}))
     # Create INPUT chain
-    |> Batch.add(Chain.build_create(%{
+    |> Batch.add(Chain.build_add(%{
       table: "filter",
       name: "INPUT",
       family: :inet,
@@ -672,7 +672,7 @@ defmodule MyApp.DistributedFirewall do
       policy: :drop
     }))
     # Create blocklist set
-    |> Batch.add(Set.build_create(%{
+    |> Batch.add(Set.build_add(%{
       name: "blocklist",
       table: "filter",
       family: :inet,

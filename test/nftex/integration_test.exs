@@ -35,11 +35,11 @@ defmodule NFTex.IntegrationTest do
   describe "complete firewall setup" do
     test "builds secure server with Chain + RuleBuilder + Policy", %{pid: pid, test_table: test_table} do
       # Step 1: Create table
-      assert :ok = Table.create(pid, %{name: test_table, family: :inet})
+      assert :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Step 2: Create INPUT chain WITHOUT hook (safe - won't filter real traffic)
       # Using a regular chain instead of hooked chain for safety
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet
@@ -112,18 +112,18 @@ defmodule NFTex.IntegrationTest do
       Table.delete(pid, nat_test_table, :inet)
 
       # Step 1: Create NAT table (isolated test table)
-      assert :ok = Table.create(pid, %{name: nat_test_table, family: :inet})
+      assert :ok = Table.add(pid, %{name: nat_test_table, family: :inet})
 
       # Step 2: Create POSTROUTING chain WITHOUT hook (safe)
       # Using regular chains instead of hooked chains for safety
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: nat_test_table,
         name: "POSTROUTING",
         family: :inet
       })
 
       # Step 3: Create PREROUTING chain WITHOUT hook (safe)
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: nat_test_table,
         name: "PREROUTING",
         family: :inet
@@ -148,10 +148,10 @@ defmodule NFTex.IntegrationTest do
 
   describe "rate limiting scenario" do
     test "applies rate limits to multiple services", %{pid: pid, test_table: test_table} do
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create regular chain WITHOUT hook (safe)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet
@@ -186,10 +186,10 @@ defmodule NFTex.IntegrationTest do
 
   describe "logging scenario" do
     test "adds logging to multiple rules", %{pid: pid, test_table: test_table} do
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create regular chain WITHOUT hook (safe)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet
@@ -223,24 +223,24 @@ defmodule NFTex.IntegrationTest do
 
   describe "multiple chains in same table" do
     test "creates and uses multiple chains", %{pid: pid, test_table: test_table} do
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create INPUT chain WITHOUT hook (safe)
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet
       })
 
       # Create FORWARD chain WITHOUT hook (safe)
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: test_table,
         name: "FORWARD",
         family: :inet
       })
 
       # Create custom chain (no hook)
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: test_table,
         name: "custom_rules",
         family: :inet
@@ -274,16 +274,16 @@ defmodule NFTex.IntegrationTest do
 
   describe "resource cleanup" do
     test "cleans up table and all chains", %{pid: pid, test_table: test_table} do
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create multiple chains WITHOUT hooks (safe)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet
       })
 
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: "custom",
         family: :inet
@@ -311,10 +311,10 @@ defmodule NFTex.IntegrationTest do
 
   describe "complex rule combinations" do
     test "combines multiple match criteria", %{pid: pid, test_table: test_table} do
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create regular chain WITHOUT hook (safe)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet
@@ -337,10 +337,10 @@ defmodule NFTex.IntegrationTest do
     end
 
     test "creates firewall with interface-specific rules", %{pid: pid, test_table: test_table} do
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
 
       # Create regular chain WITHOUT hook (safe)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: "INPUT",
         family: :inet

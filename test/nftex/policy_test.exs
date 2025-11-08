@@ -14,10 +14,10 @@ defmodule NFTex.PolicyTest do
 
     # Clean up and create test table and chain WITHOUT hook (safe)
     Table.delete(pid, test_table, :inet)
-    :ok = Table.create(pid, %{name: test_table, family: :inet})
+    :ok = Table.add(pid, %{name: test_table, family: :inet})
 
     # Create regular chain WITHOUT hook (safe - won't filter traffic)
-    :ok = Chain.create(pid, %{
+    :ok = Chain.add(pid, %{
       table: test_table,
       name: "INPUT",
       family: :inet
@@ -38,9 +38,9 @@ defmodule NFTex.PolicyTest do
       # Create isolated test infrastructure for this test
       filter_test = "nftex_test_filter_default"
       Table.delete(pid, filter_test, :inet)
-      :ok = Table.create(pid, %{name: filter_test, family: :inet})
+      :ok = Table.add(pid, %{name: filter_test, family: :inet})
 
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: filter_test,
         name: "INPUT",
         family: :inet
@@ -353,7 +353,7 @@ defmodule NFTex.PolicyTest do
       # Create table first so setup fails
       filter_test = "nftex_test_filter_error"
       Table.delete(pid, filter_test, :inet)
-      :ok = Table.create(pid, %{name: filter_test, family: :inet})
+      :ok = Table.add(pid, %{name: filter_test, family: :inet})
 
       # This should fail because table already exists
       result = Policy.setup_basic_firewall(pid, table: filter_test, test_mode: true)

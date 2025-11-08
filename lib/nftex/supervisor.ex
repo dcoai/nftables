@@ -15,7 +15,7 @@ defmodule NFTex.Supervisor do
 
   Then you can use the registered name:
 
-      NFTex.Table.create(NFTex, %{name: "filter", family: :inet})
+      NFTex.Table.add(NFTex, %{name: "filter", family: :inet})
   """
 
   use Supervisor

@@ -23,8 +23,8 @@ defmodule NFTex.RuleTest do
       Table.delete(pid, test_table, :inet)
 
       # Create test table and chain
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
-      :ok = Chain.create(pid, %{
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+      :ok = Chain.add(pid, %{
         table: test_table,
         name: test_chain,
         family: :inet
@@ -79,8 +79,8 @@ defmodule NFTex.RuleTest do
       test_table = "nftex_test_rule"
       test_chain = "test_chain"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
-      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+      :ok = Chain.add(pid, %{table: test_table, name: test_chain, family: :inet})
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -124,8 +124,8 @@ defmodule NFTex.RuleTest do
       test_table = "nftex_test_rule"
       test_chain = "test_chain"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
-      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+      :ok = Chain.add(pid, %{table: test_table, name: test_chain, family: :inet})
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -181,8 +181,8 @@ defmodule NFTex.RuleTest do
       test_table = "nftex_test_rule"
       test_chain = "test_chain"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
-      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+      :ok = Chain.add(pid, %{table: test_table, name: test_chain, family: :inet})
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -268,8 +268,8 @@ defmodule NFTex.RuleTest do
       test_table = "nftex_test_rule"
       test_chain = "test_chain"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
-      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+      :ok = Chain.add(pid, %{table: test_table, name: test_chain, family: :inet})
 
       on_exit(fn ->
         if Process.alive?(pid) do
@@ -335,8 +335,8 @@ defmodule NFTex.RuleTest do
       test_table = "nftex_test_rule"
       test_chain = "test_chain"
       Table.delete(pid, test_table, :inet)
-      :ok = Table.create(pid, %{name: test_table, family: :inet})
-      :ok = Chain.create(pid, %{table: test_table, name: test_chain, family: :inet})
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+      :ok = Chain.add(pid, %{table: test_table, name: test_chain, family: :inet})
 
       on_exit(fn ->
         if Process.alive?(pid) do

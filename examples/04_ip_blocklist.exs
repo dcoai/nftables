@@ -27,7 +27,7 @@ IO.puts("Creating blocklist set...")
 
 # Try to create the set (will fail if it already exists, which is fine)
 # Use the high-level Set API instead of raw JSON
-case NFTex.Set.create(pid, %{
+case NFTex.Set.add(pid, %{
   name: blocklist_name,
   table: table,
   family: :inet,

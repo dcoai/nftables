@@ -15,17 +15,17 @@ defmodule NFTex.NATTest do
     cleanup_tables(pid)
 
     # Create NAT table and chains
-    :ok = Table.create(pid, %{name: "nftex_test_nat", family: :inet})
+    :ok = Table.add(pid, %{name: "nftex_test_nat", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "nftex_test_nat",
         name: "prerouting",
         family: :inet
       })
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "nftex_test_nat",
         name: "postrouting",
         family: :inet

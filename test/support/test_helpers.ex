@@ -91,7 +91,7 @@ defmodule NFTex.TestHelpers do
     # Clean up if exists from previous failed test
     Table.delete(pid, table_name, family)
 
-    case Table.create(pid, %{name: table_name, family: family}) do
+    case Table.add(pid, %{name: table_name, family: family}) do
       :ok -> {:ok, table_name}
       {:error, reason} -> {:error, reason}
     end
@@ -183,7 +183,7 @@ defmodule NFTex.TestHelpers do
         chain_attrs
       end
 
-    case Chain.create(pid, chain_attrs) do
+    case Chain.add(pid, chain_attrs) do
       :ok -> {:ok, chain_name}
       {:error, reason} -> {:error, reason}
     end

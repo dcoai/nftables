@@ -54,7 +54,7 @@ defmodule NFTex.Chain do
       {:ok, pid} = NFTex.start_link()
 
       # Create a base chain for filtering input packets
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -65,7 +65,7 @@ defmodule NFTex.Chain do
       })
 
       # Create a regular chain for custom rules
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Chain.add(pid, %{
         table: "filter",
         name: "my_custom_rules",
         family: :inet
@@ -74,10 +74,10 @@ defmodule NFTex.Chain do
   ## Complete Firewall Setup
 
       # 1. Create table
-      :ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
+      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
 
       # 2. Create INPUT chain
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -101,7 +101,7 @@ defmodule NFTex.Chain do
   Chains created with NFTex can be managed with the `nft` command:
 
       # Create with NFTex
-      NFTex.Chain.create(pid, %{
+      NFTex.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -147,7 +147,7 @@ defmodule NFTex.Chain do
   @type chain_spec :: base_chain_spec() | regular_chain_spec()
 
   @doc """
-  Create a chain.
+  Add a chain.
 
   ## Base Chain Parameters
 
@@ -168,7 +168,7 @@ defmodule NFTex.Chain do
   ## Example
 
       # Base chain
-      NFTex.Chain.create(pid, %{
+      NFTex.Chain.add(pid, %{
         table: "filter",
         name: "input",
         family: :inet,
@@ -179,15 +179,15 @@ defmodule NFTex.Chain do
       })
 
       # Regular chain
-      NFTex.Chain.create(pid, %{
+      NFTex.Chain.add(pid, %{
         table: "filter",
         name: "my_rules",
         family: :inet
       })
 
   """
-  @spec create(pid(), chain_spec()) :: :ok | {:error, term()}
-  def create(pid, spec) do
+  @spec add(pid(), chain_spec()) :: :ok | {:error, term()}
+  def add(pid, spec) do
     # Validate chain name
     cond do
       !Map.has_key?(spec, :name) ->
@@ -371,23 +371,23 @@ defmodule NFTex.Chain do
   end
 
   @doc """
-  Build a JSON command to create a chain (without executing).
+  Build a JSON command to add a chain (without executing).
 
-  Returns the JSON string that would be sent to create a chain.
+  Returns the JSON string that would be sent to add a chain.
   Useful for batching, remote execution, or inspection.
 
   ## Parameters
 
-  - `spec` - Chain specification map (same as `create/2`)
+  - `spec` - Chain specification map (same as `add/2`)
 
   ## Returns
 
-  JSON string containing the chain create command
+  JSON string containing the chain add command
 
   ## Examples
 
       # Build base chain command
-      json = NFTex.Chain.build_create(%{
+      json = NFTex.Chain.build_add(%{
         table: "filter",
         name: "input",
         family: :inet,
@@ -399,7 +399,7 @@ defmodule NFTex.Chain do
       #=> "{\\\"nftables\\\":[{\\\"add\\\":{\\\"chain\\\":{...}}}]}"
 
       # Build regular chain command
-      json = NFTex.Chain.build_create(%{
+      json = NFTex.Chain.build_add(%{
         table: "filter",
         name: "my_rules",
         family: :inet
@@ -408,14 +408,14 @@ defmodule NFTex.Chain do
       # Use in batch
       batch =
         Batch.new()
-        |> Batch.add(Chain.build_create(%{...}))
-        |> Batch.add(Chain.build_create(%{...}))
+        |> Batch.add(Chain.build_add(%{...}))
+        |> Batch.add(Chain.build_add(%{...}))
 
       # Execute later
       NFTex.Executor.execute(json)
   """
-  @spec build_create(chain_spec()) :: binary()
-  def build_create(spec) do
+  @spec build_add(chain_spec()) :: binary()
+  def build_add(spec) do
     is_base_chain = Map.has_key?(spec, :hook)
 
     # Build chain options

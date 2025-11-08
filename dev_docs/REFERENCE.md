@@ -40,10 +40,10 @@ Complete reference guide for the NFTex library.
 
 | nftables Command | NFTex Equivalent |
 |-----------------|------------------|
-| `nft add table inet filter` | `NFTex.Table.create(pid, %{name: "filter", family: :inet})` |
-| `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `NFTex.Chain.create(pid, %{table: "filter", name: "input", family: :inet, type: :filter, hook: :input, priority: 0, policy: :drop})` |
+| `nft add table inet filter` | `NFTex.Table.add(pid, %{name: "filter", family: :inet})` |
+| `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `NFTex.Chain.add(pid, %{table: "filter", name: "input", family: :inet, type: :filter, hook: :input, priority: 0, policy: :drop})` |
 | `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `NFTex.Rule.block_ip(pid, "filter", "input", "192.168.1.1")` |
-| `nft add set inet filter blocklist { type ipv4_addr; }` | `NFTex.Set.create(pid, %{table: "filter", name: "blocklist", family: :inet, type: "ipv4_addr"})` |
+| `nft add set inet filter blocklist { type ipv4_addr; }` | `NFTex.Set.add(pid, %{table: "filter", name: "blocklist", family: :inet, type: "ipv4_addr"})` |
 | `nft add element inet filter blocklist { 192.168.1.1 }` | `NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])` |
 | `nft list ruleset` | `NFTex.Query.list_rules(pid)` |
 | `nft list tables` | `NFTex.Query.list_tables(pid)` |
@@ -98,7 +98,7 @@ NFTex uses a **hybrid approach**:
 
 1. **JSON format** for structured operations (tables, chains, sets):
    ```elixir
-   NFTex.Table.create(pid, %{name: "filter", family: :inet})
+   NFTex.Table.add(pid, %{name: "filter", family: :inet})
    # Generates: {"nftables": [{"add": {"table": {"family": "inet", "name": "filter"}}}]}
    ```
 
@@ -174,13 +174,13 @@ Create a new table.
 
 ```elixir
 # Create inet table
-:ok = NFTex.Table.create(pid, %{
+:ok = NFTex.Table.add(pid, %{
   name: "filter",
   family: :inet
 })
 
 # Create ip6 table
-:ok = NFTex.Table.create(pid, %{
+:ok = NFTex.Table.add(pid, %{
   name: "filter6",
   family: :inet6
 })
@@ -234,7 +234,7 @@ Create a new chain.
 
 ```elixir
 # Create base chain (with hook)
-:ok = NFTex.Chain.create(pid, %{
+:ok = NFTex.Chain.add(pid, %{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -245,7 +245,7 @@ Create a new chain.
 })
 
 # Create regular chain (no hook)
-:ok = NFTex.Chain.create(pid, %{
+:ok = NFTex.Chain.add(pid, %{
   table: "filter",
   name: "custom_rules",
   family: :inet
@@ -556,7 +556,7 @@ Manage nftables sets for efficient IP/port matching.
 Create a new set.
 
 ```elixir
-:ok = NFTex.Set.create(pid, %{
+:ok = NFTex.Set.add(pid, %{
   table: "filter",
   name: "blocklist",
   family: :inet,
@@ -564,7 +564,7 @@ Create a new set.
 })
 
 # With flags
-:ok = NFTex.Set.create(pid, %{
+:ok = NFTex.Set.add(pid, %{
   table: "filter",
   name: "interval_set",
   family: :inet,
@@ -573,7 +573,7 @@ Create a new set.
 })
 
 # With timeout
-:ok = NFTex.Set.create(pid, %{
+:ok = NFTex.Set.add(pid, %{
   table: "filter",
   name: "temp_block",
   family: :inet,
@@ -1252,7 +1252,7 @@ All NFTex functions return either:
 **Example:**
 
 ```elixir
-case NFTex.Table.create(pid, %{name: "filter", family: :inet}) do
+case NFTex.Table.add(pid, %{name: "filter", family: :inet}) do
   :ok ->
     IO.puts("Table created")
 

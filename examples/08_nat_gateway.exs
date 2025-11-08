@@ -348,15 +348,15 @@ defmodule NATGatewayExample do
   defp setup_infrastructure(pid) do
     IO.puts("Setting up NAT infrastructure...")
 
-    :ok = Table.create(pid, %{name: "nat", family: :inet})
+    :ok = Table.add(pid, %{name: "nat", family: :inet})
 
-    :ok = Chain.create(pid, %{
+    :ok = Chain.add(pid, %{
       table: "nat",
       name: "prerouting",
       family: :inet
     })
 
-    :ok = Chain.create(pid, %{
+    :ok = Chain.add(pid, %{
       table: "nat",
       name: "postrouting",
       family: :inet

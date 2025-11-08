@@ -53,9 +53,9 @@ defmodule AdvancedFeaturesDemo do
     IO.puts("## Extended Match Expressions\n")
 
     # Create filter table and chain
-    :ok = Table.create(pid, %{name: "filter", family: :inet})
+    :ok = Table.add(pid, %{name: "filter", family: :inet})
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet
@@ -137,17 +137,17 @@ defmodule AdvancedFeaturesDemo do
     IO.puts("## NAT Operations\n")
 
     # Create NAT table and chains
-    :ok = Table.create(pid, %{name: "nat", family: :inet})
+    :ok = Table.add(pid, %{name: "nat", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "nat",
         name: "prerouting",
         family: :inet
       })
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "nat",
         name: "postrouting",
         family: :inet

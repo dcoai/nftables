@@ -15,8 +15,8 @@ defmodule NFTex.Batch do
       # Create multiple firewall rules at once
       batch =
         Batch.new()
-        |> Batch.add(Table.build_create(%{name: "filter", family: :inet}))
-        |> Batch.add(Chain.build_create(%{table: "filter", name: "INPUT", family: :inet}))
+        |> Batch.add(Table.build_add(%{name: "filter", family: :inet}))
+        |> Batch.add(Chain.build_add(%{table: "filter", name: "INPUT", family: :inet}))
         |> Batch.add(Rule.build_block_ip("filter", "INPUT", "1.2.3.4"))
         |> Batch.add(Rule.build_block_ip("filter", "INPUT", "5.6.7.8"))
 
@@ -60,8 +60,8 @@ defmodule NFTex.Batch do
   ## Examples
 
       batch = Batch.new()
-      |> Batch.add(Table.build_create(%{name: "filter"}))
-      |> Batch.add(Chain.build_create(%{table: "filter", name: "INPUT"}))
+      |> Batch.add(Table.build_add(%{name: "filter"}))
+      |> Batch.add(Chain.build_add(%{table: "filter", name: "INPUT"}))
   """
   @spec add(t(), binary()) :: t()
   def add(batch, json_command) when is_binary(json_command) do
@@ -79,8 +79,8 @@ defmodule NFTex.Batch do
   ## Examples
 
       commands = [
-        Table.build_create(%{name: "filter"}),
-        Table.build_create(%{name: "nat"})
+        Table.build_add(%{name: "filter"}),
+        Table.build_add(%{name: "nat"})
       ]
 
       batch = Batch.new()
@@ -108,7 +108,7 @@ defmodule NFTex.Batch do
   ## Examples
 
       batch = Batch.new()
-      |> Batch.add(Table.build_create(%{name: "filter"}))
+      |> Batch.add(Table.build_add(%{name: "filter"}))
       |> Batch.to_json()
 
       #=> "{\"nftables\":[{\"add\":{\"table\":{...}}}]}"
@@ -146,8 +146,8 @@ defmodule NFTex.Batch do
   ## Examples
 
       batch = Batch.new()
-      |> Batch.add(Table.build_create(%{name: "filter"}))
-      |> Batch.add(Chain.build_create(%{table: "filter", name: "INPUT"}))
+      |> Batch.add(Table.build_add(%{name: "filter"}))
+      |> Batch.add(Chain.build_add(%{table: "filter", name: "INPUT"}))
 
       {:ok, _response} = Batch.execute(batch)
 
@@ -168,7 +168,7 @@ defmodule NFTex.Batch do
   ## Examples
 
       batch = Batch.new()
-      |> Batch.add(Table.build_create(%{name: "filter"}))
+      |> Batch.add(Table.build_add(%{name: "filter"}))
       |> Batch.execute!()
   """
   @spec execute!(t(), keyword()) :: binary()
@@ -185,8 +185,8 @@ defmodule NFTex.Batch do
   ## Examples
 
       batch = Batch.new()
-      |> Batch.add(Table.build_create(%{name: "filter"}))
-      |> Batch.add(Chain.build_create(%{table: "filter", name: "INPUT"}))
+      |> Batch.add(Table.build_add(%{name: "filter"}))
+      |> Batch.add(Chain.build_add(%{table: "filter", name: "INPUT"}))
 
       Batch.size(batch)  #=> 2
   """
@@ -201,7 +201,7 @@ defmodule NFTex.Batch do
       Batch.new() |> Batch.empty?()  #=> true
 
       Batch.new()
-      |> Batch.add(Table.build_create(%{name: "filter"}))
+      |> Batch.add(Table.build_add(%{name: "filter"}))
       |> Batch.empty?()  #=> false
   """
   @spec empty?(t()) :: boolean()

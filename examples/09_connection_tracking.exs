@@ -484,10 +484,10 @@ defmodule ConnectionTrackingExample do
     IO.puts("Setting up multi-WAN infrastructure...\n")
 
     # Filter table
-    :ok = Table.create(pid, %{name: "filter", family: :inet})
+    :ok = Table.add(pid, %{name: "filter", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -498,7 +498,7 @@ defmodule ConnectionTrackingExample do
       })
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "filter",
         name: "FORWARD",
         family: :inet,
@@ -509,10 +509,10 @@ defmodule ConnectionTrackingExample do
       })
 
     # Mangle table (for marking)
-    :ok = Table.create(pid, %{name: "mangle", family: :inet})
+    :ok = Table.add(pid, %{name: "mangle", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "mangle",
         name: "PREROUTING",
         family: :inet,
@@ -522,7 +522,7 @@ defmodule ConnectionTrackingExample do
       })
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "mangle",
         name: "OUTPUT",
         family: :inet,
@@ -532,10 +532,10 @@ defmodule ConnectionTrackingExample do
       })
 
     # NAT table
-    :ok = Table.create(pid, %{name: "nat", family: :inet})
+    :ok = Table.add(pid, %{name: "nat", family: :inet})
 
     :ok =
-      Chain.create(pid, %{
+      Chain.add(pid, %{
         table: "nat",
         name: "POSTROUTING",
         family: :inet,

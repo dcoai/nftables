@@ -83,10 +83,10 @@ defmodule BasicFirewall do
     IO.puts("""
 
     # # 1. Create filter table
-    # :ok = Table.create(pid, %{name: "filter", family: :inet})
+    # :ok = Table.add(pid, %{name: "filter", family: :inet})
     #
     # # 2. Create INPUT chain with DROP policy
-    # :ok = Chain.create(pid, %{
+    # :ok = Chain.add(pid, %{
     #   table: "filter",
     #   name: "INPUT",
     #   family: :inet,

@@ -9,8 +9,8 @@ defmodule NFTex.Rule do
       {:ok, pid} = NFTex.start_link()
 
       # Create table and chain first
-      :ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
-      :ok = NFTex.Chain.create(pid, %{
+      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
+      :ok = NFTex.Chain.add(pid, %{
         table: "filter",
         name: "input",
         family: :inet,

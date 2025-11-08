@@ -10,10 +10,10 @@ defmodule NFTex.Set do
       {:ok, pid} = NFTex.start_link()
 
       # Create table first
-      :ok = NFTex.Table.create(pid, %{name: "filter", family: :inet})
+      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
 
-      # Create a set
-      :ok = NFTex.Set.create(pid, %{
+      # Add a set
+      :ok = NFTex.Set.add(pid, %{
         name: "blocklist",
         table: "filter",
         family: :inet,
@@ -44,7 +44,7 @@ defmodule NFTex.Set do
         }
 
   @doc """
-  Create a set.
+  Add a set.
 
   ## Parameters
 
@@ -63,7 +63,7 @@ defmodule NFTex.Set do
 
   ## Example
 
-      NFTex.Set.create(pid, %{
+      NFTex.Set.add(pid, %{
         name: "banned_ips",
         table: "filter",
         family: :inet,
@@ -71,8 +71,8 @@ defmodule NFTex.Set do
       })
 
   """
-  @spec create(pid(), set_spec()) :: :ok | {:error, term()}
-  def create(pid, %{name: name, table: table, family: family, key_type: key_type}) do
+  @spec add(pid(), set_spec()) :: :ok | {:error, term()}
+  def add(pid, %{name: name, table: table, family: family, key_type: key_type}) do
     # Build JSON command
     cmd = JSONBuilder.add_set(family, table, name, type: key_type_to_string(key_type))
     json = Jason.encode!(cmd)
@@ -313,22 +313,22 @@ defmodule NFTex.Set do
   end
 
   @doc """
-  Build a JSON command to create a set (without executing).
+  Build a JSON command to add a set (without executing).
 
-  Returns the JSON string that would be sent to create a set.
+  Returns the JSON string that would be sent to add a set.
   Useful for batching, remote execution, or inspection.
 
   ## Parameters
 
-  - `spec` - Set specification map (same as `create/2`)
+  - `spec` - Set specification map (same as `add/2`)
 
   ## Returns
 
-  JSON string containing the set create command
+  JSON string containing the set add command
 
   ## Examples
 
-      json = NFTex.Set.build_create(%{
+      json = NFTex.Set.build_add(%{
         name: "blocklist",
         table: "filter",
         family: :inet,
@@ -339,11 +339,11 @@ defmodule NFTex.Set do
       # Use in batch
       batch =
         Batch.new()
-        |> Batch.add(Set.build_create(%{...}))
+        |> Batch.add(Set.build_add(%{...}))
         |> Batch.add(Set.build_add_elements("filter", "blocklist", :inet, ["1.2.3.4"]))
   """
-  @spec build_create(set_spec()) :: binary()
-  def build_create(%{name: name, table: table, family: family, key_type: key_type}) do
+  @spec build_add(set_spec()) :: binary()
+  def build_add(%{name: name, table: table, family: family, key_type: key_type}) do
     cmd = JSONBuilder.add_set(family, table, name, type: key_type_to_string(key_type))
     Jason.encode!(cmd)
   end

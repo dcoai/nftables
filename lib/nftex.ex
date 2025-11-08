@@ -10,10 +10,10 @@ defmodule NFTex do
       {:ok, pid} = NFTex.start_link()
 
       # Create a table
-      NFTex.Table.create(pid, %{name: "filter", family: :inet})
+      NFTex.Table.add(pid, %{name: "filter", family: :inet})
 
       # Create a chain
-      NFTex.Chain.create(pid, %{
+      NFTex.Chain.add(pid, %{
         table: "filter",
         name: "input",
         family: :inet,
@@ -24,7 +24,7 @@ defmodule NFTex do
       })
 
       # Create a set for IP blocklist
-      NFTex.Set.create(pid, %{
+      NFTex.Set.add(pid, %{
         name: "blocklist",
         table: "filter",
         family: :inet,

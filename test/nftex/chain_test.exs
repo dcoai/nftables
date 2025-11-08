@@ -24,10 +24,10 @@ defmodule NFTex.ChainTest do
   describe "create/2 base chains" do
     test "creates chain without hook (safe for testing)", %{pid: pid} do
       # Setup
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Create regular chain WITHOUT hook (safe - won't filter traffic)
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "test_input",
         family: :inet
@@ -44,13 +44,13 @@ defmodule NFTex.ChainTest do
     end
 
     test "creates multiple chains without hooks (safe for testing)", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       chain_names = ["test_prerouting", "test_input", "test_forward", "test_output", "test_postrouting"]
 
       for chain_name <- chain_names do
         # Create regular chains WITHOUT hooks (safe - won't filter traffic)
-        assert :ok = Chain.create(pid, %{
+        assert :ok = Chain.add(pid, %{
           table: "nftex_test_chain",
           name: chain_name,
           family: :inet
@@ -61,10 +61,10 @@ defmodule NFTex.ChainTest do
     end
 
     test "creates chain for NAT testing without hook (safe)", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Create regular chain WITHOUT hook (safe - won't filter traffic)
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "test_nat",
         family: :inet
@@ -74,11 +74,11 @@ defmodule NFTex.ChainTest do
     end
 
     test "creates chain without hook (safe - policy not applicable)", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Create regular chain WITHOUT hook (safe - won't filter traffic)
       # Note: Policy only applies to base chains with hooks
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "test_drop",
         family: :inet
@@ -88,14 +88,14 @@ defmodule NFTex.ChainTest do
     end
 
     test "creates multiple chains without hooks (safe - priority not applicable)", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Note: Priority only applies to base chains with hooks
       # Creating regular chains without hooks instead (safe - won't filter traffic)
       for idx <- 0..4 do
         chain_name = "test_prio_#{idx}"
 
-        assert :ok = Chain.create(pid, %{
+        assert :ok = Chain.add(pid, %{
           table: "nftex_test_chain",
           name: chain_name,
           family: :inet
@@ -108,9 +108,9 @@ defmodule NFTex.ChainTest do
 
   describe "create/2 regular chains" do
     test "creates regular chain without hook", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "my_custom_rules",
         family: :inet
@@ -120,15 +120,15 @@ defmodule NFTex.ChainTest do
     end
 
     test "creates multiple regular chains in same table", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "custom1",
         family: :inet
       })
 
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "custom2",
         family: :inet
@@ -141,9 +141,9 @@ defmodule NFTex.ChainTest do
 
   describe "delete/4" do
     test "deletes existing chain", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "temp_chain",
         family: :inet
@@ -157,7 +157,7 @@ defmodule NFTex.ChainTest do
     end
 
     test "returns error for non-existent chain", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       assert {:error, _reason} = Chain.delete(pid, "nftex_test_chain", "nonexistent", :inet)
     end
@@ -169,15 +169,15 @@ defmodule NFTex.ChainTest do
 
   describe "list/2" do
     test "lists all chains in inet family", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "chain1",
         family: :inet
       })
 
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "chain2",
         family: :inet
@@ -203,10 +203,10 @@ defmodule NFTex.ChainTest do
     end
 
     test "includes chain metadata in results", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Create regular chain WITHOUT hook (safe - won't filter traffic)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "test_metadata",
         family: :inet
@@ -226,9 +226,9 @@ defmodule NFTex.ChainTest do
 
   describe "exists?/4" do
     test "returns true for existing chain", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "exists_test",
         family: :inet
@@ -238,7 +238,7 @@ defmodule NFTex.ChainTest do
     end
 
     test "returns false for non-existent chain", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       refute Chain.exists?(pid, "nftex_test_chain", "does_not_exist", :inet)
     end
@@ -255,11 +255,11 @@ defmodule NFTex.ChainTest do
 
   describe "set_policy/5" do
     test "attempting to set policy on regular chain (expects error)", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Create regular chain WITHOUT hook (safe - won't filter traffic)
       # Note: Policy only applies to base chains with hooks
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "policy_test",
         family: :inet
@@ -273,10 +273,10 @@ defmodule NFTex.ChainTest do
     end
 
     test "attempting to set policy on another regular chain", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Create regular chain WITHOUT hook (safe - won't filter traffic)
-      :ok = Chain.create(pid, %{
+      :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "policy_accept",
         family: :inet
@@ -288,7 +288,7 @@ defmodule NFTex.ChainTest do
     end
 
     test "returns error for non-existent chain", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       assert {:error, _reason} = Chain.set_policy(
         pid,
@@ -302,9 +302,9 @@ defmodule NFTex.ChainTest do
 
   describe "family support" do
     test "works with inet family", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      assert :ok = Chain.create(pid, %{
+      assert :ok = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "inet_chain",
         family: :inet
@@ -319,7 +319,7 @@ defmodule NFTex.ChainTest do
 
   describe "error handling" do
     test "returns error when table doesn't exist", %{pid: pid} do
-      assert {:error, _reason} = Chain.create(pid, %{
+      assert {:error, _reason} = Chain.add(pid, %{
         table: "nonexistent_table",
         name: "test_chain",
         family: :inet
@@ -327,10 +327,10 @@ defmodule NFTex.ChainTest do
     end
 
     test "handles invalid chain names gracefully", %{pid: pid} do
-      :ok = Table.create(pid, %{name: "nftex_test_chain", family: :inet})
+      :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
       # Empty name should fail
-      assert {:error, _reason} = Chain.create(pid, %{
+      assert {:error, _reason} = Chain.add(pid, %{
         table: "nftex_test_chain",
         name: "",
         family: :inet
