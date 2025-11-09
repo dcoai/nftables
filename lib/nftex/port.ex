@@ -19,6 +19,18 @@ defmodule NFTex.Port do
   [4 bytes length][JSON string]
   ```
 
+  ## Port Binary Location
+
+  The port binary is located using the following resolution order:
+
+  1. **PORT_NFTABLES_PATH** environment variable (if set and file exists)
+  2. **/usr/local/sbin/port_nftables** (system-wide installation)
+  3. **/usr/sbin/port_nftables** (system-wide installation)
+  4. **priv/port_nftables** (development or application-bundled)
+
+  For production deployments, set the `PORT_NFTABLES_PATH` environment variable
+  to specify a custom location, or install to `/usr/local/sbin/port_nftables`.
+
   ## Example
 
       {:ok, pid} = NFTex.Port.start_link()
@@ -153,7 +165,32 @@ defmodule NFTex.Port do
   ## Private Functions
 
   defp get_port_path do
-    # Check if running in development (via Mix) or production (release)
+    # 1. Check environment variable first (production override)
+    case System.get_env("PORT_NFTABLES_PATH") do
+      nil ->
+        find_port_in_system()
+
+      path when is_binary(path) ->
+        if File.exists?(path) do
+          path
+        else
+          find_port_in_system()
+        end
+    end
+  end
+
+  defp find_port_in_system do
+    # 2. Search standard system directories in production
+    system_paths = [
+      "/usr/local/sbin/port_nftables",
+      "/usr/sbin/port_nftables"
+    ]
+
+    Enum.find(system_paths, &File.exists?/1) || fallback_port_path()
+  end
+
+  defp fallback_port_path do
+    # 3. Fallback to development/application directories
     cond do
       Code.ensure_loaded?(Mix.Project) ->
         # Development: Use priv directory
