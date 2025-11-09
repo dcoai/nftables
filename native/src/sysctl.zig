@@ -64,6 +64,10 @@ const ALLOWED_PARAMS = [_][]const u8{
     "net.ipv6.conf.default.accept_redirects",
     "net.ipv6.conf.all.accept_source_route",
     "net.ipv6.conf.default.accept_source_route",
+    "net.ipv6.conf.all.accept_ra",
+    "net.ipv6.conf.default.accept_ra",
+    "net.ipv6.conf.all.accept_ra_defrtr",
+    "net.ipv6.conf.all.accept_ra_pinfo",
 };
 
 /// Check if a parameter is in the whitelist
@@ -157,6 +161,10 @@ fn validateValue(param: []const u8, value: []const u8) !void {
         "net.ipv6.conf.default.accept_redirects",
         "net.ipv6.conf.all.accept_source_route",
         "net.ipv6.conf.default.accept_source_route",
+        "net.ipv6.conf.all.accept_ra",
+        "net.ipv6.conf.default.accept_ra",
+        "net.ipv6.conf.all.accept_ra_defrtr",
+        "net.ipv6.conf.all.accept_ra_pinfo",
     };
 
     for (bool_params) |bool_param| {

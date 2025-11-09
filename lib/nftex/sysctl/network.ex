@@ -214,20 +214,21 @@ defmodule NFTex.Sysctl.Network do
   end
 
   @doc """
-  Harden network security settings.
+  Harden IPv4 network security settings.
 
-  Applies security-focused sysctl settings:
+  Applies IPv4 security-focused sysctl settings:
   - Enable reverse path filtering (anti-spoofing)
   - Disable source routing
   - Disable ICMP redirects
-  - Enable SYN cookies
+  - Disable send redirects
+  - Enable SYN cookies (SYN flood protection)
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.harden_security(pid)
+      :ok = NFTex.Sysctl.Network.harden_security_ipv4(pid)
   """
-  @spec harden_security(pid() | keyword()) :: :ok | {:error, term()}
-  def harden_security(pid_or_opts) do
+  @spec harden_security_ipv4(pid() | keyword()) :: :ok | {:error, term()}
+  def harden_security_ipv4(pid_or_opts) do
     with :ok <- Sysctl.set(pid_or_opts, "net.ipv4.conf.all.rp_filter", "1"),
          :ok <- Sysctl.set(pid_or_opts, "net.ipv4.conf.default.rp_filter", "1"),
          :ok <- Sysctl.set(pid_or_opts, "net.ipv4.conf.all.accept_source_route", "0"),
@@ -236,9 +237,53 @@ defmodule NFTex.Sysctl.Network do
          :ok <- Sysctl.set(pid_or_opts, "net.ipv4.conf.default.send_redirects", "0"),
          :ok <- Sysctl.set(pid_or_opts, "net.ipv4.conf.all.accept_redirects", "0"),
          :ok <- Sysctl.set(pid_or_opts, "net.ipv4.conf.default.accept_redirects", "0"),
+         :ok <- Sysctl.set(pid_or_opts, "net.ipv4.tcp_syncookies", "1") do
+      :ok
+    end
+  end
+
+  @doc """
+  Harden IPv6 network security settings.
+
+  Applies IPv6 security-focused sysctl settings:
+  - Disable source routing
+  - Disable ICMP redirects
+  - Disable Router Advertisements (prevents RA-based attacks)
+  - Disable RA default router
+  - Disable RA prefix information
+
+  ## Example
+
+      :ok = NFTex.Sysctl.Network.harden_security_ipv6(pid)
+  """
+  @spec harden_security_ipv6(pid() | keyword()) :: :ok | {:error, term()}
+  def harden_security_ipv6(pid_or_opts) do
+    with :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.all.accept_source_route", "0"),
+         :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.default.accept_source_route", "0"),
          :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.all.accept_redirects", "0"),
          :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.default.accept_redirects", "0"),
-         :ok <- Sysctl.set(pid_or_opts, "net.ipv4.tcp_syncookies", "1") do
+         :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.all.accept_ra", "0"),
+         :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.default.accept_ra", "0"),
+         :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.all.accept_ra_defrtr", "0"),
+         :ok <- Sysctl.set(pid_or_opts, "net.ipv6.conf.all.accept_ra_pinfo", "0") do
+      :ok
+    end
+  end
+
+  @doc """
+  Harden network security settings for both IPv4 and IPv6.
+
+  Applies security-focused sysctl settings by calling both
+  `harden_security_ipv4/1` and `harden_security_ipv6/1`.
+
+  ## Example
+
+      :ok = NFTex.Sysctl.Network.harden_security(pid)
+  """
+  @spec harden_security(pid() | keyword()) :: :ok | {:error, term()}
+  def harden_security(pid_or_opts) do
+    with :ok <- harden_security_ipv4(pid_or_opts),
+         :ok <- harden_security_ipv6(pid_or_opts) do
       :ok
     end
   end

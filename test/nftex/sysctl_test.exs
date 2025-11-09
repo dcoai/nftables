@@ -353,15 +353,50 @@ defmodule NFTex.SysctlTest do
       end
     end
 
-    test "harden_security/1", %{pid: pid} do
-      case Network.harden_security(pid) do
+    test "harden_security_ipv4/1", %{pid: pid} do
+      case Network.harden_security_ipv4(pid) do
         :ok ->
-          # Verify some key settings
+          # Verify IPv4 security settings
           assert {:ok, "1"} = Sysctl.get(pid, "net.ipv4.conf.all.rp_filter")
           assert {:ok, "0"} = Sysctl.get(pid, "net.ipv4.conf.all.accept_source_route")
           assert {:ok, "0"} = Sysctl.get(pid, "net.ipv4.conf.all.send_redirects")
           assert {:ok, "0"} = Sysctl.get(pid, "net.ipv4.conf.all.accept_redirects")
           assert {:ok, "1"} = Sysctl.get(pid, "net.ipv4.tcp_syncookies")
+
+        {:error, _} ->
+          :ok
+      end
+    end
+
+    test "harden_security_ipv6/1", %{pid: pid} do
+      case Network.harden_security_ipv6(pid) do
+        :ok ->
+          # Verify IPv6 security settings
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_source_route")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_redirects")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_ra")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_ra_defrtr")
+
+        {:error, _} ->
+          :ok
+      end
+    end
+
+    test "harden_security/1 applies both IPv4 and IPv6 hardening", %{pid: pid} do
+      case Network.harden_security(pid) do
+        :ok ->
+          # Verify IPv4 security settings
+          assert {:ok, "1"} = Sysctl.get(pid, "net.ipv4.conf.all.rp_filter")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv4.conf.all.accept_source_route")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv4.conf.all.send_redirects")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv4.conf.all.accept_redirects")
+          assert {:ok, "1"} = Sysctl.get(pid, "net.ipv4.tcp_syncookies")
+
+          # Verify IPv6 security settings
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_source_route")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_redirects")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_ra")
+          assert {:ok, "0"} = Sysctl.get(pid, "net.ipv6.conf.all.accept_ra_defrtr")
 
         {:error, _} ->
           :ok
