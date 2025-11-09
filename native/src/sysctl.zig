@@ -242,8 +242,6 @@ pub fn setSysctl(allocator: Allocator, param: []const u8, value: []const u8) !vo
     // Write value (add newline for compatibility with sysctl)
     try file.writeAll(value);
     try file.writeAll("\n");
-
-    std.log.info("Set sysctl parameter '{s}' to '{s}'", .{param, value});
 }
 
 /// Escape a string for JSON (simple implementation for common cases)

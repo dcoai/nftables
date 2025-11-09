@@ -217,17 +217,20 @@ pub fn main() !void {
                 }
             };
 
-            // Clear buffers for next iteration
-            _ = libnftables.ctxUnbufferOutput(ctx);
-            _ = libnftables.ctxUnbufferError(ctx);
-            _ = libnftables.ctxBufferOutput(ctx);
-            _ = libnftables.ctxBufferError(ctx);
-
             break :blk nft_response;
         };
 
         // Send JSON response back to Elixir
         try writePacket(stdout_file, response_json);
+
+        // Clear buffers for next iteration (MUST happen AFTER sending response)
+        // The response pointers are only valid while buffers are active
+        if (!isSysctlMessage(json_cmd)) {
+            _ = libnftables.ctxUnbufferOutput(ctx);
+            _ = libnftables.ctxUnbufferError(ctx);
+            _ = libnftables.ctxBufferOutput(ctx);
+            _ = libnftables.ctxBufferError(ctx);
+        }
 
         // Free sysctl response if allocated
         if (isSysctlMessage(json_cmd)) {
