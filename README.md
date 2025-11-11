@@ -450,6 +450,122 @@ Builder.new()
 - **Queryable**: Check counter values, quota usage independently
 - **Performance**: More efficient than inline expressions for shared logic
 
+### Query Round-Trip Support
+
+NFTablesEx now supports importing existing firewall configurations back into Builder commands, enabling powerful query-modify-reapply workflows:
+
+#### Import Entire Ruleset
+
+```elixir
+# Query and import existing firewall configuration
+{:ok, builder} = Builder.from_ruleset(pid, family: :inet)
+
+# Modify and reapply
+builder
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.source("192.168.1.100")
+  |> Rule.drop()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+#### Import Specific Elements
+
+```elixir
+# Import tables
+{:ok, tables} = Query.list_tables(pid, family: :inet)
+builder = Enum.reduce(tables, Builder.new(), fn table, b ->
+  Builder.import_table(b, table)
+end)
+
+# Import chains
+{:ok, chains} = Query.list_chains(pid, family: :inet)
+builder = Enum.reduce(chains, builder, fn chain, b ->
+  Builder.import_chain(b, chain)
+end)
+
+# Import rules
+{:ok, rules} = Query.list_rules(pid, family: :inet)
+builder = Enum.reduce(rules, builder, fn rule, b ->
+  Builder.import_rule(b, rule)
+end)
+
+# Import sets
+{:ok, sets} = Query.list_sets(pid, family: :inet)
+builder = Enum.reduce(sets, builder, fn set, b ->
+  Builder.import_set(b, set)
+end)
+
+# Execute modified configuration
+Builder.execute(builder, pid)
+```
+
+#### Use Cases
+
+**Backup and Restore:**
+```elixir
+# Backup existing rules
+{:ok, builder} = Builder.from_ruleset(pid)
+backup_json = Builder.to_json(builder)
+File.write!("firewall_backup.json", backup_json)
+
+# Restore later
+backup = File.read!("firewall_backup.json")
+{:ok, restored} = Jason.decode(backup)
+# Apply restored configuration...
+```
+
+**Configuration Drift Detection:**
+```elixir
+# Import production config
+{:ok, prod_builder} = Builder.from_ruleset(prod_pid)
+prod_json = Builder.to_json(prod_builder)
+
+# Compare with expected config
+{:ok, expected_builder} = Builder.from_ruleset(staging_pid)
+expected_json = Builder.to_json(expected_builder)
+
+if prod_json != expected_json do
+  Logger.warning("Configuration drift detected!")
+end
+```
+
+**Incremental Updates:**
+```elixir
+# Query existing rules for a specific chain
+{:ok, rules} = Query.list_rules(pid, "filter", "INPUT")
+
+# Build update that preserves existing rules
+builder = Builder.new()
+|> Builder.add_table("filter")
+|> Builder.add_chain("INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+
+# Import existing rules
+builder = Enum.reduce(rules, builder, &Builder.import_rule(&2, &1))
+
+# Add new rule
+builder
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.source("10.0.0.0/8")
+  |> Rule.accept()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+**Benefits:**
+- **Query-Modify-Reapply**: Read existing config, modify, and apply changes
+- **Backup/Restore**: Export configurations for disaster recovery
+- **Configuration Management**: Track and manage firewall state programmatically
+- **Drift Detection**: Compare actual vs expected configurations
+- **Incremental Updates**: Add rules without affecting existing ones
+
 ## Migration Guide: Old API → New API
 
 If you're upgrading from the old convenience functions, here's how to migrate to the new Builder + Rule API:

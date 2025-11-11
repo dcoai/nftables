@@ -1044,6 +1044,201 @@ defmodule NFTablesEx.Builder do
     add_command(builder, %{delete: %{limit: limit_obj}})
   end
 
+  ## Round-Trip Import (Phase 8)
+
+  @doc """
+  Import a table from Query results into the builder.
+
+  Converts a table map from `Query.list_tables/2` into an `add_table` command.
+
+  ## Parameters
+  - `builder` - The builder instance
+  - `table_map` - Table map from Query.list_tables/2 with keys: `:name`, `:family`
+
+  ## Examples
+
+      {:ok, tables} = Query.list_tables(pid)
+      builder = Enum.reduce(tables, Builder.new(), fn table, b ->
+        Builder.import_table(b, table)
+      end)
+  """
+  @spec import_table(t(), map()) :: t()
+  def import_table(%__MODULE__{} = builder, %{name: name, family: family}) do
+    %__MODULE__{builder | family: family}
+    |> add_table(name)
+  end
+
+  @doc """
+  Import a chain from Query results into the builder.
+
+  Converts a chain map from `Query.list_chains/2` into an `add_chain` command.
+
+  ## Parameters
+  - `builder` - The builder instance
+  - `chain_map` - Chain map from Query.list_chains/2
+
+  ## Examples
+
+      {:ok, chains} = Query.list_chains(pid)
+      builder = Enum.reduce(chains, Builder.new(), fn chain, b ->
+        Builder.import_chain(b, chain)
+      end)
+  """
+  @spec import_chain(t(), map()) :: t()
+  def import_chain(%__MODULE__{} = builder, chain_map) do
+    opts = build_chain_opts(chain_map)
+
+    builder
+    |> set_table(chain_map.table)
+    |> add_chain(chain_map.name, opts)
+  end
+
+  defp build_chain_opts(chain_map) do
+    []
+    |> maybe_add_opt(:type, chain_map[:type])
+    |> maybe_add_opt(:hook, chain_map[:hook])
+    |> maybe_add_opt(:priority, chain_map[:prio])
+    |> maybe_add_opt(:policy, chain_map[:policy])
+    |> maybe_add_opt(:family, chain_map[:family])
+  end
+
+  @doc false
+  def maybe_add_opt(opts, _key, nil), do: opts
+  def maybe_add_opt(opts, key, value), do: Keyword.put(opts, key, value)
+
+  @doc """
+  Import a rule from Query results into the builder.
+
+  Converts a rule map from `Query.list_rules/4` into an `add_rule` command.
+  The `expr` field from the query result is used directly as it matches
+  the Builder's expression format.
+
+  ## Parameters
+  - `builder` - The builder instance
+  - `rule_map` - Rule map from Query.list_rules/4 with keys: `:family`, `:table`, `:chain`, `:expr`
+
+  ## Examples
+
+      {:ok, rules} = Query.list_rules(pid, "filter", "INPUT")
+      builder = Enum.reduce(rules, Builder.new(), fn rule, b ->
+        Builder.import_rule(b, rule)
+      end)
+  """
+  @spec import_rule(t(), map()) :: t()
+  def import_rule(%__MODULE__{} = builder, %{table: table, chain: chain, expr: expr}) do
+    builder
+    |> set_table(table)
+    |> set_chain(chain)
+    |> add_rule(expr)
+  end
+
+  @doc """
+  Import a set from Query results into the builder.
+
+  Converts a set map from `Query.list_sets/3` into an `add_set` command.
+
+  ## Parameters
+  - `builder` - The builder instance
+  - `set_map` - Set map from Query.list_sets/3
+
+  ## Examples
+
+      {:ok, sets} = Query.list_sets(pid, family: :inet)
+      builder = Enum.reduce(sets, Builder.new(), fn set, b ->
+        Builder.import_set(b, set)
+      end)
+  """
+  @spec import_set(t(), map()) :: t()
+  def import_set(%__MODULE__{} = builder, set_map) do
+    opts = build_set_opts(set_map)
+
+    builder
+    |> set_table(set_map.table)
+    |> add_set(set_map.name, opts)
+  end
+
+  defp build_set_opts(set_map) do
+    []
+    |> maybe_add_opt(:type, set_map[:type])
+    |> maybe_add_opt(:family, set_map[:family])
+    |> maybe_add_opt(:flags, set_map[:flags])
+    |> maybe_add_opt(:timeout, set_map[:timeout])
+    |> maybe_add_opt(:gc_interval, set_map[:gc_interval])
+    |> maybe_add_opt(:size, set_map[:size])
+  end
+
+  @doc """
+  Import an entire ruleset from Query results.
+
+  Queries the current ruleset and converts all tables, chains, rules, and sets
+  into Builder commands. This allows you to:
+  1. Query existing firewall configuration
+  2. Modify it programmatically
+  3. Reapply the modified configuration
+
+  ## Parameters
+  - `pid` - NFTablesEx.Port process pid
+  - `opts` - Options:
+    - `:family` - Protocol family to import (default: `:inet`)
+    - `:exclude_handles` - Exclude handle fields from import (default: `true`)
+
+  ## Examples
+
+      # Import existing ruleset
+      {:ok, builder} = Builder.from_ruleset(pid, family: :inet)
+
+      # Modify and reapply
+      builder
+      |> Builder.set_table("filter")
+      |> Builder.set_chain("INPUT")
+      |> Builder.add_rule(
+        Rule.new()
+        |> Rule.source("10.0.0.0/8")
+        |> Rule.drop()
+        |> Rule.to_expr()
+      )
+      |> Builder.execute(pid)
+
+      # Or start fresh and import specific elements
+      {:ok, tables} = Query.list_tables(pid)
+      {:ok, chains} = Query.list_chains(pid)
+
+      builder = Builder.new()
+      builder = Enum.reduce(tables, builder, &Builder.import_table(&2, &1))
+      builder = Enum.reduce(chains, builder, &Builder.import_chain(&2, &1))
+  """
+  @spec from_ruleset(pid(), keyword()) :: {:ok, t()} | {:error, term()}
+  def from_ruleset(pid, opts \\ []) when is_pid(pid) do
+    family = Keyword.get(opts, :family, :inet)
+
+    with {:ok, tables} <- NFTablesEx.Query.list_tables(pid, family: family),
+         {:ok, chains} <- NFTablesEx.Query.list_chains(pid, family: family),
+         {:ok, rules} <- NFTablesEx.Query.list_rules(pid, family: family),
+         {:ok, sets} <- NFTablesEx.Query.list_sets(pid, family: family) do
+
+      builder = new(family: family)
+
+      # Import in order: tables -> chains -> sets -> rules
+      builder = Enum.reduce(tables, builder, fn table, b ->
+        import_table(b, table)
+      end)
+
+      builder = Enum.reduce(chains, builder, fn chain, b ->
+        import_chain(b, chain)
+      end)
+
+      builder = Enum.reduce(sets, builder, fn set, b ->
+        import_set(b, set)
+      end)
+
+      builder = Enum.reduce(rules, builder, fn rule, b ->
+        import_rule(b, rule)
+      end)
+
+      {:ok, builder}
+    end
+  end
+
   ## Execution
 
   @doc """
