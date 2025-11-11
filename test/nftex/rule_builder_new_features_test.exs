@@ -1,14 +1,14 @@
-defmodule NFTex.RuleBuilderNewFeaturesTest do
+defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
   use ExUnit.Case, async: false
   require Logger
 
   @moduletag :integration
   @moduletag :new_features
 
-  alias NFTex.{Table, Chain, RuleBuilder, Query}
+  alias NFTablesEx.{Table, Chain, RuleBuilder, Query}
 
   setup do
-    {:ok, pid} = NFTex.start_link(port: NFTex.Port, check_capabilities: false)
+    {:ok, pid} = NFTablesEx.start_link(port: NFTablesEx.Port, check_capabilities: false)
 
     cleanup_tables(pid)
 
@@ -24,7 +24,7 @@ defmodule NFTex.RuleBuilderNewFeaturesTest do
     on_exit(fn ->
       if Process.alive?(pid) do
         cleanup_tables(pid)
-        NFTex.stop(pid)
+        NFTablesEx.stop(pid)
       end
     end)
 

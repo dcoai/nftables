@@ -1,34 +1,38 @@
-defmodule NFTex.RuleBuilder.PortMatching do
+defmodule NFTablesEx.RuleBuilder.PortMatching do
   @moduledoc """
   Port matching functions for RuleBuilder.
 
   Provides functions to match TCP and UDP ports, including single ports and port ranges.
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   @doc "Match TCP source port"
   @spec match_source_port(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_source_port(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    RuleBuilder.add_part(builder, "tcp sport #{port}")
+    expr = JsonExpr.payload_match("tcp", "sport", port)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc "Match TCP destination port"
   @spec match_dest_port(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_dest_port(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    RuleBuilder.add_part(builder, "tcp dport #{port}")
+    expr = JsonExpr.payload_match("tcp", "dport", port)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc "Match UDP source port"
   @spec match_udp_sport(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_udp_sport(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    RuleBuilder.add_part(builder, "udp sport #{port}")
+    expr = JsonExpr.payload_match("udp", "sport", port)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc "Match UDP destination port"
   @spec match_udp_dport(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_udp_dport(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    RuleBuilder.add_part(builder, "udp dport #{port}")
+    expr = JsonExpr.payload_match("udp", "dport", port)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -48,7 +52,8 @@ defmodule NFTex.RuleBuilder.PortMatching do
              min_port >= 0 and min_port <= 65535 and
              max_port >= 0 and max_port <= 65535 and
              min_port <= max_port do
-    RuleBuilder.add_part(builder, "tcp dport #{min_port}-#{max_port}")
+    expr = JsonExpr.payload_match("tcp", "dport", {:range, min_port, max_port})
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -64,7 +69,8 @@ defmodule NFTex.RuleBuilder.PortMatching do
              min_port >= 0 and min_port <= 65535 and
              max_port >= 0 and max_port <= 65535 and
              min_port <= max_port do
-    RuleBuilder.add_part(builder, "tcp sport #{min_port}-#{max_port}")
+    expr = JsonExpr.payload_match("tcp", "sport", {:range, min_port, max_port})
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -81,7 +87,8 @@ defmodule NFTex.RuleBuilder.PortMatching do
              min_port >= 0 and min_port <= 65535 and
              max_port >= 0 and max_port <= 65535 and
              min_port <= max_port do
-    RuleBuilder.add_part(builder, "udp dport #{min_port}-#{max_port}")
+    expr = JsonExpr.payload_match("udp", "dport", {:range, min_port, max_port})
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -97,6 +104,7 @@ defmodule NFTex.RuleBuilder.PortMatching do
              min_port >= 0 and min_port <= 65535 and
              max_port >= 0 and max_port <= 65535 and
              min_port <= max_port do
-    RuleBuilder.add_part(builder, "udp sport #{min_port}-#{max_port}")
+    expr = JsonExpr.payload_match("udp", "sport", {:range, min_port, max_port})
+    RuleBuilder.add_expr(builder, expr)
   end
 end

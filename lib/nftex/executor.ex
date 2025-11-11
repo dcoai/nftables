@@ -1,11 +1,11 @@
-defmodule NFTex.Executor do
+defmodule NFTablesEx.Executor do
   @moduledoc """
-  Command execution abstraction for NFTex.
+  Command execution abstraction for NFTablesEx.
 
   This module provides a clean interface for executing nftables JSON commands,
   decoupling command building from execution. This enables:
 
-  - Local execution via NFTex.Port
+  - Local execution via NFTablesEx.Port
   - Remote execution via custom transports
   - Command inspection and logging
   - Testing without actual firewall changes
@@ -17,7 +17,7 @@ defmodule NFTex.Executor do
       {:ok, response} = Executor.execute(json)
 
       # With specific port process
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       Executor.execute(json, pid: pid)
 
       # Custom timeout
@@ -47,7 +47,7 @@ defmodule NFTex.Executor do
 
   - `command` - JSON string containing nftables commands
   - `opts` - Options:
-    - `:pid` - NFTex.Port process (default: looks up registered process)
+    - `:pid` - NFTablesEx.Port process (default: looks up registered process)
     - `:timeout` - Timeout in milliseconds (default: 5000)
 
   ## Returns
@@ -62,7 +62,7 @@ defmodule NFTex.Executor do
       {:ok, response} = Executor.execute(json)
 
       # Execute with specific port pid
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       Executor.execute(json, pid: pid)
 
       # Custom timeout for long operations
@@ -73,7 +73,43 @@ defmodule NFTex.Executor do
     pid = get_port_pid(opts)
     timeout = Keyword.get(opts, :timeout, 5000)
 
-    NFTex.Port.call(pid, command, timeout)
+    case NFTablesEx.Port.commit(pid, command, timeout) do
+      {:ok, ""} ->
+        # Empty response is success
+        {:ok, ""}
+
+      {:ok, response_json} ->
+        # Check if response contains an error
+        case JSON.decode(response_json) do
+          {:ok, %{"nftables" => items}} when is_list(items) ->
+            # Check if any item contains an error
+            case Enum.find(items, fn item -> Map.has_key?(item, "error") end) do
+              %{"error" => error} -> {:error, error}
+              nil -> {:ok, response_json}
+            end
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:ok, _other} ->
+            # Valid JSON but unexpected format, return as success
+            {:ok, response_json}
+
+          {:error, _reason} ->
+            # Not valid JSON, could be plain error text
+            if String.contains?(response_json, "does not exist") or
+               String.contains?(response_json, "No such") or
+               String.contains?(response_json, "not found") or
+               String.contains?(response_json, "Error:") do
+              {:error, response_json}
+            else
+              {:ok, response_json}
+            end
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -103,12 +139,12 @@ defmodule NFTex.Executor do
         pid
 
       :error ->
-        # Try to find registered NFTex.Port process
-        case Process.whereis(NFTex.Port) do
+        # Try to find registered NFTablesEx.Port process
+        case Process.whereis(NFTablesEx.Port) do
           nil ->
             raise ArgumentError, """
-            No NFTex.Port process found. Either:
-            1. Start NFTex with: NFTex.start_link()
+            No NFTablesEx.Port process found. Either:
+            1. Start NFTex with: NFTablesEx.start_link()
             2. Pass pid explicitly: Executor.execute(json, pid: pid)
             """
 

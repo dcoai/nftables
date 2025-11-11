@@ -1,4 +1,4 @@
-defmodule NFTex.RuleBuilder.CTMatching do
+defmodule NFTablesEx.RuleBuilder.CTMatching do
   @moduledoc """
   Connection tracking (CT) matching functions for RuleBuilder.
 
@@ -6,7 +6,7 @@ defmodule NFTex.RuleBuilder.CTMatching do
   direction, labels, zones, helpers, and other CT-related attributes.
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   @doc """
   Match connection tracking state.
@@ -25,11 +25,9 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_state(RuleBuilder.t(), list(atom())) :: RuleBuilder.t()
   def match_ct_state(builder, states) when is_list(states) do
-    state_str = states
-      |> Enum.map(&to_string/1)
-      |> Enum.join(",")
-
-    RuleBuilder.add_part(builder, "ct state #{state_str}")
+    state_list = Enum.map(states, &to_string/1)
+    expr = JsonExpr.ct_match("state", state_list)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -54,10 +52,9 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_status(RuleBuilder.t(), list(atom())) :: RuleBuilder.t()
   def match_ct_status(builder, statuses) when is_list(statuses) do
-    status_str = statuses
-      |> Enum.map(&to_string/1)
-      |> Enum.join(",")
-    RuleBuilder.add_part(builder, "ct status #{status_str}")
+    status_list = Enum.map(statuses, &to_string/1)
+    expr = JsonExpr.ct_match("status", status_list)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -73,7 +70,8 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_direction(RuleBuilder.t(), atom()) :: RuleBuilder.t()
   def match_ct_direction(builder, direction) when direction in [:original, :reply] do
-    RuleBuilder.add_part(builder, "ct direction #{direction}")
+    expr = JsonExpr.ct_match("direction", to_string(direction))
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -87,7 +85,8 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_connmark(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_connmark(builder, mark) when is_integer(mark) and mark >= 0 do
-    RuleBuilder.add_part(builder, "ct mark #{mark}")
+    expr = JsonExpr.ct_match("mark", mark)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -105,8 +104,8 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_label(RuleBuilder.t(), String.t() | non_neg_integer()) :: RuleBuilder.t()
   def match_ct_label(builder, label) when is_binary(label) or is_integer(label) do
-    label_str = if is_integer(label), do: to_string(label), else: inspect(label)
-    RuleBuilder.add_part(builder, "ct label #{label_str}")
+    expr = JsonExpr.ct_match("label", label)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -124,7 +123,8 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_zone(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
-    RuleBuilder.add_part(builder, "ct zone #{zone}")
+    expr = JsonExpr.ct_match("zone", zone)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -142,7 +142,8 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_helper(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_ct_helper(builder, helper) when is_binary(helper) do
-    RuleBuilder.add_part(builder, "ct helper #{inspect(helper)}")
+    expr = JsonExpr.ct_match("helper", helper)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -158,15 +159,9 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_bytes(RuleBuilder.t(), atom(), non_neg_integer()) :: RuleBuilder.t()
   def match_ct_bytes(builder, op, bytes) when is_integer(bytes) and bytes >= 0 do
-    op_str = case op do
-      :eq -> "=="
-      :ne -> "!="
-      :lt -> "<"
-      :gt -> ">"
-      :le -> "<="
-      :ge -> ">="
-    end
-    RuleBuilder.add_part(builder, "ct bytes #{op_str} #{bytes}")
+    op_str = atom_to_op(op)
+    expr = JsonExpr.ct_match("bytes", bytes, op_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -182,15 +177,9 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_packets(RuleBuilder.t(), atom(), non_neg_integer()) :: RuleBuilder.t()
   def match_ct_packets(builder, op, packets) when is_integer(packets) and packets >= 0 do
-    op_str = case op do
-      :eq -> "=="
-      :ne -> "!="
-      :lt -> "<"
-      :gt -> ">"
-      :le -> "<="
-      :ge -> ">="
-    end
-    RuleBuilder.add_part(builder, "ct packets #{op_str} #{packets}")
+    op_str = atom_to_op(op)
+    expr = JsonExpr.ct_match("packets", packets, op_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -206,7 +195,15 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_original_saddr(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_ct_original_saddr(builder, addr) when is_binary(addr) do
-    RuleBuilder.add_part(builder, "ct original ip saddr #{addr}")
+    # CT original address requires special structure
+    expr = %{
+      "match" => %{
+        "left" => %{"ct" => %{"key" => "ip saddr", "dir" => "original"}},
+        "right" => addr,
+        "op" => "=="
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -219,7 +216,15 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec match_ct_original_daddr(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_ct_original_daddr(builder, addr) when is_binary(addr) do
-    RuleBuilder.add_part(builder, "ct original ip daddr #{addr}")
+    # CT original address requires special structure
+    expr = %{
+      "match" => %{
+        "left" => %{"ct" => %{"key" => "ip daddr", "dir" => "original"}},
+        "right" => addr,
+        "op" => "=="
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -243,6 +248,15 @@ defmodule NFTex.RuleBuilder.CTMatching do
   """
   @spec limit_connections(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def limit_connections(builder, count) when is_integer(count) and count > 0 do
-    RuleBuilder.add_part(builder, "ct count #{count}")
+    expr = JsonExpr.ct_match("count", count)
+    RuleBuilder.add_expr(builder, expr)
   end
+
+  # Helper to convert atom operators to string
+  defp atom_to_op(:eq), do: "=="
+  defp atom_to_op(:ne), do: "!="
+  defp atom_to_op(:lt), do: "<"
+  defp atom_to_op(:gt), do: ">"
+  defp atom_to_op(:le), do: "<="
+  defp atom_to_op(:ge), do: ">="
 end

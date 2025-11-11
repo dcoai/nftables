@@ -1,4 +1,4 @@
-defmodule NFTex.Policy do
+defmodule NFTablesEx.Policy do
   @moduledoc """
   Pre-built firewall policies and common rule patterns.
 
@@ -7,11 +7,11 @@ defmodule NFTex.Policy do
 
   ## Quick Start
 
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Create table and chain
-      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
-      :ok = NFTex.Chain.add(pid, %{
+      :ok = NFTablesEx.Table.add(pid, %{name: "filter", family: :inet})
+      :ok = NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -22,17 +22,17 @@ defmodule NFTex.Policy do
       })
 
       # Apply common policies
-      :ok = NFTex.Policy.accept_loopback(pid)
-      :ok = NFTex.Policy.accept_established(pid)
-      :ok = NFTex.Policy.allow_ssh(pid)
+      :ok = NFTablesEx.Policy.accept_loopback(pid)
+      :ok = NFTablesEx.Policy.accept_established(pid)
+      :ok = NFTablesEx.Policy.allow_ssh(pid)
 
   ## See Also
 
-  - `NFTex.RuleBuilder` - Fluent API for custom rules
-  - `NFTex.Rule` - Low-level rule operations
+  - `NFTablesEx.RuleBuilder` - Fluent API for custom rules
+  - `NFTablesEx.Rule` - Low-level rule operations
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.RuleBuilder
 
   @doc """
   Accept all loopback traffic.
@@ -42,8 +42,8 @@ defmodule NFTex.Policy do
 
   ## Example
 
-      :ok = NFTex.Policy.accept_loopback(pid)
-      :ok = NFTex.Policy.accept_loopback(pid, table: "filter", chain: "INPUT")
+      :ok = NFTablesEx.Policy.accept_loopback(pid)
+      :ok = NFTablesEx.Policy.accept_loopback(pid, table: "filter", chain: "INPUT")
   """
   @spec accept_loopback(pid(), keyword()) :: :ok | {:error, term()}
   def accept_loopback(pid, opts \\ []) do
@@ -65,7 +65,7 @@ defmodule NFTex.Policy do
 
   ## Example
 
-      :ok = NFTex.Policy.accept_established(pid)
+      :ok = NFTablesEx.Policy.accept_established(pid)
   """
   @spec accept_established(pid(), keyword()) :: :ok | {:error, term()}
   def accept_established(pid, opts \\ []) do
@@ -93,13 +93,13 @@ defmodule NFTex.Policy do
   ## Examples
 
       # Basic SSH allow
-      :ok = NFTex.Policy.allow_ssh(pid)
+      :ok = NFTablesEx.Policy.allow_ssh(pid)
 
       # With rate limiting
-      :ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10)
+      :ok = NFTablesEx.Policy.allow_ssh(pid, rate_limit: 10)
 
       # With logging
-      :ok = NFTex.Policy.allow_ssh(pid, log: true)
+      :ok = NFTablesEx.Policy.allow_ssh(pid, log: true)
   """
   @spec allow_ssh(pid(), keyword()) :: :ok | {:error, term()}
   def allow_ssh(pid, opts \\ []) do
@@ -142,8 +142,8 @@ defmodule NFTex.Policy do
 
   ## Example
 
-      :ok = NFTex.Policy.allow_http(pid)
-      :ok = NFTex.Policy.allow_http(pid, rate_limit: 100)
+      :ok = NFTablesEx.Policy.allow_http(pid)
+      :ok = NFTablesEx.Policy.allow_http(pid, rate_limit: 100)
   """
   @spec allow_http(pid(), keyword()) :: :ok | {:error, term()}
   def allow_http(pid, opts \\ []) do
@@ -155,7 +155,7 @@ defmodule NFTex.Policy do
 
   ## Example
 
-      :ok = NFTex.Policy.allow_https(pid)
+      :ok = NFTablesEx.Policy.allow_https(pid)
   """
   @spec allow_https(pid(), keyword()) :: :ok | {:error, term()}
   def allow_https(pid, opts \\ []) do
@@ -167,7 +167,7 @@ defmodule NFTex.Policy do
 
   ## Example
 
-      :ok = NFTex.Policy.allow_dns(pid)
+      :ok = NFTablesEx.Policy.allow_dns(pid)
   """
   @spec allow_dns(pid(), keyword()) :: :ok | {:error, term()}
   def allow_dns(pid, opts \\ []) do
@@ -181,7 +181,7 @@ defmodule NFTex.Policy do
 
   ## Example
 
-      :ok = NFTex.Policy.drop_invalid(pid)
+      :ok = NFTablesEx.Policy.drop_invalid(pid)
   """
   @spec drop_invalid(pid(), keyword()) :: :ok | {:error, term()}
   def drop_invalid(pid, opts \\ []) do
@@ -191,6 +191,111 @@ defmodule NFTex.Policy do
 
     RuleBuilder.new(pid, table, chain, family: family)
     |> RuleBuilder.match_ct_state([:invalid])
+    |> RuleBuilder.drop()
+    |> RuleBuilder.commit()
+  end
+
+  @doc """
+  Setup stateful firewall rules.
+
+  Combines `accept_established/2` and `drop_invalid/2` to set up basic
+  connection tracking rules. This is essential for any stateful firewall,
+  allowing return traffic for established connections while dropping
+  packets with invalid connection tracking state.
+
+  ## Options
+
+  - `:table` - Table name (default: "filter")
+  - `:chain` - Chain name (default: "INPUT")
+  - `:family` - Protocol family (default: :inet)
+
+  ## Example
+
+      :ok = NFTablesEx.Policy.stateful(pid)
+      :ok = NFTablesEx.Policy.stateful(pid, table: "filter", chain: "INPUT")
+  """
+  @spec stateful(pid(), keyword()) :: :ok | {:error, term()}
+  def stateful(pid, opts \\ []) do
+    with :ok <- accept_established(pid, opts),
+         :ok <- drop_invalid(pid, opts) do
+      :ok
+    end
+  end
+
+  @doc """
+  Accept all traffic.
+
+  Creates a rule that accepts all packets without any matching criteria.
+  Useful as a catch-all rule or for testing purposes.
+
+  **Warning**: This creates a permissive rule. Use with caution in production.
+
+  ## Options
+
+  - `:table` - Table name (default: "filter")
+  - `:chain` - Chain name (default: "INPUT")
+  - `:family` - Protocol family (default: :inet)
+  - `:log` - Log accepted packets (default: false)
+
+  ## Example
+
+      :ok = NFTablesEx.Policy.allow_any(pid)
+      :ok = NFTablesEx.Policy.allow_any(pid, log: true)
+  """
+  @spec allow_any(pid(), keyword()) :: :ok | {:error, term()}
+  def allow_any(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+    log_enabled = Keyword.get(opts, :log, false)
+
+    builder = RuleBuilder.new(pid, table, chain, family: family)
+
+    builder = if log_enabled do
+      RuleBuilder.log(builder, "ALLOW ANY: ")
+    else
+      builder
+    end
+
+    builder
+    |> RuleBuilder.accept()
+    |> RuleBuilder.commit()
+  end
+
+  @doc """
+  Drop all traffic.
+
+  Creates a rule that drops all packets without any matching criteria.
+  Useful as a catch-all deny rule at the end of a chain or for testing.
+
+  ## Options
+
+  - `:table` - Table name (default: "filter")
+  - `:chain` - Chain name (default: "INPUT")
+  - `:family` - Protocol family (default: :inet)
+  - `:log` - Log dropped packets (default: false)
+
+  ## Example
+
+      :ok = NFTablesEx.Policy.deny_all(pid)
+      :ok = NFTablesEx.Policy.deny_all(pid, log: true)
+  """
+  @spec deny_all(pid(), keyword()) :: :ok | {:error, term()}
+  def deny_all(pid, opts \\ []) do
+    table = Keyword.get(opts, :table, "filter")
+    chain = Keyword.get(opts, :chain, "INPUT")
+    family = Keyword.get(opts, :family, :inet)
+    log_enabled = Keyword.get(opts, :log, false)
+
+    builder = RuleBuilder.new(pid, table, chain, family: family)
+
+    builder = if log_enabled do
+      RuleBuilder.log(builder, "DENY ALL: ")
+    else
+      builder
+    end
+
+    builder
     |> RuleBuilder.drop()
     |> RuleBuilder.commit()
   end
@@ -223,11 +328,11 @@ defmodule NFTex.Policy do
   ## Examples
 
       # Production use (creates hooked chains that filter traffic)
-      :ok = NFTex.Policy.setup_basic_firewall(pid)
-      :ok = NFTex.Policy.setup_basic_firewall(pid, allow_services: [:ssh, :http, :https])
+      :ok = NFTablesEx.Policy.setup_basic_firewall(pid)
+      :ok = NFTablesEx.Policy.setup_basic_firewall(pid, allow_services: [:ssh, :http, :https])
 
       # Test use (creates regular chains without hooks - SAFE)
-      :ok = NFTex.Policy.setup_basic_firewall(pid, test_mode: true, table: "my_test")
+      :ok = NFTablesEx.Policy.setup_basic_firewall(pid, test_mode: true, table: "my_test")
   """
   @spec setup_basic_firewall(pid(), keyword()) :: :ok | {:error, term()}
   def setup_basic_firewall(pid, opts \\ []) do
@@ -260,8 +365,8 @@ defmodule NFTex.Policy do
       }
     end
 
-    with :ok <- NFTex.Table.add(pid, %{name: table, family: family}),
-         :ok <- NFTex.Chain.add(pid, chain_attrs),
+    with :ok <- NFTablesEx.Table.add(pid, %{name: table, family: family}),
+         :ok <- NFTablesEx.Chain.add(pid, chain_attrs),
          :ok <- accept_loopback(pid, table: table, family: family),
          :ok <- accept_established(pid, table: table, family: family),
          :ok <- drop_invalid(pid, table: table, family: family),

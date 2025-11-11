@@ -1,7 +1,7 @@
-defmodule NFTex.SysctlTest do
+defmodule NFTablesEx.SysctlTest do
   use ExUnit.Case, async: false
 
-  alias NFTex.{Sysctl, Sysctl.Network}
+  alias NFTablesEx.{Sysctl, Sysctl.Network}
 
   @moduletag :sysctl
 
@@ -15,7 +15,7 @@ defmodule NFTex.SysctlTest do
 
   setup do
     # Start port
-    {:ok, pid} = NFTex.Port.start_link(check_capabilities: false)
+    {:ok, pid} = NFTablesEx.Port.start_link(check_capabilities: false)
 
     # Store original values for restoration
     original_values = %{
@@ -28,7 +28,7 @@ defmodule NFTex.SysctlTest do
         # Restore original values (best effort)
         restore_sysctl_value(pid, @test_param, original_values.syncookies)
         restore_sysctl_value(pid, @bool_param, original_values.ip_forward)
-        NFTex.Port.stop(pid)
+        NFTablesEx.Port.stop(pid)
       end
     end)
 

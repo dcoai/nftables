@@ -1,19 +1,19 @@
-defmodule NFTex do
+defmodule NFTablesEx do
   @moduledoc """
   Elixir interface to Linux nftables via libnftables JSON API.
 
-  NFTex provides a high-level, idiomatic Elixir API for managing nftables rules,
+  NFTablesEx provides a high-level, idiomatic Elixir API for managing nftables rules,
   using the official `libnftables` library with JSON for all communication.
 
   ## Quick Start
 
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Create a table
-      NFTex.Table.add(pid, %{name: "filter", family: :inet})
+      NFTablesEx.Table.add(pid, %{name: "filter", family: :inet})
 
       # Create a chain
-      NFTex.Chain.add(pid, %{
+      NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "input",
         family: :inet,
@@ -24,7 +24,7 @@ defmodule NFTex do
       })
 
       # Create a set for IP blocklist
-      NFTex.Set.add(pid, %{
+      NFTablesEx.Set.add(pid, %{
         name: "blocklist",
         table: "filter",
         family: :inet,
@@ -33,13 +33,13 @@ defmodule NFTex do
       })
 
       # Add IPs to the blocklist (string format)
-      NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, [
+      NFTablesEx.Set.add_elements(pid, "filter", "blocklist", :inet, [
         "192.168.1.100",
         "10.0.0.50"
       ])
 
       # Add a rule to drop blocklisted IPs
-      NFTex.Rule.add(pid, %{
+      NFTablesEx.Rule.add(pid, %{
         family: :inet,
         table: "filter",
         chain: "input",
@@ -50,20 +50,20 @@ defmodule NFTex do
 
   ### High-Level APIs
 
-  - `NFTex.Table` - Table creation and management
-  - `NFTex.Chain` - Chain creation and management
-  - `NFTex.Set` - Set creation and element management
-  - `NFTex.Rule` - Rule creation with expression support
-  - `NFTex.Query` - Query tables, chains, rules, and sets
+  - `NFTablesEx.Table` - Table creation and management
+  - `NFTablesEx.Chain` - Chain creation and management
+  - `NFTablesEx.Set` - Set creation and element management
+  - `NFTablesEx.Rule` - Rule creation with expression support
+  - `NFTablesEx.Query` - Query tables, chains, rules, and sets
 
   ### Low-Level APIs
 
-  - `NFTex.Port` - JSON-based port communication
-  - `NFTex.JSONBuilder` - Build raw nftables JSON commands
+  - `NFTablesEx.Port` - JSON-based port communication (from NFTablesEx.Port package)
+  - `NFTablesEx.Builder` - Fluent API for building nftables configurations
 
   ## Architecture
 
-  NFTex uses a port-based architecture for fault isolation and security:
+  NFTablesEx uses a port-based architecture for fault isolation and security:
 
   - The Zig port process runs with CAP_NET_ADMIN capability
   - Port binary: `priv/port_nftables` - JSON-only communication
@@ -75,14 +75,14 @@ defmodule NFTex do
   The underlying JSON format follows the official nftables JSON schema.
   See: https://wiki.nftables.org/wiki-nftables/index.php/JSON_API
 
-  For advanced use cases, you can use `NFTex.JSONBuilder` to construct custom
-  JSON commands and send them via the port.
+  For advanced use cases, you can use `NFTablesEx.Builder` to construct custom
+  firewall configurations with a fluent, functional interface.
 
   ## Migration from v0.3.x
 
   v0.4.0 introduces a complete rewrite using JSON instead of ETF/netlink:
 
-  - **Removed**: All `NFTex.Kernel.*` modules (no longer needed with JSON approach)
+  - **Removed**: All `NFTablesEx.Kernel.*` modules (no longer needed with JSON approach)
   - **Removed**: Resource ID-based API (libnftables handles resources internally)
   - **Changed**: High-level APIs simplified (no resource management)
   - **Added**: JSON-based port for simpler, more maintainable implementation
@@ -91,12 +91,12 @@ defmodule NFTex do
   module documentation for each API (Table, Chain, Set, Rule) for details.
   """
 
-  alias NFTex.Port
+  alias NFTablesEx.Port
 
   @type nft_family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
 
   @doc """
-  Starts the NFTex port process.
+  Starts the NFTablesEx port process.
 
   ## Options
 
@@ -106,13 +106,13 @@ defmodule NFTex do
   ## Examples
 
       # Default behavior
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Skip capability check (not recommended for production)
-      {:ok, pid} = NFTex.start_link(check_capabilities: false)
+      {:ok, pid} = NFTablesEx.start_link(check_capabilities: false)
 
       # With name registration
-      {:ok, pid} = NFTex.start_link(name: :nftex)
+      {:ok, pid} = NFTablesEx.start_link(name: :nftables_ex)
 
   """
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -121,14 +121,14 @@ defmodule NFTex do
   end
 
   @doc """
-  Stops the NFTex port process.
+  Stops the NFTablesEx port process.
 
   All nftables objects remain in the kernel after stopping.
-  Use `NFTex.Query.flush_ruleset/2` to clean up if needed.
+  Use `NFTablesEx.Query.flush_ruleset/2` to clean up if needed.
 
   ## Example
 
-      NFTex.stop(pid)
+      NFTablesEx.stop(pid)
 
   """
   @spec stop(pid()) :: :ok

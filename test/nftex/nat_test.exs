@@ -1,15 +1,15 @@
-defmodule NFTex.NATTest do
+defmodule NFTablesEx.NATTest do
   use ExUnit.Case, async: false
   require Logger
 
   @moduletag :integration
   @moduletag :nat
 
-  alias NFTex.{Table, Chain, NAT, Query}
+  alias NFTablesEx.{Table, Chain, NAT, Query}
 
   setup do
     # Start NFTex
-    {:ok, pid} = NFTex.start_link(port: NFTex.Port, check_capabilities: false)
+    {:ok, pid} = NFTablesEx.start_link(port: NFTablesEx.Port, check_capabilities: false)
 
     # Clean up any existing test tables
     cleanup_tables(pid)
@@ -34,7 +34,7 @@ defmodule NFTex.NATTest do
     on_exit(fn ->
       if Process.alive?(pid) do
         cleanup_tables(pid)
-        NFTex.stop(pid)
+        NFTablesEx.stop(pid)
       end
     end)
 

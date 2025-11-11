@@ -1,4 +1,4 @@
-defmodule NFTex.Set do
+defmodule NFTablesEx.Set do
   @moduledoc """
   High-level set operations for nftables.
 
@@ -7,13 +7,13 @@ defmodule NFTex.Set do
   ## Quick Start
 
       # Start NFTex
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Create table first
-      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
+      :ok = NFTablesEx.Table.add(pid, %{name: "filter", family: :inet})
 
       # Add a set
-      :ok = NFTex.Set.add(pid, %{
+      :ok = NFTablesEx.Set.add(pid, %{
         name: "blocklist",
         table: "filter",
         family: :inet,
@@ -22,17 +22,17 @@ defmodule NFTex.Set do
 
       # Add IP addresses to blocklist
       ips = ["192.168.1.100", "10.0.0.50"]
-      :ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ips)
+      :ok = NFTablesEx.Set.add_elements(pid, "filter", "blocklist", :inet, ips)
 
       # List blocked IPs
-      {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
+      {:ok, elements} = NFTablesEx.Set.list_elements(pid, "filter", "blocklist")
 
       # Remove an IP
-      :ok = NFTex.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.100"])
+      :ok = NFTablesEx.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.100"])
 
   """
 
-  alias NFTex.{Port, JSONBuilder}
+  alias NFTablesEx.Port
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type key_type :: :ipv4_addr | :ipv6_addr | :ether_addr | :inet_protocol | :inet_service
@@ -63,7 +63,7 @@ defmodule NFTex.Set do
 
   ## Example
 
-      NFTex.Set.add(pid, %{
+      NFTablesEx.Set.add(pid, %{
         name: "banned_ips",
         table: "filter",
         family: :inet,
@@ -74,18 +74,32 @@ defmodule NFTex.Set do
   @spec add(pid(), set_spec()) :: :ok | {:error, term()}
   def add(pid, %{name: name, table: table, family: family, key_type: key_type}) do
     # Build JSON command
-    cmd = JSONBuilder.add_set(family, table, name, type: key_type_to_string(key_type))
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "add" => %{
+            "set" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name,
+              "type" => key_type_to_string(key_type)
+            }
+          }
+        }
+      ]
+    }
+
+    json = cmd |> JSON.encode!()
 
     # Send to port
-    case Port.call(pid, json) do
+    case Port.commit(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
         # Parse response to check for errors
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 
@@ -106,24 +120,37 @@ defmodule NFTex.Set do
 
   ## Example
 
-      NFTex.Set.delete(pid, "filter", "banned_ips", :inet)
+      NFTablesEx.Set.delete(pid, "filter", "banned_ips", :inet)
 
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
   def delete(pid, table, name, family) do
     # Build JSON command
-    cmd = JSONBuilder.delete_set(family, table, name)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "set" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name
+            }
+          }
+        }
+      ]
+    }
+
+    json = cmd |> JSON.encode!()
 
     # Send to port
-    case Port.call(pid, json) do
+    case Port.commit(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
         # Parse response to check for errors
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 
@@ -151,7 +178,7 @@ defmodule NFTex.Set do
 
   ## Example
 
-      NFTex.Set.add_elements(pid, "filter", "banned_ips", :inet, [
+      NFTablesEx.Set.add_elements(pid, "filter", "banned_ips", :inet, [
         "192.168.1.200",
         "10.0.0.50"
       ])
@@ -161,18 +188,32 @@ defmodule NFTex.Set do
           :ok | {:error, term()}
   def add_elements(pid, table, name, family, elements) when is_list(elements) do
     # Build JSON command
-    cmd = JSONBuilder.add_element(family, table, name, elements)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "add" => %{
+            "element" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name,
+              "elem" => elements
+            }
+          }
+        }
+      ]
+    }
+
+    json = cmd |> JSON.encode!()
 
     # Send to port
-    case Port.call(pid, json) do
+    case Port.commit(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
         # Parse response to check for errors
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 
@@ -193,7 +234,7 @@ defmodule NFTex.Set do
 
   ## Example
 
-      NFTex.Set.delete_elements(pid, "filter", "banned_ips", :inet, [
+      NFTablesEx.Set.delete_elements(pid, "filter", "banned_ips", :inet, [
         "192.168.1.100"
       ])
 
@@ -202,18 +243,32 @@ defmodule NFTex.Set do
           :ok | {:error, term()}
   def delete_elements(pid, table, name, family, elements) when is_list(elements) do
     # Build JSON command
-    cmd = JSONBuilder.delete_element(family, table, name, elements)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "element" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name,
+              "elem" => elements
+            }
+          }
+        }
+      ]
+    }
+
+    json = cmd |> JSON.encode!()
 
     # Send to port
-    case Port.call(pid, json) do
+    case Port.commit(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
         # Parse response to check for errors
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 
@@ -242,8 +297,8 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      {:ok, sets} = NFTex.Set.list(pid)
-      {:ok, sets} = NFTex.Set.list(pid, family: :inet6)
+      {:ok, sets} = NFTablesEx.Set.list(pid)
+      {:ok, sets} = NFTablesEx.Set.list(pid, family: :inet6)
 
       for s <- sets do
         IO.puts("Set: \#{s.name} in table \#{s.table}")
@@ -252,7 +307,7 @@ defmodule NFTex.Set do
   """
   @spec list(pid(), keyword()) :: {:ok, [map()]} | {:error, term()}
   def list(pid, opts \\ []) do
-    NFTex.Query.list_sets(pid, opts)
+    NFTablesEx.Query.list_sets(pid, opts)
   end
 
   @doc """
@@ -270,7 +325,7 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "banned_ips")
+      {:ok, elements} = NFTablesEx.Set.list_elements(pid, "filter", "banned_ips")
 
       for el <- elements do
         IO.puts("Element: \#{inspect(el)}")
@@ -279,7 +334,7 @@ defmodule NFTex.Set do
   """
   @spec list_elements(pid(), String.t(), String.t(), keyword()) :: {:ok, [map()]} | {:error, term()}
   def list_elements(pid, table, set_name, opts \\ []) do
-    NFTex.Query.list_set_elements(pid, table, set_name, opts)
+    NFTablesEx.Query.list_set_elements(pid, table, set_name, opts)
   end
 
   @doc """
@@ -294,14 +349,14 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      if NFTex.Set.exists?(pid, "filter", "banned_ips", :inet) do
+      if NFTablesEx.Set.exists?(pid, "filter", "banned_ips", :inet) do
         IO.puts("Set exists")
       end
 
   """
   @spec exists?(pid(), String.t(), String.t(), family()) :: boolean()
   def exists?(pid, table, set_name, family \\ :inet) do
-    case NFTex.Query.list_sets(pid, family: family) do
+    case NFTablesEx.Query.list_sets(pid, family: family) do
       {:ok, sets} ->
         Enum.any?(sets, fn set ->
           set.name == set_name and set.table == table
@@ -328,7 +383,7 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      json = NFTex.Set.build_add(%{
+      json = NFTablesEx.Set.build_add(%{
         name: "blocklist",
         table: "filter",
         family: :inet,
@@ -344,8 +399,22 @@ defmodule NFTex.Set do
   """
   @spec build_add(set_spec()) :: binary()
   def build_add(%{name: name, table: table, family: family, key_type: key_type}) do
-    cmd = JSONBuilder.add_set(family, table, name, type: key_type_to_string(key_type))
-    Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "add" => %{
+            "set" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name,
+              "type" => key_type_to_string(key_type)
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
   end
 
   @doc """
@@ -365,13 +434,26 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      json = NFTex.Set.build_delete("filter", "blocklist", :inet)
-      NFTex.Executor.execute(json)
+      json = NFTablesEx.Set.build_delete("filter", "blocklist", :inet)
+      NFTablesEx.Executor.execute(json)
   """
   @spec build_delete(String.t(), String.t(), family()) :: binary()
   def build_delete(table, name, family) do
-    cmd = JSONBuilder.delete_set(family, table, name)
-    Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "set" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
   end
 
   @doc """
@@ -392,17 +474,31 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      json = NFTex.Set.build_add_elements("filter", "blocklist", :inet, [
+      json = NFTablesEx.Set.build_add_elements("filter", "blocklist", :inet, [
         "192.168.1.100",
         "10.0.0.50"
       ])
 
-      NFTex.Executor.execute(json)
+      NFTablesEx.Executor.execute(json)
   """
   @spec build_add_elements(String.t(), String.t(), family(), [String.t()]) :: binary()
   def build_add_elements(table, name, family, elements) when is_list(elements) do
-    cmd = JSONBuilder.add_element(family, table, name, elements)
-    Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "add" => %{
+            "element" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name,
+              "elem" => elements
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
   end
 
   @doc """
@@ -423,16 +519,30 @@ defmodule NFTex.Set do
 
   ## Examples
 
-      json = NFTex.Set.build_delete_elements("filter", "blocklist", :inet, [
+      json = NFTablesEx.Set.build_delete_elements("filter", "blocklist", :inet, [
         "192.168.1.100"
       ])
 
-      NFTex.Executor.execute(json)
+      NFTablesEx.Executor.execute(json)
   """
   @spec build_delete_elements(String.t(), String.t(), family(), [String.t()]) :: binary()
   def build_delete_elements(table, name, family, elements) when is_list(elements) do
-    cmd = JSONBuilder.delete_element(family, table, name, elements)
-    Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "element" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name,
+              "elem" => elements
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
   end
 
   # Private helpers

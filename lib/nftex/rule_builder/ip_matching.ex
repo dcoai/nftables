@@ -1,11 +1,11 @@
-defmodule NFTex.RuleBuilder.IPMatching do
+defmodule NFTablesEx.RuleBuilder.IPMatching do
   @moduledoc """
   IP address matching functions for RuleBuilder.
 
   Provides functions to match source and destination IP addresses (IPv4 and IPv6).
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   @doc """
   Match source IP address.
@@ -25,13 +25,15 @@ defmodule NFTex.RuleBuilder.IPMatching do
     ip_str = format_ip(ip)
 
     # Determine IP version based on family or IP format
-    prefix = case builder.family do
+    protocol = case builder.family do
       :ip6 -> "ip6"
       :inet6 -> "ip6"
       _ -> if String.contains?(ip_str, ":"), do: "ip6", else: "ip"
     end
 
-    RuleBuilder.add_part(builder, "#{prefix} saddr #{ip_str}")
+    # Build JSON expression for IP source address match
+    expr = JsonExpr.payload_match(protocol, "saddr", ip_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -52,13 +54,15 @@ defmodule NFTex.RuleBuilder.IPMatching do
     ip_str = format_ip(ip)
 
     # Determine IP version based on family or IP format
-    prefix = case builder.family do
+    protocol = case builder.family do
       :ip6 -> "ip6"
       :inet6 -> "ip6"
       _ -> if String.contains?(ip_str, ":"), do: "ip6", else: "ip"
     end
 
-    RuleBuilder.add_part(builder, "#{prefix} daddr #{ip_str}")
+    # Build JSON expression for IP destination address match
+    expr = JsonExpr.payload_match(protocol, "daddr", ip_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Private helpers

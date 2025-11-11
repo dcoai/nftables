@@ -1,4 +1,4 @@
-defmodule NFTex.Supervisor do
+defmodule NFTablesEx.Supervisor do
   @moduledoc """
   Supervisor for the NFTex JSON port process.
 
@@ -8,14 +8,14 @@ defmodule NFTex.Supervisor do
   ## Usage
 
       children = [
-        {NFTex.Supervisor, name: NFTex}
+        {NFTablesEx.Supervisor, name: NFTex}
       ]
 
       Supervisor.start_link(children, strategy: :one_for_one)
 
   Then you can use the registered name:
 
-      NFTex.Table.add(NFTex, %{name: "filter", family: :inet})
+      NFTablesEx.Table.add(NFTex, %{name: "filter", family: :inet})
   """
 
   use Supervisor
@@ -30,7 +30,7 @@ defmodule NFTex.Supervisor do
     port_name = opts[:name] || NFTex
 
     children = [
-      {NFTex.Port, [name: port_name]}
+      {NFTablesEx.Port, [name: port_name]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

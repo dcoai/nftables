@@ -1,10 +1,10 @@
-defmodule NFTex.RuleBuilderTest do
+defmodule NFTablesEx.RuleBuilderTest do
   use ExUnit.Case, async: false
 
-  alias NFTex.{RuleBuilder, Table, Chain}
+  alias NFTablesEx.{RuleBuilder, Table, Chain}
 
   setup do
-    {:ok, pid} = NFTex.start_link()
+    {:ok, pid} = NFTablesEx.start_link()
 
     # Clean up and create test table and chain
     Table.delete(pid, "nftex_test_rule_builder", :inet)
@@ -35,7 +35,7 @@ defmodule NFTex.RuleBuilderTest do
       assert builder.table == "nftex_test_rule_builder"
       assert builder.chain == "test_rb_chain"
       assert builder.family == :inet
-      assert builder.nft_parts == []
+      assert builder.expr_list == []
     end
 
     test "creates builder with custom family", %{pid: pid} do
@@ -52,7 +52,7 @@ defmodule NFTex.RuleBuilderTest do
       builder = RuleBuilder.match_source_ip(builder, "192.168.1.100")
 
       assert %RuleBuilder{} = builder
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_dest_ip/2 adds expression to builder", %{pid: pid} do
@@ -60,7 +60,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_dest_ip(builder, "10.0.0.1")
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_source_port/2 adds expression to builder", %{pid: pid} do
@@ -68,7 +68,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_source_port(builder, 1234)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_dest_port/2 adds expression to builder", %{pid: pid} do
@@ -76,7 +76,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_dest_port(builder, 80)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_dest_port/2 validates port range", %{pid: pid} do
@@ -101,7 +101,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_ct_state(builder, [:established])
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_ct_state/2 with multiple states", %{pid: pid} do
@@ -109,7 +109,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_ct_state(builder, [:established, :related])
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_ct_state/2 with all states", %{pid: pid} do
@@ -117,7 +117,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_ct_state(builder, [:invalid, :established, :related, :new])
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_iif/2 adds expression to builder", %{pid: pid} do
@@ -125,7 +125,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_iif(builder, "eth0")
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "match_oif/2 adds expression to builder", %{pid: pid} do
@@ -133,7 +133,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.match_oif(builder, "eth1")
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
   end
 
@@ -143,7 +143,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.counter(builder)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "log/2 adds log expression with prefix", %{pid: pid} do
@@ -151,7 +151,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.log(builder, "TEST: ")
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "log/3 adds log expression with options", %{pid: pid} do
@@ -159,7 +159,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.log(builder, "TEST: ", level: :warning)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "rate_limit/3 adds rate limit expression", %{pid: pid} do
@@ -167,7 +167,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.rate_limit(builder, 10, :minute)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "rate_limit/4 with burst option", %{pid: pid} do
@@ -175,7 +175,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.rate_limit(builder, 100, :second, burst: 50)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
   end
 
@@ -185,7 +185,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.accept(builder)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "drop/1 adds drop verdict", %{pid: pid} do
@@ -193,7 +193,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.drop(builder)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "reject/1 adds reject verdict with default type", %{pid: pid} do
@@ -201,7 +201,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.reject(builder)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
 
     test "reject/2 adds reject verdict with custom type", %{pid: pid} do
@@ -209,7 +209,7 @@ defmodule NFTex.RuleBuilderTest do
 
       builder = RuleBuilder.reject(builder, :tcp_reset)
 
-      assert length(builder.nft_parts) == 1
+      assert length(builder.expr_list) == 1
     end
   end
 
@@ -220,7 +220,7 @@ defmodule NFTex.RuleBuilderTest do
         |> RuleBuilder.match_source_ip("192.168.1.100")
         |> RuleBuilder.match_dest_port(22)
 
-      assert length(builder.nft_parts) == 2
+      assert length(builder.expr_list) == 2
     end
 
     test "chains match, action, and verdict", %{pid: pid} do
@@ -230,7 +230,7 @@ defmodule NFTex.RuleBuilderTest do
         |> RuleBuilder.counter()
         |> RuleBuilder.accept()
 
-      assert length(builder.nft_parts) == 3
+      assert length(builder.expr_list) == 3
     end
 
     test "preserves expression order", %{pid: pid} do
@@ -241,7 +241,7 @@ defmodule NFTex.RuleBuilderTest do
         |> RuleBuilder.log("SSH: ")
         |> RuleBuilder.drop()
 
-      assert length(builder.nft_parts) == 4
+      assert length(builder.expr_list) == 4
       # Expressions should be in the order they were added
     end
   end

@@ -165,15 +165,25 @@ getcap priv/port_nftables
 
 ## Quick Start
 
-### Block an IP Address
+### Block an IP Address (New API)
 
 ```elixir
 # Start NFTex
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTablesEx.start_link()
 
-# Block a malicious IP
-ip = "192.168.1.100"
-:ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", ip)
+# Build and execute a rule to block an IP
+alias NFTablesEx.{Builder, Rule}
+
+Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.source("192.168.1.100")
+  |> Rule.drop()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
 
 # That's it! The rule is now active in the kernel.
 ```
@@ -199,19 +209,42 @@ malicious_ips = [
 {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
 ```
 
-### Build Complex Rules with RuleBuilder
+### Build Complex Rules (New API)
 
 ```elixir
-alias NFTex.RuleBuilder
+alias NFTablesEx.{Builder, Rule}
 
-# Build a sophisticated firewall rule
-:ok = RuleBuilder.new(pid, "filter", "INPUT")
-  |> RuleBuilder.match_source_ip("10.0.0.0/8")
-  |> RuleBuilder.match_dest_port(22)
-  |> RuleBuilder.rate_limit(10, :minute, burst: 5)
-  |> RuleBuilder.log("SSH_ACCESS: ", level: :info)
-  |> RuleBuilder.accept()
-  |> RuleBuilder.commit()
+# Build a sophisticated firewall rule with the new fluent API
+:ok = Builder.new(family: :inet)
+  |> Builder.set_table("filter")
+  |> Builder.set_chain("INPUT")
+  |> Builder.add_rule(
+    Rule.new()
+    |> Rule.source("10.0.0.0/8")
+    |> Rule.protocol(:tcp)
+    |> Rule.dport(22)
+    |> Rule.state([:new])
+    |> Rule.limit(10, :minute, burst: 5)
+    |> Rule.log("SSH_ACCESS: ", level: "info")
+    |> Rule.counter()
+    |> Rule.accept()
+    |> Rule.to_expr()
+  )
+  |> Builder.execute(pid)
+
+# Or build multiple rules in a batch
+:ok = Builder.new(family: :inet)
+  |> Builder.add_table("filter")
+  |> Builder.add_chain("INPUT")
+  |> Builder.set_table("filter")
+  |> Builder.set_chain("INPUT")
+  |> Builder.add_rule(
+    Rule.new() |> Rule.source("10.0.0.0/8") |> Rule.drop() |> Rule.to_expr()
+  )
+  |> Builder.add_rule(
+    Rule.new() |> Rule.state([:established, :related]) |> Rule.accept() |> Rule.to_expr()
+  )
+  |> Builder.execute(pid)
 ```
 
 ### Setup Basic Firewall
@@ -233,6 +266,306 @@ alias NFTex.RuleBuilder
 # - Allow SSH with rate limiting
 # - Allow HTTP and HTTPS
 ```
+
+## New Builder + Rule API
+
+NFTablesEx now provides a powerful, composable API for building firewall rules:
+
+### Builder Module - Command Construction
+
+The `Builder` module provides a pure functional interface for constructing nftables commands:
+
+```elixir
+alias NFTablesEx.Builder
+
+# Build commands without executing
+builder = Builder.new(family: :inet)
+|> Builder.add_table("filter")
+|> Builder.add_chain("INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+
+# Execute when ready
+:ok = Builder.execute(builder, pid)
+
+# Or inspect the JSON that would be sent
+json = Builder.to_json(builder)
+```
+
+### Rule Module - Expression Building
+
+The `Rule` module provides a fluent API for building rule expressions:
+
+```elixir
+alias NFTablesEx.Rule
+
+# Build rule expressions
+expr = Rule.new()
+|> Rule.source("10.0.0.0/8")           # Match source IP/CIDR
+|> Rule.protocol(:tcp)                   # Match protocol
+|> Rule.dport(22)                        # Match destination port
+|> Rule.state([:established, :related]) # Match connection state
+|> Rule.limit(10, :minute, burst: 5)    # Rate limiting
+|> Rule.log("SSH: ", level: "info")     # Logging
+|> Rule.counter()                        # Add counter
+|> Rule.accept()                         # Verdict
+|> Rule.to_expr()                        # Convert to expression list
+
+# Use with Builder
+Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(expr)
+|> Builder.execute(pid)
+```
+
+### Available Rule Matchers
+
+- **IP**: `source/1`, `dest/1` - Supports single IPs and CIDR notation
+- **Ports**: `sport/1`, `dport/1`, `port/1` - TCP/UDP ports
+- **Protocol**: `protocol/1` - tcp, udp, icmp, etc.
+- **State**: `state/1` - Connection tracking states
+- **Interface**: `iif/1`, `oif/1` - Input/output interfaces
+- **TCP Flags**: `tcp_flags/2` - SYN, ACK, FIN, etc.
+- **Many more**: See module documentation
+
+### Available Actions & Verdicts
+
+- **Actions**: `counter/0`, `log/2`, `limit/3`, `set_mark/1`
+- **Verdicts**: `accept/0`, `drop/0`, `reject/1`, `jump/1`, `return/0`
+- **NAT**: `snat/2`, `dnat/2`, `masquerade/1`
+
+### Advanced Features - Named Objects
+
+The `Builder` module also supports nftables named objects for advanced use cases:
+
+#### Maps (Key-Value Dictionaries)
+
+Maps allow you to create dynamic mappings from keys to values (e.g., port → verdict):
+
+```elixir
+# Create a map that maps ports to verdicts
+Builder.new()
+|> Builder.add_table("filter")
+|> Builder.add_map("port_verdict", type: {:inet_service, :verdict})
+|> Builder.add_map_elements("port_verdict", [
+  {80, "accept"},
+  {443, "accept"},
+  {8080, "drop"}
+])
+|> Builder.execute(pid)
+
+# Use the map in a rule
+Builder.new()
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.protocol(:tcp)
+  |> Rule.dport_map("port_verdict")  # Map lookup
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+#### Named Counters
+
+Named counters can be shared across multiple rules and queried independently:
+
+```elixir
+# Create a named counter
+Builder.new()
+|> Builder.add_table("filter")
+|> Builder.add_counter("http_traffic")
+|> Builder.execute(pid)
+
+# Reference it in rules
+Builder.new()
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.protocol(:tcp)
+  |> Rule.dport(80)
+  |> Rule.counter_ref("http_traffic")  # Reference named counter
+  |> Rule.accept()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+#### Quotas
+
+Quotas limit the total amount of traffic (in bytes) that can pass through:
+
+```elixir
+# Create a 1 GB quota
+Builder.new()
+|> Builder.add_table("filter")
+|> Builder.add_quota("monthly_limit", 1_000_000_000)
+|> Builder.execute(pid)
+
+# Use in a rule - traffic stops when quota exceeded
+Builder.new()
+|> Builder.set_table("filter")
+|> Builder.set_chain("OUTPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.quota_ref("monthly_limit")
+  |> Rule.accept()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+#### Named Limits
+
+Named limits provide reusable rate limiting across multiple rules:
+
+```elixir
+# Create a rate limit object
+Builder.new()
+|> Builder.add_table("filter")
+|> Builder.add_limit("ssh_limit", 10, :minute, burst: 5)
+|> Builder.execute(pid)
+
+# Use in multiple rules
+Builder.new()
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.protocol(:tcp)
+  |> Rule.dport(22)
+  |> Rule.limit_ref("ssh_limit")  # Reference named limit
+  |> Rule.accept()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+**Benefits of Named Objects:**
+- **Reusability**: Define once, use in multiple rules
+- **Dynamic Updates**: Update the object without modifying rules
+- **Queryable**: Check counter values, quota usage independently
+- **Performance**: More efficient than inline expressions for shared logic
+
+## Migration Guide: Old API → New API
+
+If you're upgrading from the old convenience functions, here's how to migrate to the new Builder + Rule API:
+
+### Blocking an IP Address
+
+**Old API:**
+```elixir
+Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
+```
+
+**New API:**
+```elixir
+Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.source("192.168.1.100")
+  |> Rule.drop()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+### Accepting an IP Address
+
+**Old API:**
+```elixir
+Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
+```
+
+**New API:**
+```elixir
+Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.source("10.0.0.1")
+  |> Rule.accept()
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+### Rate Limiting
+
+**Old API:**
+```elixir
+Rule.rate_limit(pid, "filter", "INPUT", 10, :minute, burst: 5)
+```
+
+**New API:**
+```elixir
+Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  Rule.new()
+  |> Rule.limit(10, :minute, burst: 5)
+  |> Rule.drop()  # or accept() depending on your use case
+  |> Rule.to_expr()
+)
+|> Builder.execute(pid)
+```
+
+### Deleting Rules
+
+**Old API:**
+```elixir
+Rule.delete(pid, "filter", "INPUT", :inet, handle)
+```
+
+**New API:**
+```elixir
+# Query for rules first
+{:ok, rules} = Query.list_rules(pid, "filter", "INPUT", family: :inet)
+
+# Find the rule you want to delete and use Builder
+rule = Enum.find(rules, fn r -> r.handle == target_handle end)
+
+Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.delete_rule(rule.handle)
+|> Builder.execute(pid)
+```
+
+### Benefits of the New API
+
+1. **Composability**: Build complex rules by chaining matchers and actions
+2. **Type Safety**: Better compile-time validation of rule structure
+3. **Testability**: Separate command building from execution
+4. **Clarity**: Clear separation between matchers (source, protocol) and verdicts (accept, drop)
+5. **CIDR Support**: Native support for CIDR notation like `"10.0.0.0/8"`
+6. **Distributed Firewall**: Build commands centrally, execute on multiple nodes
+7. **Batch Operations**: Combine multiple operations atomically
+
+### Query Operations
+
+**Old API:**
+```elixir
+Rule.list(pid, "filter", "INPUT", family: :inet)
+```
+
+**New API:**
+```elixir
+Query.list_rules(pid, "filter", "INPUT", family: :inet)
+```
+
+The Query module now handles all listing operations:
+- `Query.list_tables/2`
+- `Query.list_chains/3`
+- `Query.list_rules/4`
+- `Query.list_sets/3`
 
 ## Core Modules
 
@@ -289,24 +622,32 @@ alias NFTex.RuleBuilder
 {:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
 ```
 
-### NFTex.Rule - Rule Management
+### NFTex.Rule - Rule Expression Building
+
+The `Rule` module now provides a fluent API for building rule expressions:
 
 ```elixir
-# Add a rule using nft syntax
-:ok = NFTex.Rule.add(pid, %{
-  family: :inet,
-  table: "filter",
-  chain: "INPUT",
-  expr: "ip saddr 192.168.1.100 drop"
-})
+alias NFTablesEx.{Builder, Rule}
 
-# Helper functions for common operations
-:ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
-:ok = NFTex.Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
+# Build complex rules using the fluent API
+:ok = Builder.new(family: :inet)
+  |> Builder.set_table("filter")
+  |> Builder.set_chain("INPUT")
+  |> Builder.add_rule(
+    Rule.new()
+    |> Rule.source("192.168.1.100")
+    |> Rule.protocol(:tcp)
+    |> Rule.dport(80)
+    |> Rule.drop()
+    |> Rule.to_expr()
+  )
+  |> Builder.execute(pid)
 
-# List rules
-{:ok, rules} = NFTex.Query.list_rules(pid, family: :inet)
+# List rules using Query module
+{:ok, rules} = NFTex.Query.list_rules(pid, "filter", "INPUT", family: :inet)
 ```
+
+**Note**: The old `Rule.block_ip/4`, `Rule.accept_ip/4`, `Rule.rate_limit/6`, and `Rule.delete/5` functions are deprecated. See the Migration Guide above for how to use the new Builder + Rule API.
 
 ### NFTex.RuleBuilder - Fluent Rule Construction
 

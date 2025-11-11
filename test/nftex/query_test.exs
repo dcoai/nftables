@@ -1,10 +1,10 @@
 Code.require_file("../test_helper.exs", __DIR__)
 
-defmodule NFTex.QueryTest do
+defmodule NFTablesEx.QueryTest do
   use ExUnit.Case
   require Logger
 
-  alias NFTex.Query
+  alias NFTablesEx.Query
 
   @moduletag :integration
 
@@ -14,9 +14,9 @@ defmodule NFTex.QueryTest do
 
   describe "list_tables/2" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTex.stop(pid)
+        if Process.alive?(pid), do: NFTablesEx.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -50,9 +50,9 @@ defmodule NFTex.QueryTest do
 
   describe "list_chains/2" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTex.stop(pid)
+        if Process.alive?(pid), do: NFTablesEx.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -90,9 +90,9 @@ defmodule NFTex.QueryTest do
 
   describe "list_rules/2" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTex.stop(pid)
+        if Process.alive?(pid), do: NFTablesEx.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -128,9 +128,9 @@ defmodule NFTex.QueryTest do
 
   describe "list_sets/2" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTex.stop(pid)
+        if Process.alive?(pid), do: NFTablesEx.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -162,9 +162,9 @@ defmodule NFTex.QueryTest do
 
   describe "list_set_elements/3" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTex.stop(pid)
+        if Process.alive?(pid), do: NFTablesEx.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -201,9 +201,9 @@ defmodule NFTex.QueryTest do
 
   describe "integration test" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTex.stop(pid)
+        if Process.alive?(pid), do: NFTablesEx.stop(pid)
       end)
       {:ok, pid: pid}
     end

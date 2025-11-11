@@ -1,4 +1,4 @@
-defmodule NFTex.RuleBuilder.AdvancedMatching do
+defmodule NFTablesEx.RuleBuilder.AdvancedMatching do
   @moduledoc """
   Advanced matching functions for RuleBuilder.
 
@@ -7,7 +7,7 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   IPsec SPI, ARP operations, and set matching.
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   # Packet metadata matching
 
@@ -22,7 +22,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_mark(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_mark(builder, mark) when is_integer(mark) and mark >= 0 do
-    RuleBuilder.add_part(builder, "meta mark #{mark}")
+    expr = JsonExpr.meta_match("mark", mark)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -38,7 +39,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_dscp(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_dscp(builder, dscp) when is_integer(dscp) and dscp >= 0 and dscp <= 63 do
-    RuleBuilder.add_part(builder, "ip dscp #{dscp}")
+    expr = JsonExpr.payload_match("ip", "dscp", dscp)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -54,10 +56,36 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_fragmented(RuleBuilder.t(), boolean()) :: RuleBuilder.t()
   def match_fragmented(builder, true) do
-    RuleBuilder.add_part(builder, "ip frag-off & 0x1fff != 0")
+    # ip frag-off & 0x1fff != 0
+    expr = %{
+      "match" => %{
+        "left" => %{
+          "&" => [
+            %{"payload" => %{"protocol" => "ip", "field" => "frag-off"}},
+            0x1FFF
+          ]
+        },
+        "right" => 0,
+        "op" => "!="
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
   def match_fragmented(builder, false) do
-    RuleBuilder.add_part(builder, "ip frag-off & 0x1fff == 0")
+    # ip frag-off & 0x1fff == 0
+    expr = %{
+      "match" => %{
+        "left" => %{
+          "&" => [
+            %{"payload" => %{"protocol" => "ip", "field" => "frag-off"}},
+            0x1FFF
+          ]
+        },
+        "right" => 0,
+        "op" => "=="
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # ICMP matching
@@ -85,7 +113,7 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_icmp_type(RuleBuilder.t(), atom() | non_neg_integer()) :: RuleBuilder.t()
   def match_icmp_type(builder, type) do
-    type_str = case type do
+    type_val = case type do
       :echo_reply -> "echo-reply"
       :dest_unreachable -> "destination-unreachable"
       :source_quench -> "source-quench"
@@ -101,10 +129,11 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
       :info_reply -> "info-reply"
       :address_mask_request -> "address-mask-request"
       :address_mask_reply -> "address-mask-reply"
-      num when is_integer(num) -> to_string(num)
+      num when is_integer(num) -> num
       other -> to_string(other)
     end
-    RuleBuilder.add_part(builder, "icmp type #{type_str}")
+    expr = JsonExpr.payload_match("icmp", "type", type_val)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -122,7 +151,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_icmp_code(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_icmp_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
-    RuleBuilder.add_part(builder, "icmp code #{code}")
+    expr = JsonExpr.payload_match("icmp", "code", code)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -149,7 +179,7 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_icmpv6_type(RuleBuilder.t(), atom() | non_neg_integer()) :: RuleBuilder.t()
   def match_icmpv6_type(builder, type) do
-    type_str = case type do
+    type_val = case type do
       :dest_unreachable -> "destination-unreachable"
       :packet_too_big -> "packet-too-big"
       :time_exceeded -> "time-exceeded"
@@ -161,10 +191,11 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
       :neighbour_solicit -> "nd-neighbor-solicit"
       :neighbour_advert -> "nd-neighbor-advert"
       :redirect -> "nd-redirect"
-      num when is_integer(num) -> to_string(num)
+      num when is_integer(num) -> num
       other -> to_string(other)
     end
-    RuleBuilder.add_part(builder, "icmpv6 type #{type_str}")
+    expr = JsonExpr.payload_match("icmpv6", "type", type_val)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -181,7 +212,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_icmpv6_code(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_icmpv6_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
-    RuleBuilder.add_part(builder, "icmpv6 code #{code}")
+    expr = JsonExpr.payload_match("icmpv6", "code", code)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Packet type and metadata
@@ -209,7 +241,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_pkttype(RuleBuilder.t(), atom()) :: RuleBuilder.t()
   def match_pkttype(builder, pkttype) when pkttype in [:unicast, :broadcast, :multicast, :other] do
-    RuleBuilder.add_part(builder, "meta pkttype #{pkttype}")
+    expr = JsonExpr.meta_match("pkttype", to_string(pkttype))
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -233,7 +266,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
       :le -> "<="
       :ge -> ">="
     end
-    RuleBuilder.add_part(builder, "meta priority #{op_str} #{priority}")
+    expr = JsonExpr.meta_match("priority", priority, op_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Cgroup and socket matching
@@ -253,7 +287,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_cgroup(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_cgroup(builder, cgroup_id) when is_integer(cgroup_id) and cgroup_id >= 0 do
-    RuleBuilder.add_part(builder, "meta cgroup #{cgroup_id}")
+    expr = JsonExpr.meta_match("cgroup", cgroup_id)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -278,7 +313,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_skuid(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_skuid(builder, uid) when is_integer(uid) and uid >= 0 do
-    RuleBuilder.add_part(builder, "meta skuid #{uid}")
+    expr = JsonExpr.meta_match("skuid", uid)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -303,7 +339,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_skgid(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_skgid(builder, gid) when is_integer(gid) and gid >= 0 do
-    RuleBuilder.add_part(builder, "meta skgid #{gid}")
+    expr = JsonExpr.meta_match("skgid", gid)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # IPsec matching
@@ -321,10 +358,17 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_ah_spi(RuleBuilder.t(), non_neg_integer() | :any) :: RuleBuilder.t()
   def match_ah_spi(builder, :any) do
-    RuleBuilder.add_part(builder, "ah spi")
+    # Match any AH SPI (just check if AH header exists)
+    expr = %{"match" => %{
+      "left" => %{"payload" => %{"protocol" => "ah", "field" => "spi"}},
+      "right" => 0,
+      "op" => ">="
+    }}
+    RuleBuilder.add_expr(builder, expr)
   end
   def match_ah_spi(builder, spi) when is_integer(spi) and spi >= 0 do
-    RuleBuilder.add_part(builder, "ah spi #{spi}")
+    expr = JsonExpr.payload_match("ah", "spi", spi)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -340,10 +384,17 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   """
   @spec match_esp_spi(RuleBuilder.t(), non_neg_integer() | :any) :: RuleBuilder.t()
   def match_esp_spi(builder, :any) do
-    RuleBuilder.add_part(builder, "esp spi")
+    # Match any ESP SPI (just check if ESP header exists)
+    expr = %{"match" => %{
+      "left" => %{"payload" => %{"protocol" => "esp", "field" => "spi"}},
+      "right" => 0,
+      "op" => ">="
+    }}
+    RuleBuilder.add_expr(builder, expr)
   end
   def match_esp_spi(builder, spi) when is_integer(spi) and spi >= 0 do
-    RuleBuilder.add_part(builder, "esp spi #{spi}")
+    expr = JsonExpr.payload_match("esp", "spi", spi)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # ARP matching
@@ -373,7 +424,8 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
       num when is_integer(num) -> num
       _ -> raise ArgumentError, "Invalid ARP operation: #{inspect(operation)}"
     end
-    RuleBuilder.add_part(builder, "arp operation #{op_val}")
+    expr = JsonExpr.payload_match("arp", "operation", op_val)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Set matching
@@ -381,12 +433,12 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
   @doc """
   Match against a named set.
 
-  The set must already exist in the table. Use NFTex.Set to manage sets.
+  The set must already exist in the table. Use NFTablesEx.Set to manage sets.
 
   ## Example
 
       # Create set first
-      :ok = NFTex.Set.add(pid, %{
+      :ok = NFTablesEx.Set.add(pid, %{
         name: "blocklist",
         table: "filter",
         family: :inet,
@@ -415,14 +467,42 @@ defmodule NFTex.RuleBuilder.AdvancedMatching do
     # Ensure set name starts with @
     set_ref = if String.starts_with?(set_name, "@"), do: set_name, else: "@#{set_name}"
 
-    match_expr = case match_type do
-      :saddr -> "ip saddr #{set_ref}"
-      :daddr -> "ip daddr #{set_ref}"
-      :sport -> "tcp sport #{set_ref}"
-      :dport -> "tcp dport #{set_ref}"
+    expr = case match_type do
+      :saddr ->
+        %{
+          "match" => %{
+            "left" => %{"payload" => %{"protocol" => "ip", "field" => "saddr"}},
+            "right" => set_ref,
+            "op" => "=="
+          }
+        }
+      :daddr ->
+        %{
+          "match" => %{
+            "left" => %{"payload" => %{"protocol" => "ip", "field" => "daddr"}},
+            "right" => set_ref,
+            "op" => "=="
+          }
+        }
+      :sport ->
+        %{
+          "match" => %{
+            "left" => %{"payload" => %{"protocol" => "tcp", "field" => "sport"}},
+            "right" => set_ref,
+            "op" => "=="
+          }
+        }
+      :dport ->
+        %{
+          "match" => %{
+            "left" => %{"payload" => %{"protocol" => "tcp", "field" => "dport"}},
+            "right" => set_ref,
+            "op" => "=="
+          }
+        }
       other -> raise ArgumentError, "Invalid set match type: #{inspect(other)}"
     end
 
-    RuleBuilder.add_part(builder, match_expr)
+    RuleBuilder.add_expr(builder, expr)
   end
 end

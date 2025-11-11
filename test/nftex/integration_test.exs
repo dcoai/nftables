@@ -1,14 +1,14 @@
-defmodule NFTex.IntegrationTest do
+defmodule NFTablesEx.IntegrationTest do
   use ExUnit.Case, async: false
 
-  alias NFTex.{Table, Chain, RuleBuilder, Policy, TestHelpers}
+  alias NFTablesEx.{Table, Chain, RuleBuilder, Policy, TestHelpers, Builder, Rule}
 
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
   # the host's network connectivity. All tables are prefixed with "nftex_test_"
   # and chains without hooks are used when possible to prevent traffic filtering.
 
   setup do
-    {:ok, pid} = NFTex.start_link()
+    {:ok, pid} = NFTablesEx.start_link()
 
     # Use isolated test tables
     test_table = "nftex_test_integration"
@@ -25,7 +25,7 @@ defmodule NFTex.IntegrationTest do
         TestHelpers.cleanup_test_table(pid, test_table, :inet)
         TestHelpers.cleanup_test_table(pid, filter_test_table, :inet)
         TestHelpers.cleanup_test_table(pid, nat_test_table, :inet)
-        NFTex.stop(pid)
+        NFTablesEx.stop(pid)
       end
     end)
 
@@ -80,7 +80,7 @@ defmodule NFTex.IntegrationTest do
       # Verify chain exists and has rules
       assert Chain.exists?(pid, test_table, "INPUT", :inet)
 
-      {:ok, rules} = NFTex.Rule.list(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 5
     end
 
@@ -100,7 +100,7 @@ defmodule NFTex.IntegrationTest do
       assert Table.exists?(pid, filter_test_table, :inet)
       assert Chain.exists?(pid, filter_test_table, "INPUT", :inet)
 
-      {:ok, rules} = NFTex.Rule.list(pid, filter_test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, filter_test_table, "INPUT", family: :inet)
       # Should have loopback, established, invalid drop, and 3 services
       assert length(rules) >= 6
     end
@@ -179,7 +179,7 @@ defmodule NFTex.IntegrationTest do
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTex.Rule.list(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 3
     end
   end
@@ -216,7 +216,7 @@ defmodule NFTex.IntegrationTest do
         |> RuleBuilder.log("DROP-DEFAULT: ")
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTex.Rule.list(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 3
     end
   end
@@ -332,7 +332,7 @@ defmodule NFTex.IntegrationTest do
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTex.Rule.list(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -362,7 +362,7 @@ defmodule NFTex.IntegrationTest do
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTex.Rule.list(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 2
     end
   end
@@ -387,6 +387,229 @@ defmodule NFTex.IntegrationTest do
       )
 
       assert {:error, _reason} = result
+    end
+  end
+
+  describe "Builder + Rule integration (new fluent API)" do
+    test "builds simple SSH rule with Rule and Builder", %{pid: pid, test_table: test_table} do
+      # Build rule using Rule module's fluent API
+      expr_list = Rule.new()
+                  |> Rule.protocol(:tcp)
+                  |> Rule.port(22)
+                  |> Rule.state([:new])
+                  |> Rule.log("SSH: ")
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      # Use Builder to create table, chain, and add rule
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      # Verify rule was added
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds multiple rules with Rule and batches with Builder", %{pid: pid, test_table: test_table} do
+      # Build multiple rules using Rule module
+      ssh_rule = Rule.new()
+                 |> Rule.protocol(:tcp)
+                 |> Rule.port(22)
+                 |> Rule.limit(10, :minute)
+                 |> Rule.accept()
+                 |> Rule.to_expr()
+
+      http_rule = Rule.new()
+                  |> Rule.protocol(:tcp)
+                  |> Rule.port(80)
+                  |> Rule.counter()
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      https_rule = Rule.new()
+                   |> Rule.protocol(:tcp)
+                   |> Rule.port(443)
+                   |> Rule.counter()
+                   |> Rule.accept()
+                   |> Rule.to_expr()
+
+      # Build entire firewall configuration in one go
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rules([ssh_rule, http_rule, https_rule])
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      # Verify all rules were added
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 3
+    end
+
+    test "builds complex rule with multiple matches", %{pid: pid, test_table: test_table} do
+      # Complex rule with multiple criteria
+      expr_list = Rule.new()
+                  |> Rule.source("10.0.0.0/8")
+                  |> Rule.protocol(:tcp)
+                  |> Rule.dport(8080)
+                  |> Rule.state([:new])
+                  |> Rule.limit(50, :second, burst: 100)
+                  |> Rule.log("API: ", level: "info")
+                  |> Rule.counter()
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds DROP rule with logging", %{pid: pid, test_table: test_table} do
+      # Block specific IP with logging
+      expr_list = Rule.new()
+                  |> Rule.source("192.168.1.100")
+                  |> Rule.log("BLOCKED: ")
+                  |> Rule.counter()
+                  |> Rule.drop()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds NAT rule with SNAT", %{pid: pid, nat_test_table: nat_test_table} do
+      # SNAT rule for outgoing traffic
+      expr_list = Rule.new()
+                  |> Rule.oif("eth0")
+                  |> Rule.snat("203.0.113.1")
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(nat_test_table)
+               |> Builder.add_chain("POSTROUTING")
+               |> Builder.set_table(nat_test_table)
+               |> Builder.set_chain("POSTROUTING")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds NAT rule with masquerade", %{pid: pid, nat_test_table: nat_test_table} do
+      # Masquerade for dynamic IP
+      expr_list = Rule.new()
+                  |> Rule.oif("ppp0")
+                  |> Rule.masquerade()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(nat_test_table)
+               |> Builder.add_chain("POSTROUTING")
+               |> Builder.set_table(nat_test_table)
+               |> Builder.set_chain("POSTROUTING")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds rule with connection tracking features", %{pid: pid, test_table: test_table} do
+      # Accept established/related connections
+      expr_list = Rule.new()
+                  |> Rule.state([:established, :related])
+                  |> Rule.counter()
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds complete firewall with Builder + Rule", %{pid: pid, test_table: test_table} do
+      # Define rules using Rule module
+      loopback = Rule.new() |> Rule.iif("lo") |> Rule.accept() |> Rule.to_expr()
+
+      established = Rule.new()
+                    |> Rule.state([:established, :related])
+                    |> Rule.accept()
+                    |> Rule.to_expr()
+
+      invalid = Rule.new() |> Rule.state([:invalid]) |> Rule.drop() |> Rule.to_expr()
+
+      ssh = Rule.new()
+            |> Rule.protocol(:tcp)
+            |> Rule.port(22)
+            |> Rule.state([:new])
+            |> Rule.limit(10, :minute)
+            |> Rule.accept()
+            |> Rule.to_expr()
+
+      web = Rule.new()
+            |> Rule.protocol(:tcp)
+            |> Rule.port(80)
+            |> Rule.state([:new])
+            |> Rule.accept()
+            |> Rule.to_expr()
+
+      # Build complete firewall configuration
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rules([loopback, established, invalid, ssh, web])
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      # Verify all rules were added
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 5
     end
   end
 end

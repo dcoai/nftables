@@ -1,4 +1,4 @@
-defmodule NFTex.Validation do
+defmodule NFTablesEx.Validation do
   @moduledoc """
   Validation helpers for NFTex operations with user-friendly error messages.
 
@@ -15,13 +15,13 @@ defmodule NFTex.Validation do
 
   ## Examples
 
-      iex> NFTex.Validation.validate_ipv4(<<192, 168, 1, 1>>)
+      iex> NFTablesEx.Validation.validate_ipv4(<<192, 168, 1, 1>>)
       :ok
 
-      iex> NFTex.Validation.validate_ipv4(<<192, 168, 1>>)
+      iex> NFTablesEx.Validation.validate_ipv4(<<192, 168, 1>>)
       {:error, "Invalid IPv4 address: expected 4 bytes, got 3 bytes. IPv4 addresses must be exactly 4 bytes (e.g., <<192, 168, 1, 1>>)"}
 
-      iex> NFTex.Validation.validate_ipv4("192.168.1.1")
+      iex> NFTablesEx.Validation.validate_ipv4("192.168.1.1")
       {:error, "Invalid IPv4 address: expected binary, got string. Use <<192, 168, 1, 1>> format, not \"192.168.1.1\""}
   """
   @spec validate_ipv4(term()) :: :ok | validation_error()
@@ -65,10 +65,10 @@ defmodule NFTex.Validation do
   ## Examples
 
       iex> ipv6 = <<0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>>
-      iex> NFTex.Validation.validate_ipv6(ipv6)
+      iex> NFTablesEx.Validation.validate_ipv6(ipv6)
       :ok
 
-      iex> NFTex.Validation.validate_ipv6(<<1, 2, 3, 4>>)
+      iex> NFTablesEx.Validation.validate_ipv6(<<1, 2, 3, 4>>)
       {:error, "Invalid IPv6 address: expected 16 bytes, got 4 bytes. IPv6 addresses must be exactly 16 bytes"}
   """
   @spec validate_ipv6(term()) :: :ok | validation_error()
@@ -111,13 +111,13 @@ defmodule NFTex.Validation do
 
   ## Examples
 
-      iex> NFTex.Validation.validate_family(:inet)
+      iex> NFTablesEx.Validation.validate_family(:inet)
       {:ok, 2}
 
-      iex> NFTex.Validation.validate_family(:ip)
+      iex> NFTablesEx.Validation.validate_family(:ip)
       {:ok, 2}
 
-      iex> NFTex.Validation.validate_family(:invalid)
+      iex> NFTablesEx.Validation.validate_family(:invalid)
       {:error, "Invalid family: :invalid. Valid families are: :inet (or :ip), :ip6 (or :inet6), :arp, :bridge, :netdev"}
   """
   @spec validate_family(term()) :: {:ok, non_neg_integer()} | validation_error()
@@ -141,13 +141,13 @@ defmodule NFTex.Validation do
 
   ## Examples
 
-      iex> NFTex.Validation.errno_to_string(2)
+      iex> NFTablesEx.Validation.errno_to_string(2)
       "No such file or directory (ENOENT)"
 
-      iex> NFTex.Validation.errno_to_string(1)
+      iex> NFTablesEx.Validation.errno_to_string(1)
       "Operation not permitted (EPERM)"
 
-      iex> NFTex.Validation.errno_to_string(0)
+      iex> NFTablesEx.Validation.errno_to_string(0)
       "Success"
   """
   @spec errno_to_string(integer()) :: String.t()
@@ -204,13 +204,13 @@ defmodule NFTex.Validation do
 
   ## Examples
 
-      iex> NFTex.Validation.enhance_netlink_error("No such file or directory (ENOENT)", %{operation: :rule_add, table: "filter", chain: "INPUT"})
+      iex> NFTablesEx.Validation.enhance_netlink_error("No such file or directory (ENOENT)", %{operation: :rule_add, table: "filter", chain: "INPUT"})
       "Failed to add rule to filter/INPUT: Table or chain not found. Ensure the table and chain exist (e.g., 'nft add table filter' and 'nft add chain filter INPUT ...')"
 
-      iex> NFTex.Validation.enhance_netlink_error(2, %{operation: :rule_add, table: "filter", chain: "INPUT"})
+      iex> NFTablesEx.Validation.enhance_netlink_error(2, %{operation: :rule_add, table: "filter", chain: "INPUT"})
       "Failed to add rule to filter/INPUT: Table or chain not found. Ensure the table and chain exist (e.g., 'nft add table filter' and 'nft add chain filter INPUT ...')"
 
-      iex> NFTex.Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{operation: :rule_add})
+      iex> NFTablesEx.Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{operation: :rule_add})
       "Failed to add rule: Permission denied. NFTex requires CAP_NET_ADMIN capability. Run: sudo setcap cap_net_admin=ep path/to/priv/port_nftables"
   """
   @spec enhance_netlink_error(String.t() | integer(), map()) :: String.t()

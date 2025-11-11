@@ -1,4 +1,4 @@
-defmodule NFTex.Query do
+defmodule NFTablesEx.Query do
   @moduledoc """
   High-level API for querying nftables resources.
 
@@ -7,20 +7,20 @@ defmodule NFTex.Query do
 
   ## Quick Start
 
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # List all tables
-      {:ok, tables} = NFTex.Query.list_tables(pid, family: :inet)
+      {:ok, tables} = NFTablesEx.Query.list_tables(pid, family: :inet)
 
       # List all sets
-      {:ok, sets} = NFTex.Query.list_sets(pid, family: :inet)
+      {:ok, sets} = NFTablesEx.Query.list_sets(pid, family: :inet)
 
       # List elements in a specific set
-      {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocklist")
+      {:ok, elements} = NFTablesEx.Query.list_set_elements(pid, "filter", "blocklist")
 
   """
 
-  alias NFTex.{Port, JSONBuilder}
+  alias NFTablesEx.Port
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type result(t) :: {:ok, t} | {:error, term()}
@@ -39,8 +39,8 @@ defmodule NFTex.Query do
 
   ## Examples
 
-      {:ok, tables} = NFTex.Query.list_tables(pid)
-      {:ok, tables} = NFTex.Query.list_tables(pid, family: :inet6)
+      {:ok, tables} = NFTablesEx.Query.list_tables(pid)
+      {:ok, tables} = NFTablesEx.Query.list_tables(pid, family: :inet6)
   """
   @spec list_tables(pid(), keyword()) :: result([map()])
   def list_tables(pid, opts \\ []) do
@@ -48,17 +48,23 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Build JSON command
-    cmd = JSONBuilder.list_tables(family: family)
-    json = Jason.encode!(cmd)
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"tables" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"tables" => %{}}}]}
+      end
+
+    json = cmd |> JSON.encode!()
 
     # Send to port
-    case Port.call(pid, json, timeout) do
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => items}} ->
             tables = items
               |> Enum.filter(&Map.has_key?(&1, "table"))
@@ -97,8 +103,8 @@ defmodule NFTex.Query do
 
   ## Examples
 
-      {:ok, chains} = NFTex.Query.list_chains(pid)
-      {:ok, chains} = NFTex.Query.list_chains(pid, family: :inet6)
+      {:ok, chains} = NFTablesEx.Query.list_chains(pid)
+      {:ok, chains} = NFTablesEx.Query.list_chains(pid, family: :inet6)
   """
   @spec list_chains(pid(), keyword()) :: result([map()])
   def list_chains(pid, opts \\ []) do
@@ -106,16 +112,22 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Use list_ruleset to get chains
-    cmd = JSONBuilder.list_ruleset(family: family)
-    json = Jason.encode!(cmd)
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
 
-    case Port.call(pid, json, timeout) do
+    json = cmd |> JSON.encode!()
+
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => items}} ->
             chains = items
               |> Enum.filter(&Map.has_key?(&1, "chain"))
@@ -161,12 +173,12 @@ defmodule NFTex.Query do
 
   ## Examples
 
-      {:ok, rules} = NFTex.Query.list_rules(pid, "filter", "input")
-      {:ok, rules} = NFTex.Query.list_rules(pid, "filter", "input", family: :inet6)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, "filter", "input")
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, "filter", "input", family: :inet6)
 
   ## List all rules for a family
 
-      {:ok, rules} = NFTex.Query.list_rules(pid, family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, family: :inet)
   """
   @spec list_rules(pid(), keyword()) :: result([map()])
   @spec list_rules(pid(), String.t(), String.t()) :: result([map()])
@@ -176,15 +188,21 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Use list ruleset to get all rules
-    cmd = JSONBuilder.list_ruleset(family: family)
-    json = Jason.encode!(cmd)
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
 
-    case Port.call(pid, json, timeout) do
+    json = cmd |> JSON.encode!()
+
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         {:ok, []}
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => items}} ->
             rules = items
               |> Enum.filter(&Map.has_key?(&1, "rule"))
@@ -202,8 +220,11 @@ defmodule NFTex.Query do
           {:ok, %{"error" => error}} ->
             {:error, error}
 
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
+          {:error, _reason} ->
+            # JSON decode failed - likely a plain text response
+            # For list operations, treat non-JSON responses as empty results
+            # (empty chains return informational messages in some nftables versions)
+            {:ok, []}
         end
 
       {:error, reason} ->
@@ -218,16 +239,29 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Use list_chain to get rules
-    cmd = JSONBuilder.list_chain(family, table, chain)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "list" => %{
+            "chain" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => chain
+            }
+          }
+        }
+      ]
+    }
 
-    case Port.call(pid, json, timeout) do
+    json = cmd |> JSON.encode!()
+
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => items}} ->
             rules = items
               |> Enum.filter(&Map.has_key?(&1, "rule"))
@@ -245,8 +279,11 @@ defmodule NFTex.Query do
           {:ok, %{"error" => error}} ->
             {:error, error}
 
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
+          {:error, _reason} ->
+            # JSON decode failed - likely a plain text response
+            # For list operations, treat non-JSON responses as empty results
+            # (empty chains return informational messages in some nftables versions)
+            {:ok, []}
         end
 
       {:error, reason} ->
@@ -268,8 +305,8 @@ defmodule NFTex.Query do
 
   ## Examples
 
-      {:ok, sets} = NFTex.Query.list_sets(pid)
-      {:ok, sets} = NFTex.Query.list_sets(pid, family: :inet6)
+      {:ok, sets} = NFTablesEx.Query.list_sets(pid)
+      {:ok, sets} = NFTablesEx.Query.list_sets(pid, family: :inet6)
   """
   @spec list_sets(pid(), keyword()) :: result([map()])
   def list_sets(pid, opts \\ []) do
@@ -277,16 +314,22 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Use list_ruleset to get sets
-    cmd = JSONBuilder.list_ruleset(family: family)
-    json = Jason.encode!(cmd)
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
 
-    case Port.call(pid, json, timeout) do
+    json = cmd |> JSON.encode!()
+
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => items}} ->
             sets = items
               |> Enum.filter(&Map.has_key?(&1, "set"))
@@ -331,7 +374,7 @@ defmodule NFTex.Query do
 
   ## Examples
 
-      {:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocked_ips")
+      {:ok, elements} = NFTablesEx.Query.list_set_elements(pid, "filter", "blocked_ips")
   """
   @spec list_set_elements(pid(), String.t(), String.t(), keyword()) :: result([map()])
   def list_set_elements(pid, table, set_name, opts \\ []) do
@@ -339,16 +382,29 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Use list_set to get elements
-    cmd = JSONBuilder.list_set(family, table, set_name)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "list" => %{
+            "set" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => set_name
+            }
+          }
+        }
+      ]
+    }
 
-    case Port.call(pid, json, timeout) do
+    json = cmd |> JSON.encode!()
+
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response - return empty list
         {:ok, []}
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => items}} ->
             # Find the set object which contains elements
             elements = items
@@ -395,7 +451,7 @@ defmodule NFTex.Query do
 
   ## Example
 
-      :ok = NFTex.Query.delete_set_elements(pid, "filter", "blocked_ips", ["192.168.1.100"])
+      :ok = NFTablesEx.Query.delete_set_elements(pid, "filter", "blocked_ips", ["192.168.1.100"])
   """
   @spec delete_set_elements(pid(), String.t(), String.t(), [String.t()], keyword()) :: :ok | {:error, term()}
   def delete_set_elements(pid, table, set_name, elements, opts \\ []) when is_list(elements) do
@@ -403,17 +459,333 @@ defmodule NFTex.Query do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     # Build JSON command
-    cmd = JSONBuilder.delete_element(family, table, set_name, elements)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "element" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => set_name,
+              "elem" => elements
+            }
+          }
+        }
+      ]
+    }
+
+    json = cmd |> JSON.encode!()
 
     # Send to port
-    case Port.call(pid, json, timeout) do
+    case Port.commit(pid, json, timeout) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
+          {:ok, %{"nftables" => _}} ->
+            :ok
+
+          {:ok, %{"error" => error}} ->
+            {:error, error}
+
+          {:error, reason} ->
+            {:error, {:json_decode_failed, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  ## Build Functions (for distributed firewall support)
+
+  @doc """
+  Build a JSON command to list tables without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Options
+
+  - `:family` - Protocol family (optional)
+
+  ## Examples
+
+      # List all tables
+      json = NFTablesEx.Query.build_list_tables()
+
+      # List tables for specific family
+      json = NFTablesEx.Query.build_list_tables(family: :inet)
+
+      # Send to remote node
+      MyTransport.send_to_node("firewall-1", json)
+  """
+  @spec build_list_tables(keyword()) :: String.t()
+  def build_list_tables(opts \\ []) do
+    family = Keyword.get(opts, :family)
+
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"tables" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"tables" => %{}}}]}
+      end
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Build a JSON command to list chains without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Options
+
+  - `:family` - Protocol family (optional)
+
+  ## Examples
+
+      json = NFTablesEx.Query.build_list_chains()
+      json = NFTablesEx.Query.build_list_chains(family: :inet)
+  """
+  @spec build_list_chains(keyword()) :: String.t()
+  def build_list_chains(opts \\ []) do
+    family = Keyword.get(opts, :family)
+
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Build a JSON command to list rules without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Parameters
+
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:inet`)
+
+  Or:
+
+  - `table` - Table name (string)
+  - `chain` - Chain name (string)
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:inet`)
+
+  ## Examples
+
+      # List all rules for a family
+      json = NFTablesEx.Query.build_list_rules(family: :inet)
+
+      # List rules in specific chain
+      json = NFTablesEx.Query.build_list_rules("filter", "input")
+      json = NFTablesEx.Query.build_list_rules("filter", "input", family: :inet6)
+  """
+  @spec build_list_rules(keyword()) :: String.t()
+  @spec build_list_rules(String.t(), String.t()) :: String.t()
+  @spec build_list_rules(String.t(), String.t(), keyword()) :: String.t()
+  def build_list_rules(opts) when is_list(opts) do
+    family = Keyword.get(opts, :family, :inet)
+
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
+
+    cmd |> JSON.encode!()
+  end
+
+  def build_list_rules(table, chain) when is_binary(table) and is_binary(chain) do
+    build_list_rules(table, chain, [])
+  end
+
+  def build_list_rules(table, chain, opts) when is_binary(table) and is_binary(chain) and is_list(opts) do
+    family = Keyword.get(opts, :family, :inet)
+
+    cmd = %{
+      "nftables" => [
+        %{
+          "list" => %{
+            "chain" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => chain
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Build a JSON command to list sets without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Options
+
+  - `:family` - Protocol family (optional)
+
+  ## Examples
+
+      json = NFTablesEx.Query.build_list_sets()
+      json = NFTablesEx.Query.build_list_sets(family: :inet)
+  """
+  @spec build_list_sets(keyword()) :: String.t()
+  def build_list_sets(opts \\ []) do
+    family = Keyword.get(opts, :family)
+
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Build a JSON command to list set elements without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Parameters
+
+  - `table` - Table name (string)
+  - `set_name` - Set name (string)
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (default: `:inet`)
+
+  ## Examples
+
+      json = NFTablesEx.Query.build_list_set_elements("filter", "blocklist")
+      json = NFTablesEx.Query.build_list_set_elements("filter", "blocklist", family: :inet6)
+  """
+  @spec build_list_set_elements(String.t(), String.t(), keyword()) :: String.t()
+  def build_list_set_elements(table, set_name, opts \\ []) do
+    family = Keyword.get(opts, :family, :inet)
+
+    cmd = %{
+      "nftables" => [
+        %{
+          "list" => %{
+            "set" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => set_name
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Build a JSON command to list the entire ruleset without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Options
+
+  - `:family` - Protocol family (optional, default: list all families)
+
+  ## Examples
+
+      # List entire ruleset
+      json = NFTablesEx.Query.build_list_ruleset()
+
+      # List ruleset for specific family
+      json = NFTablesEx.Query.build_list_ruleset(family: :inet)
+  """
+  @spec build_list_ruleset(keyword()) :: String.t()
+  def build_list_ruleset(opts \\ []) do
+    family = Keyword.get(opts, :family)
+
+    cmd =
+      if family do
+        %{"nftables" => [%{"list" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"list" => %{"ruleset" => %{}}}]}
+      end
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Build a JSON command to flush the ruleset without executing it.
+
+  Returns a JSON string that can be sent to a remote node or executed later.
+
+  ## Options
+
+  - `:family` - Protocol family (optional, default: flush all families)
+
+  ## Examples
+
+      # Flush entire ruleset
+      json = NFTablesEx.Query.build_flush_ruleset()
+
+      # Flush ruleset for specific family
+      json = NFTablesEx.Query.build_flush_ruleset(family: :inet)
+  """
+  @spec build_flush_ruleset(keyword()) :: String.t()
+  def build_flush_ruleset(opts \\ []) do
+    family = Keyword.get(opts, :family)
+
+    cmd =
+      if family do
+        %{"nftables" => [%{"flush" => %{"ruleset" => %{"family" => to_string(family)}}}]}
+      else
+        %{"nftables" => [%{"flush" => %{"ruleset" => %{}}}]}
+      end
+
+    cmd |> JSON.encode!()
+  end
+
+  @doc """
+  Flush the ruleset (delete all tables, chains, rules, sets).
+
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `opts` - Keyword list options:
+    - `:family` - Protocol family (optional, default: flush all families)
+    - `:timeout` - Operation timeout in ms (default: 5000)
+
+  ## Examples
+
+      # Flush entire ruleset (all families)
+      :ok = NFTablesEx.Query.flush_ruleset(pid)
+
+      # Flush only inet family
+      :ok = NFTablesEx.Query.flush_ruleset(pid, family: :inet)
+  """
+  @spec flush_ruleset(pid(), keyword()) :: :ok | {:error, term()}
+  def flush_ruleset(pid, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, 5000)
+    json = build_flush_ruleset(opts)
+
+    case Port.commit(pid, json, timeout) do
+      {:ok, ""} ->
+        :ok
+
+      {:ok, response_json} ->
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 

@@ -1,4 +1,4 @@
-defmodule NFTex.RuleBuilder do
+defmodule NFTablesEx.RuleBuilder do
   @moduledoc """
   Fluent API for building nftables rules.
 
@@ -7,7 +7,7 @@ defmodule NFTex.RuleBuilder do
 
   ## Quick Example
 
-      alias NFTex.RuleBuilder
+      alias NFTablesEx.RuleBuilder
 
       # Drop packets from specific IP
       RuleBuilder.new(pid, "filter", "INPUT")
@@ -33,12 +33,12 @@ defmodule NFTex.RuleBuilder do
 
   ## See Also
 
-  - `NFTex.Policy` - Pre-built common policies
-  - `NFTex.Rule` - Low-level rule operations
+  - `NFTablesEx.Policy` - Pre-built common policies
+  - `NFTablesEx.Rule` - Low-level rule operations
   """
 
-  alias NFTex.Rule
-  alias NFTex.RuleBuilder.{
+  alias NFTablesEx.Formatter
+  alias NFTablesEx.RuleBuilder.{
     IPMatching,
     PortMatching,
     TCPMatching,
@@ -55,7 +55,7 @@ defmodule NFTex.RuleBuilder do
     :table,
     :chain,
     :family,
-    nft_parts: []
+    expr_list: []      # JSON expression maps
   ]
 
   @type t :: %__MODULE__{
@@ -63,7 +63,7 @@ defmodule NFTex.RuleBuilder do
           table: String.t(),
           chain: String.t(),
           family: atom(),
-          nft_parts: list(String.t())
+          expr_list: list(map())
         }
 
   @doc """
@@ -79,7 +79,10 @@ defmodule NFTex.RuleBuilder do
 
   ## Example
 
+      # Create builder with default IPv4/IPv6 family
       builder = RuleBuilder.new(pid, "filter", "INPUT")
+
+      # Create builder for IPv6
       builder = RuleBuilder.new(pid, "filter", "INPUT", family: :inet6)
   """
   @spec new(pid(), String.t(), String.t(), keyword()) :: t()
@@ -91,7 +94,7 @@ defmodule NFTex.RuleBuilder do
       table: table,
       chain: chain,
       family: family,
-      nft_parts: []
+      expr_list: []
     }
   end
 
@@ -219,6 +222,7 @@ defmodule NFTex.RuleBuilder do
   @doc """
   Build the nft command string without executing.
 
+  Converts the JSON expression list to human-readable nft syntax.
   Returns the nft command string that would be sent to add this rule.
   Useful for batching, remote execution, or inspection.
 
@@ -262,39 +266,60 @@ defmodule NFTex.RuleBuilder do
   """
   @spec to_nft_command(t()) :: binary()
   def to_nft_command(%__MODULE__{} = builder) do
-    # Build complete nft expression
-    expr = Enum.join(builder.nft_parts, " ")
-
-    # Return the command string (same as Rule.build_add)
+    # Format expr_list to nft syntax
+    expr = Formatter.format_expr_list(builder.expr_list)
     "add rule #{builder.family} #{builder.table} #{builder.chain} #{expr}"
   end
 
   @doc """
   Commit the rule to the kernel.
 
-  This builds the complete nft expression string from all parts
-  and creates the rule using the JSON API.
+  Sends the structured JSON expression list directly to the kernel via
+  the libnftables JSON API.
 
   Returns `:ok` on success, `{:error, reason}` on failure.
+
+  ## Examples
+
+      # Build and commit a rule
+      RuleBuilder.new(pid, "filter", "INPUT")
+      |> RuleBuilder.match_source_ip("192.168.1.100")
+      |> RuleBuilder.drop()
+      |> RuleBuilder.commit()
   """
   @spec commit(t()) :: :ok | {:error, term()}
   def commit(%__MODULE__{} = builder) do
-    # Build complete nft expression
-    expr = Enum.join(builder.nft_parts, " ")
+    # Convert expr_list to nftables JSON format
+    nftables_json = %{
+      nftables: [
+        %{
+          add: %{
+            rule: %{
+              family: builder.family,
+              table: builder.table,
+              chain: builder.chain,
+              expr: builder.expr_list
+            }
+          }
+        }
+      ]
+    }
 
-    # Use Rule.add to create the rule
-    Rule.add(builder.pid, %{
-      family: builder.family,
-      table: builder.table,
-      chain: builder.chain,
-      expr: expr
-    })
+    # Encode to JSON using Elixir's JSON module (returns binary)
+    json_string = JSON.encode!(nftables_json)
+
+    # Execute via Executor
+    case NFTablesEx.Executor.execute(json_string, pid: builder.pid) do
+      {:ok, _response} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   # Private helpers
 
   @doc false
-  def add_part(builder, part) when is_binary(part) do
-    %{builder | nft_parts: builder.nft_parts ++ [part]}
+  def add_expr(builder, expr) when is_map(expr) do
+    # Add JSON expression map to expr_list
+    %{builder | expr_list: builder.expr_list ++ [expr]}
   end
 end

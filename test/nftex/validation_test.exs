@@ -1,7 +1,7 @@
-defmodule NFTex.ValidationTest do
+defmodule NFTablesEx.ValidationTest do
   use ExUnit.Case, async: true
 
-  alias NFTex.Validation
+  alias NFTablesEx.Validation
 
   describe "validate_ipv4/1" do
     test "accepts valid IPv4 address" do

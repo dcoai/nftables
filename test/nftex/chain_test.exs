@@ -1,12 +1,12 @@
-defmodule NFTex.ChainTest do
+defmodule NFTablesEx.ChainTest do
   use ExUnit.Case, async: false
 
-  alias NFTex.{Chain, Table}
+  alias NFTablesEx.{Chain, Table}
 
   setup do
     # Note: These tests require CAP_NET_ADMIN capability
     # Run: sudo setcap cap_net_admin=ep priv/port_nftables
-    {:ok, pid} = NFTex.start_link()
+    {:ok, pid} = NFTablesEx.start_link()
 
     # Clean up test table if it exists (using nftex_test_ prefix)
     Table.delete(pid, "nftex_test_chain", :inet)

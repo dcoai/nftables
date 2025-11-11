@@ -1,13 +1,13 @@
-defmodule NFTex.PolicyTest do
+defmodule NFTablesEx.PolicyTest do
   use ExUnit.Case, async: false
 
-  alias NFTex.{Policy, Table, Chain, TestHelpers}
+  alias NFTablesEx.{Policy, Table, Chain, Query, TestHelpers}
 
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
   # the host's network connectivity. Never use production tables like "filter"!
 
   setup do
-    {:ok, pid} = NFTex.start_link()
+    {:ok, pid} = NFTablesEx.start_link()
 
     # Use isolated test table
     test_table = "nftex_test_policy"
@@ -26,7 +26,7 @@ defmodule NFTex.PolicyTest do
     on_exit(fn ->
       if Process.alive?(pid) do
         TestHelpers.cleanup_test_table(pid, test_table, :inet)
-        NFTex.stop(pid)
+        NFTablesEx.stop(pid)
       end
     end)
 
@@ -383,7 +383,7 @@ defmodule NFTex.PolicyTest do
 
       # The rule should now exist in the chain
       # We can verify by listing rules (if Rule.list works)
-      {:ok, rules} = NFTex.Rule.list(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
 
       # Should have at least one rule
       assert length(rules) >= 1

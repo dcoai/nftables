@@ -1,4 +1,4 @@
-defmodule NFTex.RuleBuilder.Actions do
+defmodule NFTablesEx.RuleBuilder.Actions do
   @moduledoc """
   Action and packet modification functions for RuleBuilder.
 
@@ -6,14 +6,15 @@ defmodule NFTex.RuleBuilder.Actions do
   CT operations, and packet header modifications (DSCP, TTL, hop limit).
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   # Basic actions
 
   @doc "Add counter expression"
   @spec counter(RuleBuilder.t()) :: RuleBuilder.t()
   def counter(builder) do
-    RuleBuilder.add_part(builder, "counter")
+    expr = JsonExpr.counter()
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -44,7 +45,7 @@ defmodule NFTex.RuleBuilder.Actions do
   def log(builder, prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
 
-    log_expr = if level do
+    json_opts = if level do
       level_str = case level do
         :emerg -> "emerg"
         :alert -> "alert"
@@ -57,12 +58,13 @@ defmodule NFTex.RuleBuilder.Actions do
         :debug -> "debug"
         other -> to_string(other)
       end
-      "log prefix #{inspect(prefix)} level #{level_str}"
+      [level: level_str]
     else
-      "log prefix #{inspect(prefix)}"
+      []
     end
 
-    RuleBuilder.add_part(builder, log_expr)
+    expr = JsonExpr.log(prefix, json_opts)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -84,14 +86,14 @@ defmodule NFTex.RuleBuilder.Actions do
       other -> to_string(other)
     end
 
-    burst = Keyword.get(opts, :burst)
-    limit_str = if burst do
-      "limit rate #{rate}/#{unit_str} burst #{burst} packets"
+    json_opts = if burst = Keyword.get(opts, :burst) do
+      [burst: burst]
     else
-      "limit rate #{rate}/#{unit_str}"
+      []
     end
 
-    RuleBuilder.add_part(builder, limit_str)
+    expr = JsonExpr.limit(rate, unit_str, json_opts)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Marking actions
@@ -107,7 +109,8 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_mark(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def set_mark(builder, mark) when is_integer(mark) and mark >= 0 do
-    RuleBuilder.add_part(builder, "meta mark set #{mark}")
+    expr = JsonExpr.meta_set("mark", mark)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -121,7 +124,8 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_connmark(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def set_connmark(builder, mark) when is_integer(mark) and mark >= 0 do
-    RuleBuilder.add_part(builder, "ct mark set #{mark}")
+    expr = JsonExpr.ct_set("mark", mark)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -147,7 +151,14 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec restore_mark(RuleBuilder.t()) :: RuleBuilder.t()
   def restore_mark(builder) do
-    RuleBuilder.add_part(builder, "meta mark set ct mark")
+    # meta mark set ct mark
+    expr = %{
+      "mangle" => %{
+        "key" => %{"meta" => %{"key" => "mark"}},
+        "value" => %{"ct" => %{"key" => "mark"}}
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -175,7 +186,14 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec save_mark(RuleBuilder.t()) :: RuleBuilder.t()
   def save_mark(builder) do
-    RuleBuilder.add_part(builder, "ct mark set meta mark")
+    # ct mark set meta mark
+    expr = %{
+      "mangle" => %{
+        "key" => %{"ct" => %{"key" => "mark"}},
+        "value" => %{"meta" => %{"key" => "mark"}}
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # CT actions
@@ -208,8 +226,8 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_ct_label(RuleBuilder.t(), String.t() | non_neg_integer()) :: RuleBuilder.t()
   def set_ct_label(builder, label) when is_binary(label) or is_integer(label) do
-    label_str = if is_integer(label), do: to_string(label), else: inspect(label)
-    RuleBuilder.add_part(builder, "ct label set #{label_str}")
+    expr = JsonExpr.ct_set("label", label)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -242,7 +260,8 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_ct_helper(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def set_ct_helper(builder, helper) when is_binary(helper) do
-    RuleBuilder.add_part(builder, "ct helper set #{inspect(helper)}")
+    expr = JsonExpr.ct_set("helper", helper)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -274,7 +293,8 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_ct_zone(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def set_ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
-    RuleBuilder.add_part(builder, "ct zone set #{zone}")
+    expr = JsonExpr.ct_set("zone", zone)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Packet modification
@@ -325,7 +345,14 @@ defmodule NFTex.RuleBuilder.Actions do
       num when is_integer(num) and num >= 0 and num <= 63 -> num
       _ -> raise ArgumentError, "Invalid DSCP value: #{inspect(dscp)}"
     end
-    RuleBuilder.add_part(builder, "ip dscp set #{dscp_val}")
+
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip", "field" => "dscp"}},
+        "value" => dscp_val
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -349,7 +376,13 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_ttl(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def set_ttl(builder, ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
-    RuleBuilder.add_part(builder, "ip ttl set #{ttl}")
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
+        "value" => ttl
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -367,7 +400,13 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec set_hoplimit(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def set_hoplimit(builder, hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
-    RuleBuilder.add_part(builder, "ip6 hoplimit set #{hoplimit}")
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
+        "value" => hoplimit
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -380,7 +419,18 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec increment_ttl(RuleBuilder.t()) :: RuleBuilder.t()
   def increment_ttl(builder) do
-    RuleBuilder.add_part(builder, "ip ttl set ip ttl + 1")
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
+        "value" => %{
+          "+" => [
+            %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
+            1
+          ]
+        }
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -393,7 +443,18 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec decrement_ttl(RuleBuilder.t()) :: RuleBuilder.t()
   def decrement_ttl(builder) do
-    RuleBuilder.add_part(builder, "ip ttl set ip ttl - 1")
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
+        "value" => %{
+          "-" => [
+            %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
+            1
+          ]
+        }
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -406,7 +467,18 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec increment_hoplimit(RuleBuilder.t()) :: RuleBuilder.t()
   def increment_hoplimit(builder) do
-    RuleBuilder.add_part(builder, "ip6 hoplimit set ip6 hoplimit + 1")
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
+        "value" => %{
+          "+" => [
+            %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
+            1
+          ]
+        }
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -419,6 +491,17 @@ defmodule NFTex.RuleBuilder.Actions do
   """
   @spec decrement_hoplimit(RuleBuilder.t()) :: RuleBuilder.t()
   def decrement_hoplimit(builder) do
-    RuleBuilder.add_part(builder, "ip6 hoplimit set ip6 hoplimit - 1")
+    expr = %{
+      "mangle" => %{
+        "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
+        "value" => %{
+          "-" => [
+            %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
+            1
+          ]
+        }
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 end

@@ -1,10 +1,10 @@
 Code.require_file("../test_helper.exs", __DIR__)
 
-defmodule NFTex.SetOperationsTest do
+defmodule NFTablesEx.SetOperationsTest do
   use ExUnit.Case
   require Logger
 
-  alias NFTex.{Set, Table, TestHelpers}
+  alias NFTablesEx.{Set, Table, TestHelpers}
 
   @moduletag :integration
 
@@ -12,11 +12,11 @@ defmodule NFTex.SetOperationsTest do
   # the host's network connectivity. Never use production tables like "filter"!
 
   # Note: Set operations require a test set to be created. Sets are now created
-  # using the JSON API via NFTex.Set.create/2.
+  # using the JSON API via NFTablesEx.Set.create/2.
 
   describe "add_elements/5" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Use isolated test table and set
       test_table = "nftex_test_set"
@@ -37,7 +37,7 @@ defmodule NFTex.SetOperationsTest do
       on_exit(fn ->
         if Process.alive?(pid) do
           TestHelpers.cleanup_test_table(pid, test_table, :inet)
-          NFTex.stop(pid)
+          NFTablesEx.stop(pid)
         end
       end)
 
@@ -91,7 +91,7 @@ defmodule NFTex.SetOperationsTest do
 
   describe "delete_elements/5" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
@@ -109,7 +109,7 @@ defmodule NFTex.SetOperationsTest do
       on_exit(fn ->
         if Process.alive?(pid) do
           TestHelpers.cleanup_test_table(pid, test_table, :inet)
-          NFTex.stop(pid)
+          NFTablesEx.stop(pid)
         end
       end)
 
@@ -154,7 +154,7 @@ defmodule NFTex.SetOperationsTest do
 
   describe "list_elements/3" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
@@ -172,7 +172,7 @@ defmodule NFTex.SetOperationsTest do
       on_exit(fn ->
         if Process.alive?(pid) do
           TestHelpers.cleanup_test_table(pid, test_table, :inet)
-          NFTex.stop(pid)
+          NFTablesEx.stop(pid)
         end
       end)
 
@@ -227,7 +227,7 @@ defmodule NFTex.SetOperationsTest do
 
   describe "exists?/4" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
@@ -245,7 +245,7 @@ defmodule NFTex.SetOperationsTest do
       on_exit(fn ->
         if Process.alive?(pid) do
           TestHelpers.cleanup_test_table(pid, test_table, :inet)
-          NFTex.stop(pid)
+          NFTablesEx.stop(pid)
         end
       end)
 
@@ -271,7 +271,7 @@ defmodule NFTex.SetOperationsTest do
 
   describe "list/2" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       test_table = "nftex_test_set"
       Table.delete(pid, test_table, :inet)
@@ -280,7 +280,7 @@ defmodule NFTex.SetOperationsTest do
       on_exit(fn ->
         if Process.alive?(pid) do
           TestHelpers.cleanup_test_table(pid, test_table, :inet)
-          NFTex.stop(pid)
+          NFTablesEx.stop(pid)
         end
       end)
 
@@ -301,7 +301,7 @@ defmodule NFTex.SetOperationsTest do
 
   describe "integration test" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       test_table = "nftex_test_set"
       test_set = "test_blocklist"
@@ -319,7 +319,7 @@ defmodule NFTex.SetOperationsTest do
       on_exit(fn ->
         if Process.alive?(pid) do
           TestHelpers.cleanup_test_table(pid, test_table, :inet)
-          NFTex.stop(pid)
+          NFTablesEx.stop(pid)
         end
       end)
 

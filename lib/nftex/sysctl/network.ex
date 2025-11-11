@@ -1,27 +1,27 @@
-defmodule NFTex.Sysctl.Network do
+defmodule NFTablesEx.Sysctl.Network do
   @moduledoc """
   Convenience functions for common network sysctl operations.
 
   This module provides high-level helpers for frequently-used network
-  configuration tasks, wrapping the low-level `NFTex.Sysctl` API.
+  configuration tasks, wrapping the low-level `NFTablesEx.Sysctl` API.
 
   ## Examples
 
       # Enable IP forwarding (for routers)
-      :ok = NFTex.Sysctl.Network.enable_ipv4_forwarding(pid)
+      :ok = NFTablesEx.Sysctl.Network.enable_ipv4_forwarding(pid)
 
       # Configure router settings
-      :ok = NFTex.Sysctl.Network.configure_router(pid,
+      :ok = NFTablesEx.Sysctl.Network.configure_router(pid,
         ipv4_forwarding: true,
         ipv6_forwarding: true,
         syncookies: true
       )
 
       # Harden security settings
-      :ok = NFTex.Sysctl.Network.harden_security(pid)
+      :ok = NFTablesEx.Sysctl.Network.harden_security(pid)
   """
 
-  alias NFTex.Sysctl
+  alias NFTablesEx.Sysctl
 
   ## IPv4 Forwarding
 
@@ -32,7 +32,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.enable_ipv4_forwarding(pid)
+      :ok = NFTablesEx.Sysctl.Network.enable_ipv4_forwarding(pid)
   """
   @spec enable_ipv4_forwarding(pid() | keyword()) :: :ok | {:error, term()}
   def enable_ipv4_forwarding(pid_or_opts) do
@@ -44,7 +44,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.disable_ipv4_forwarding(pid)
+      :ok = NFTablesEx.Sysctl.Network.disable_ipv4_forwarding(pid)
   """
   @spec disable_ipv4_forwarding(pid() | keyword()) :: :ok | {:error, term()}
   def disable_ipv4_forwarding(pid_or_opts) do
@@ -58,7 +58,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      {:ok, true} = NFTex.Sysctl.Network.ipv4_forwarding_enabled?(pid)
+      {:ok, true} = NFTablesEx.Sysctl.Network.ipv4_forwarding_enabled?(pid)
   """
   @spec ipv4_forwarding_enabled?(pid() | keyword()) :: {:ok, boolean()} | {:error, term()}
   def ipv4_forwarding_enabled?(pid_or_opts) do
@@ -76,7 +76,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.enable_ipv6_forwarding(pid)
+      :ok = NFTablesEx.Sysctl.Network.enable_ipv6_forwarding(pid)
   """
   @spec enable_ipv6_forwarding(pid() | keyword()) :: :ok | {:error, term()}
   def enable_ipv6_forwarding(pid_or_opts) do
@@ -88,7 +88,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.disable_ipv6_forwarding(pid)
+      :ok = NFTablesEx.Sysctl.Network.disable_ipv6_forwarding(pid)
   """
   @spec disable_ipv6_forwarding(pid() | keyword()) :: :ok | {:error, term()}
   def disable_ipv6_forwarding(pid_or_opts) do
@@ -104,7 +104,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.enable_syncookies(pid)
+      :ok = NFTablesEx.Sysctl.Network.enable_syncookies(pid)
   """
   @spec enable_syncookies(pid() | keyword()) :: :ok | {:error, term()}
   def enable_syncookies(pid_or_opts) do
@@ -116,7 +116,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.disable_syncookies(pid)
+      :ok = NFTablesEx.Sysctl.Network.disable_syncookies(pid)
   """
   @spec disable_syncookies(pid() | keyword()) :: :ok | {:error, term()}
   def disable_syncookies(pid_or_opts) do
@@ -132,7 +132,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.set_conntrack_max(pid, 131072)
+      :ok = NFTablesEx.Sysctl.Network.set_conntrack_max(pid, 131072)
   """
   @spec set_conntrack_max(pid() | keyword(), pos_integer()) :: :ok | {:error, term()}
   def set_conntrack_max(pid_or_opts, max) when is_integer(max) and max > 0 do
@@ -144,7 +144,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      {:ok, 65536} = NFTex.Sysctl.Network.get_conntrack_max(pid)
+      {:ok, 65536} = NFTablesEx.Sysctl.Network.get_conntrack_max(pid)
   """
   @spec get_conntrack_max(pid() | keyword()) :: {:ok, pos_integer()} | {:error, term()}
   def get_conntrack_max(pid_or_opts) do
@@ -161,7 +161,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.ignore_ping(pid)
+      :ok = NFTablesEx.Sysctl.Network.ignore_ping(pid)
   """
   @spec ignore_ping(pid() | keyword()) :: :ok | {:error, term()}
   def ignore_ping(pid_or_opts) do
@@ -173,7 +173,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.allow_ping(pid)
+      :ok = NFTablesEx.Sysctl.Network.allow_ping(pid)
   """
   @spec allow_ping(pid() | keyword()) :: :ok | {:error, term()}
   def allow_ping(pid_or_opts) do
@@ -196,7 +196,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.configure_router(pid,
+      :ok = NFTablesEx.Sysctl.Network.configure_router(pid,
         ipv4_forwarding: true,
         ipv6_forwarding: true,
         syncookies: true,
@@ -225,7 +225,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.harden_security_ipv4(pid)
+      :ok = NFTablesEx.Sysctl.Network.harden_security_ipv4(pid)
   """
   @spec harden_security_ipv4(pid() | keyword()) :: :ok | {:error, term()}
   def harden_security_ipv4(pid_or_opts) do
@@ -254,7 +254,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.harden_security_ipv6(pid)
+      :ok = NFTablesEx.Sysctl.Network.harden_security_ipv6(pid)
   """
   @spec harden_security_ipv6(pid() | keyword()) :: :ok | {:error, term()}
   def harden_security_ipv6(pid_or_opts) do
@@ -278,7 +278,7 @@ defmodule NFTex.Sysctl.Network do
 
   ## Example
 
-      :ok = NFTex.Sysctl.Network.harden_security(pid)
+      :ok = NFTablesEx.Sysctl.Network.harden_security(pid)
   """
   @spec harden_security(pid() | keyword()) :: :ok | {:error, term()}
   def harden_security(pid_or_opts) do

@@ -1,4 +1,4 @@
-defmodule NFTex.Chain do
+defmodule NFTablesEx.Chain do
   @moduledoc """
   High-level chain operations.
 
@@ -51,10 +51,10 @@ defmodule NFTex.Chain do
 
   ## Quick Example
 
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Create a base chain for filtering input packets
-      :ok = NFTex.Chain.add(pid, %{
+      :ok = NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -65,7 +65,7 @@ defmodule NFTex.Chain do
       })
 
       # Create a regular chain for custom rules
-      :ok = NFTex.Chain.add(pid, %{
+      :ok = NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "my_custom_rules",
         family: :inet
@@ -74,10 +74,10 @@ defmodule NFTex.Chain do
   ## Complete Firewall Setup
 
       # 1. Create table
-      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
+      :ok = NFTablesEx.Table.add(pid, %{name: "filter", family: :inet})
 
       # 2. Create INPUT chain
-      :ok = NFTex.Chain.add(pid, %{
+      :ok = NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -88,20 +88,20 @@ defmodule NFTex.Chain do
       })
 
       # 3. Add rules
-      :ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
+      :ok = NFTablesEx.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
 
   ## Querying Chains
 
-  To list existing chains, use `NFTex.Query.list_chains/2`:
+  To list existing chains, use `NFTablesEx.Query.list_chains/2`:
 
-      {:ok, chains} = NFTex.Query.list_chains(pid, family: :inet)
+      {:ok, chains} = NFTablesEx.Query.list_chains(pid, family: :inet)
 
   ## Integration with nft Command
 
   Chains created with NFTex can be managed with the `nft` command:
 
       # Create with NFTex
-      NFTex.Chain.add(pid, %{
+      NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "INPUT",
         family: :inet,
@@ -119,12 +119,12 @@ defmodule NFTex.Chain do
 
   ## See Also
 
-  - `NFTex.Table` - Create tables to contain chains
-  - `NFTex.Rule` - Add rules to chains
-  - `NFTex.Query` - Query existing chains
+  - `NFTablesEx.Table` - Create tables to contain chains
+  - `NFTablesEx.Rule` - Add rules to chains
+  - `NFTablesEx.Query` - Query existing chains
   """
 
-  alias NFTex.{Port, JSONBuilder}
+  alias NFTablesEx.Port
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type chain_type :: :filter | :nat | :route
@@ -168,7 +168,7 @@ defmodule NFTex.Chain do
   ## Example
 
       # Base chain
-      NFTex.Chain.add(pid, %{
+      NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "input",
         family: :inet,
@@ -179,7 +179,7 @@ defmodule NFTex.Chain do
       })
 
       # Regular chain
-      NFTex.Chain.add(pid, %{
+      NFTablesEx.Chain.add(pid, %{
         table: "filter",
         name: "my_rules",
         family: :inet
@@ -204,32 +204,48 @@ defmodule NFTex.Chain do
   defp create_chain(pid, spec) do
     is_base_chain = Map.has_key?(spec, :hook)
 
-    # Build chain options
-    opts =
+    # Build chain spec
+    chain_spec =
       if is_base_chain do
-        [
-          type: to_string(spec.type),
-          hook: to_string(spec.hook),
-          prio: spec.priority,
-          policy: to_string(spec.policy)
-        ]
+        %{
+          "family" => to_string(spec.family),
+          "table" => spec.table,
+          "name" => spec.name,
+          "type" => to_string(spec.type),
+          "hook" => to_string(spec.hook),
+          "prio" => spec.priority,
+          "policy" => to_string(spec.policy)
+        }
       else
-        []
+        %{
+          "family" => to_string(spec.family),
+          "table" => spec.table,
+          "name" => spec.name
+        }
       end
 
     # Build JSON command
-    cmd = JSONBuilder.add_chain(spec.family, spec.table, spec.name, opts)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "add" => %{
+            "chain" => chain_spec
+          }
+        }
+      ]
+    }
+
+    json = JSON.encode!(cmd)
 
     # Send to port
-    case Port.call(pid, json) do
+    case Port.commit(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
         # Parse response to check for errors
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 
@@ -250,24 +266,37 @@ defmodule NFTex.Chain do
 
   ## Example
 
-      NFTex.Chain.delete(pid, "filter", "input", :inet)
+      NFTablesEx.Chain.delete(pid, "filter", "input", :inet)
 
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
   def delete(pid, table, name, family) do
     # Build JSON command
-    cmd = JSONBuilder.delete_chain(family, table, name)
-    json = Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "chain" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name
+            }
+          }
+        }
+      ]
+    }
+
+    json = JSON.encode!(cmd)
 
     # Send to port
-    case Port.call(pid, json) do
+    case Port.commit(pid, json) do
       {:ok, ""} ->
         # Empty response means success
         :ok
 
       {:ok, response_json} ->
         # Parse response to check for errors
-        case Jason.decode(response_json) do
+        case JSON.decode(response_json) do
           {:ok, %{"nftables" => _}} ->
             :ok
 
@@ -286,7 +315,7 @@ defmodule NFTex.Chain do
   @doc """
   List all chains for a given protocol family.
 
-  This is a convenience function that calls `NFTex.Query.list_chains/2`.
+  This is a convenience function that calls `NFTablesEx.Query.list_chains/2`.
 
   ## Parameters
 
@@ -298,8 +327,8 @@ defmodule NFTex.Chain do
 
   ## Examples
 
-      {:ok, chains} = NFTex.Chain.list(pid)
-      {:ok, chains} = NFTex.Chain.list(pid, family: :inet6)
+      {:ok, chains} = NFTablesEx.Chain.list(pid)
+      {:ok, chains} = NFTablesEx.Chain.list(pid, family: :inet6)
 
       for c <- chains do
         IO.puts("Chain: \#{c.name} in table \#{c.table}")
@@ -308,7 +337,7 @@ defmodule NFTex.Chain do
   """
   @spec list(pid(), keyword()) :: {:ok, [map()]} | {:error, term()}
   def list(pid, opts \\ []) do
-    NFTex.Query.list_chains(pid, opts)
+    NFTablesEx.Query.list_chains(pid, opts)
   end
 
   @doc """
@@ -323,14 +352,14 @@ defmodule NFTex.Chain do
 
   ## Examples
 
-      if NFTex.Chain.exists?(pid, "filter", "INPUT", :inet) do
+      if NFTablesEx.Chain.exists?(pid, "filter", "INPUT", :inet) do
         IO.puts("Chain exists")
       end
 
   """
   @spec exists?(pid(), String.t(), String.t(), family()) :: boolean()
   def exists?(pid, table, name, family \\ :inet) do
-    case NFTex.Query.list_chains(pid, family: family) do
+    case NFTablesEx.Query.list_chains(pid, family: family) do
       {:ok, chains} ->
         Enum.any?(chains, fn chain ->
           chain.name == name and chain.table == table
@@ -359,7 +388,7 @@ defmodule NFTex.Chain do
 
   ## Example
 
-      :ok = NFTex.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
+      :ok = NFTablesEx.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
 
   """
   @spec set_policy(pid(), String.t(), String.t(), family(), policy()) ::
@@ -387,7 +416,7 @@ defmodule NFTex.Chain do
   ## Examples
 
       # Build base chain command
-      json = NFTex.Chain.build_add(%{
+      json = NFTablesEx.Chain.build_add(%{
         table: "filter",
         name: "input",
         family: :inet,
@@ -399,7 +428,7 @@ defmodule NFTex.Chain do
       #=> "{\\\"nftables\\\":[{\\\"add\\\":{\\\"chain\\\":{...}}}]}"
 
       # Build regular chain command
-      json = NFTex.Chain.build_add(%{
+      json = NFTablesEx.Chain.build_add(%{
         table: "filter",
         name: "my_rules",
         family: :inet
@@ -412,28 +441,44 @@ defmodule NFTex.Chain do
         |> Batch.add(Chain.build_add(%{...}))
 
       # Execute later
-      NFTex.Executor.execute(json)
+      NFTablesEx.Executor.execute(json)
   """
   @spec build_add(chain_spec()) :: binary()
   def build_add(spec) do
     is_base_chain = Map.has_key?(spec, :hook)
 
-    # Build chain options
-    opts =
+    # Build chain spec
+    chain_spec =
       if is_base_chain do
-        [
-          type: to_string(spec.type),
-          hook: to_string(spec.hook),
-          prio: spec.priority,
-          policy: to_string(spec.policy)
-        ]
+        %{
+          "family" => to_string(spec.family),
+          "table" => spec.table,
+          "name" => spec.name,
+          "type" => to_string(spec.type),
+          "hook" => to_string(spec.hook),
+          "prio" => spec.priority,
+          "policy" => to_string(spec.policy)
+        }
       else
-        []
+        %{
+          "family" => to_string(spec.family),
+          "table" => spec.table,
+          "name" => spec.name
+        }
       end
 
     # Build JSON command
-    cmd = JSONBuilder.add_chain(spec.family, spec.table, spec.name, opts)
-    Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "add" => %{
+            "chain" => chain_spec
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
   end
 
   @doc """
@@ -453,12 +498,25 @@ defmodule NFTex.Chain do
 
   ## Examples
 
-      json = NFTex.Chain.build_delete("filter", "input", :inet)
-      NFTex.Executor.execute(json)
+      json = NFTablesEx.Chain.build_delete("filter", "input", :inet)
+      NFTablesEx.Executor.execute(json)
   """
   @spec build_delete(String.t(), String.t(), family()) :: binary()
   def build_delete(table, name, family) do
-    cmd = JSONBuilder.delete_chain(family, table, name)
-    Jason.encode!(cmd)
+    cmd = %{
+      "nftables" => [
+        %{
+          "delete" => %{
+            "chain" => %{
+              "family" => to_string(family),
+              "table" => table,
+              "name" => name
+            }
+          }
+        }
+      ]
+    }
+
+    cmd |> JSON.encode!()
   end
 end

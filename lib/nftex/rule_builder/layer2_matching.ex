@@ -1,11 +1,11 @@
-defmodule NFTex.RuleBuilder.Layer2Matching do
+defmodule NFTablesEx.RuleBuilder.Layer2Matching do
   @moduledoc """
   Layer 2 (MAC, interface, VLAN) matching functions for RuleBuilder.
 
   Provides functions for matching MAC addresses, network interfaces, and VLAN tags.
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   @doc """
   Match source MAC address.
@@ -16,7 +16,8 @@ defmodule NFTex.RuleBuilder.Layer2Matching do
   """
   @spec match_source_mac(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_source_mac(builder, mac) when is_binary(mac) do
-    RuleBuilder.add_part(builder, "ether saddr #{mac}")
+    expr = JsonExpr.payload_match("ether", "saddr", mac)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -28,19 +29,22 @@ defmodule NFTex.RuleBuilder.Layer2Matching do
   """
   @spec match_dest_mac(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_dest_mac(builder, mac) when is_binary(mac) do
-    RuleBuilder.add_part(builder, "ether daddr #{mac}")
+    expr = JsonExpr.payload_match("ether", "daddr", mac)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc "Match input interface name"
   @spec match_iif(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_iif(builder, ifname) when is_binary(ifname) do
-    RuleBuilder.add_part(builder, "iifname #{inspect(ifname)}")
+    expr = JsonExpr.meta_match("iifname", ifname)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc "Match output interface name"
   @spec match_oif(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def match_oif(builder, ifname) when is_binary(ifname) do
-    RuleBuilder.add_part(builder, "oifname #{inspect(ifname)}")
+    expr = JsonExpr.meta_match("oifname", ifname)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -58,7 +62,8 @@ defmodule NFTex.RuleBuilder.Layer2Matching do
   """
   @spec match_vlan_id(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_vlan_id(builder, vlan_id) when is_integer(vlan_id) and vlan_id >= 0 and vlan_id <= 4095 do
-    RuleBuilder.add_part(builder, "vlan id #{vlan_id}")
+    expr = JsonExpr.payload_match("vlan", "id", vlan_id)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -71,6 +76,7 @@ defmodule NFTex.RuleBuilder.Layer2Matching do
   """
   @spec match_vlan_pcp(RuleBuilder.t(), non_neg_integer()) :: RuleBuilder.t()
   def match_vlan_pcp(builder, pcp) when is_integer(pcp) and pcp >= 0 and pcp <= 7 do
-    RuleBuilder.add_part(builder, "vlan pcp #{pcp}")
+    expr = JsonExpr.payload_match("vlan", "pcp", pcp)
+    RuleBuilder.add_expr(builder, expr)
   end
 end

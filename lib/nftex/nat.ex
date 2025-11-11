@@ -1,4 +1,4 @@
-defmodule NFTex.NAT do
+defmodule NFTablesEx.NAT do
   @moduledoc """
   High-level Network Address Translation (NAT) operations.
 
@@ -7,26 +7,26 @@ defmodule NFTex.NAT do
 
   ## Quick Examples
 
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTablesEx.start_link()
 
       # Internet sharing (masquerade)
-      :ok = NFTex.NAT.setup_masquerade(pid, "wan0")
+      :ok = NFTablesEx.NAT.setup_masquerade(pid, "wan0")
 
       # Port forwarding
-      :ok = NFTex.NAT.port_forward(pid, 80, "192.168.1.100", 8080)
+      :ok = NFTablesEx.NAT.port_forward(pid, 80, "192.168.1.100", 8080)
 
       # 1:1 NAT
-      :ok = NFTex.NAT.static_nat(pid, "203.0.113.1", "192.168.1.100")
+      :ok = NFTablesEx.NAT.static_nat(pid, "203.0.113.1", "192.168.1.100")
 
   ## Prerequisites
 
   NAT operations require a NAT table and appropriate chains:
 
       # Create NAT table
-      :ok = NFTex.Table.add(pid, %{name: "nat", family: :inet})
+      :ok = NFTablesEx.Table.add(pid, %{name: "nat", family: :inet})
 
       # Create PREROUTING chain (for DNAT)
-      :ok = NFTex.Chain.add(pid, %{
+      :ok = NFTablesEx.Chain.add(pid, %{
         table: "nat",
         name: "prerouting",
         family: :inet,
@@ -37,7 +37,7 @@ defmodule NFTex.NAT do
       })
 
       # Create POSTROUTING chain (for SNAT/masquerade)
-      :ok = NFTex.Chain.add(pid, %{
+      :ok = NFTablesEx.Chain.add(pid, %{
         table: "nat",
         name: "postrouting",
         family: :inet,
@@ -49,7 +49,7 @@ defmodule NFTex.NAT do
 
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.RuleBuilder
 
   @type family :: :inet | :ip | :ip6
 
@@ -71,7 +71,7 @@ defmodule NFTex.NAT do
   ## Example
 
       # Share internet connection via eth0
-      :ok = NFTex.NAT.setup_masquerade(pid, "eth0")
+      :ok = NFTablesEx.NAT.setup_masquerade(pid, "eth0")
 
       # Now internal hosts (192.168.1.0/24) can access internet
   """
@@ -109,13 +109,13 @@ defmodule NFTex.NAT do
   ## Examples
 
       # Forward external port 80 to internal web server
-      :ok = NFTex.NAT.port_forward(pid, 80, "192.168.1.100", 8080)
+      :ok = NFTablesEx.NAT.port_forward(pid, 80, "192.168.1.100", 8080)
 
       # Forward SSH to internal host
-      :ok = NFTex.NAT.port_forward(pid, 2222, "192.168.1.10", 22)
+      :ok = NFTablesEx.NAT.port_forward(pid, 2222, "192.168.1.10", 22)
 
       # Forward UDP DNS
-      :ok = NFTex.NAT.port_forward(pid, 53, "192.168.1.1", 53, protocol: :udp)
+      :ok = NFTablesEx.NAT.port_forward(pid, 53, "192.168.1.1", 53, protocol: :udp)
   """
   @spec port_forward(pid(), non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
           :ok | {:error, term()}
@@ -163,7 +163,7 @@ defmodule NFTex.NAT do
   ## Example
 
       # Map public IP to DMZ host
-      :ok = NFTex.NAT.static_nat(pid, "203.0.113.100", "192.168.1.100")
+      :ok = NFTablesEx.NAT.static_nat(pid, "203.0.113.100", "192.168.1.100")
   """
   @spec static_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def static_nat(pid, public_ip, private_ip, opts \\ [])
@@ -196,10 +196,10 @@ defmodule NFTex.NAT do
   ## Example
 
       # NAT internal subnet to public IP
-      :ok = NFTex.NAT.source_nat(pid, "192.168.1.0/24", "203.0.113.1")
+      :ok = NFTablesEx.NAT.source_nat(pid, "192.168.1.0/24", "203.0.113.1")
 
       # NAT specific host
-      :ok = NFTex.NAT.source_nat(pid, "192.168.1.100", "203.0.113.1")
+      :ok = NFTablesEx.NAT.source_nat(pid, "192.168.1.100", "203.0.113.1")
   """
   @spec source_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def source_nat(pid, source, nat_ip, opts \\ [])
@@ -240,7 +240,7 @@ defmodule NFTex.NAT do
   ## Example
 
       # Redirect traffic to virtual IP to actual server
-      :ok = NFTex.NAT.destination_nat(pid, "203.0.113.100", "192.168.1.100")
+      :ok = NFTablesEx.NAT.destination_nat(pid, "203.0.113.100", "192.168.1.100")
   """
   @spec destination_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def destination_nat(pid, dest, nat_ip, opts \\ [])
@@ -272,7 +272,7 @@ defmodule NFTex.NAT do
   ## Example
 
       # Redirect HTTP to local proxy
-      :ok = NFTex.NAT.redirect_port(pid, 80, 3128)
+      :ok = NFTablesEx.NAT.redirect_port(pid, 80, 3128)
   """
   @spec redirect_port(pid(), non_neg_integer(), non_neg_integer(), keyword()) ::
           :ok | {:error, term()}

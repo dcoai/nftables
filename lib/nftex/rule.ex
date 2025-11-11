@@ -1,473 +1,618 @@
-defmodule NFTex.Rule do
+defmodule NFTablesEx.Rule do
   @moduledoc """
-  High-level rule operations for nftables.
+  High-level fluent API for building firewall rules.
 
-  Rules define packet filtering and manipulation logic within chains.
+  This module provides clean, concise functions for building nftables rules
+  with a functional, pipeable interface. Function names are short and intuitive.
 
-  ## Quick Example
+  ## Design Philosophy
 
-      {:ok, pid} = NFTex.start_link()
+  - **Short Names**: `state()` instead of `match_ct_state()`
+  - **Pipeable**: Every function returns updated rule struct
+  - **Type Safe**: Full typespecs and guards
+  - **Flexible**: Can be used standalone or with Builder
 
-      # Create table and chain first
-      :ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
-      :ok = NFTex.Chain.add(pid, %{
-        table: "filter",
-        name: "input",
-        family: :inet,
-        type: :filter,
-        hook: :input,
-        priority: 0,
-        policy: :accept
-      })
+  ## Basic Usage
 
-      # Block an IP address
-      :ok = NFTex.Rule.block_ip(pid, "filter", "input", "192.168.1.100")
+      # Create and build a rule
+      rule = Rule.new()
+      |> Rule.protocol(:tcp)
+      |> Rule.port(22)
+      |> Rule.state([:new])
+      |> Rule.log("SSH: ")
+      |> Rule.accept()
 
-      # Accept an IP address
-      :ok = NFTex.Rule.accept_ip(pid, "filter", "input", "10.0.0.1")
+      # Extract expression list for Builder
+      expr_list = Rule.to_expr(rule)
 
+      # Use with Builder
+      Builder.new()
+      |> Builder.add_table("filter")
+      |> Builder.add_chain("input")
+      |> Builder.add_rule(expr_list)
+      |> Builder.execute(pid)
+
+  ## Common Patterns
+
+      # Allow established connections
+      Rule.new()
+      |> Rule.state([:established, :related])
+      |> Rule.accept()
+
+      # Block specific IP with logging
+      Rule.new()
+      |> Rule.source("192.168.1.100")
+      |> Rule.log("BLOCKED: ")
+      |> Rule.drop()
+
+      # Rate-limited SSH
+      Rule.new()
+      |> Rule.protocol(:tcp)
+      |> Rule.port(22)
+      |> Rule.limit(10, :minute)
+      |> Rule.accept()
   """
 
-  alias NFTex.Port
+  alias NFTablesEx.JsonExpr
 
-  @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
+  @type t :: %__MODULE__{
+          family: atom(),
+          table: String.t() | nil,
+          chain: String.t() | nil,
+          expr_list: list(map()),
+          comment: String.t() | nil
+        }
+
+  defstruct family: :inet,
+            table: nil,
+            chain: nil,
+            expr_list: [],
+            comment: nil
+
+  ## Core Functions
 
   @doc """
-  Add a rule using nft syntax.
+  Create a new rule.
 
-  ## Parameters
+  ## Options
 
-  - `family` - Protocol family
-  - `table` - Table name
-  - `chain` - Chain name
-  - `expr` - nft expression/statement string
+  - `:family` - Address family (default: `:inet`)
+  - `:table` - Table name (optional)
+  - `:chain` - Chain name (optional)
 
   ## Examples
 
-      # Block specific IP
-      NFTex.Rule.add(pid, %{
-        family: :inet,
-        table: "filter",
-        chain: "input",
-        expr: "ip saddr 192.168.1.100 drop"
-      })
-
-      # Accept on specific port
-      NFTex.Rule.add(pid, %{
-        family: :inet,
-        table: "filter",
-        chain: "input",
-        expr: "tcp dport 22 accept"
-      })
-
+      Rule.new()
+      Rule.new(family: :ip6)
+      Rule.new(table: "filter", chain: "input")
   """
-  @spec add(pid(), map()) :: :ok | {:error, term()}
-  def add(pid, %{family: family, table: table, chain: chain, expr: expr}) do
-    # Build raw nft syntax command (not JSON!)
-    # libnftables accepts text commands via nft_run_cmd_from_buffer
-    nft_command = "add rule #{family} #{table} #{chain} #{expr}"
-
-    # Send raw nft command to port
-    case Port.call(pid, nft_command) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response} ->
-        # Non-empty response might be an error message
-        if String.contains?(response, "Error") do
-          {:error, {:nft_error, response}}
-        else
-          :ok
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  @spec new(keyword()) :: t()
+  def new(opts \\ []) do
+    %__MODULE__{
+      family: Keyword.get(opts, :family, :inet),
+      table: Keyword.get(opts, :table),
+      chain: Keyword.get(opts, :chain)
+    }
   end
 
   @doc """
-  Delete a rule by handle.
+  Extract the expression list from a rule.
 
-  ## Example
-
-      NFTex.Rule.delete(pid, "filter", "input", :inet, 42)
-
-  """
-  @spec delete(pid(), String.t(), String.t(), family(), integer()) :: :ok | {:error, term()}
-  def delete(pid, table, chain, family, handle) when is_integer(handle) do
-    # Build raw nft syntax command
-    nft_command = "delete rule #{family} #{table} #{chain} handle #{handle}"
-
-    # Send raw nft command to port
-    case Port.call(pid, nft_command) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response} ->
-        # Non-empty response might be an error message
-        if String.contains?(response, "Error") do
-          {:error, {:nft_error, response}}
-        else
-          :ok
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  List rules in a chain.
-
-  This is a convenience function that calls `NFTex.Query.list_rules/3`.
-
-  ## Example
-
-      {:ok, rules} = NFTex.Rule.list(pid, "filter", "input")
-
-  """
-  @spec list(pid(), String.t(), String.t(), keyword()) :: {:ok, [map()]} | {:error, term()}
-  def list(pid, table, chain, opts \\ []) do
-    NFTex.Query.list_rules(pid, table, chain, opts)
-  end
-
-  @doc """
-  Block an IPv4 address.
-
-  ## Parameters
-
-  - `ip_address` - IP address as string (e.g., "192.168.1.100")
-  - `opts` - Options:
-    - `:counter` - Add packet counter (default: false)
-    - `:comment` - Add comment (default: nil)
-
-  ## Example
-
-      :ok = NFTex.Rule.block_ip(pid, "filter", "input", "192.168.1.100")
-      :ok = NFTex.Rule.block_ip(pid, "filter", "input", "10.0.0.1", counter: true)
-
-  """
-  @spec block_ip(pid(), String.t(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def block_ip(pid, table, chain, ip_address, opts \\ []) when is_binary(ip_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip saddr #{ip_address} #{counter}drop"
-
-    add(pid, %{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
-  end
-
-  @doc """
-  Accept an IPv4 address.
-
-  ## Example
-
-      :ok = NFTex.Rule.accept_ip(pid, "filter", "input", "10.0.0.1")
-
-  """
-  @spec accept_ip(pid(), String.t(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def accept_ip(pid, table, chain, ip_address, opts \\ []) when is_binary(ip_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip saddr #{ip_address} #{counter}accept"
-
-    add(pid, %{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
-  end
-
-  @doc """
-  Block an IPv6 address.
-
-  ## Example
-
-      :ok = NFTex.Rule.block_ipv6(pid, "filter", "input", "2001:db8::1")
-
-  """
-  @spec block_ipv6(pid(), String.t(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def block_ipv6(pid, table, chain, ipv6_address, opts \\ []) when is_binary(ipv6_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip6 saddr #{ipv6_address} #{counter}drop"
-
-    add(pid, %{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
-  end
-
-  @doc """
-  Accept an IPv6 address.
-
-  ## Example
-
-      :ok = NFTex.Rule.accept_ipv6(pid, "filter", "input", "2001:db8::1")
-
-  """
-  @spec accept_ipv6(pid(), String.t(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def accept_ipv6(pid, table, chain, ipv6_address, opts \\ []) when is_binary(ipv6_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip6 saddr #{ipv6_address} #{counter}accept"
-
-    add(pid, %{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
-  end
-
-  @doc """
-  Add rate limiting rule.
-
-  ## Parameters
-
-  - `rate` - Rate limit number
-  - `unit` - Time unit: `:second`, `:minute`, `:hour`, `:day`
-
-  ## Example
-
-      # Limit to 10 packets per second
-      :ok = NFTex.Rule.rate_limit(pid, "filter", "input", 10, :second)
-
-  """
-  @spec rate_limit(pid(), String.t(), String.t(), integer(), atom(), keyword()) :: :ok | {:error, term()}
-  def rate_limit(pid, table, chain, rate, unit, opts \\ []) do
-    unit_str = case unit do
-      :second -> "second"
-      :minute -> "minute"
-      :hour -> "hour"
-      :day -> "day"
-    end
-
-    action = Keyword.get(opts, :action, :drop)
-    action_str = to_string(action)
-
-    expr = "limit rate #{rate}/#{unit_str} #{action_str}"
-
-    add(pid, %{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
-  end
-
-  @doc """
-  Build an nft command to add a rule (without executing).
-
-  Returns the nft command string that would be sent to add a rule.
-  Useful for batching, remote execution, or inspection.
-
-  ## Parameters
-
-  - `spec` - Rule specification map with `:family`, `:table`, `:chain`, and `:expr` keys
-
-  ## Returns
-
-  nft command string
+  Returns the list of JSON expressions that can be used with Builder.add_rule/2.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_add(%{
-        family: :inet,
-        table: "filter",
-        chain: "input",
-        expr: "ip saddr 192.168.1.100 drop"
-      })
-      #=> "add rule inet filter input ip saddr 192.168.1.100 drop"
-
-      # Execute later
-      NFTex.Executor.execute(cmd)
+      rule = Rule.new() |> Rule.protocol(:tcp) |> Rule.accept()
+      expr_list = Rule.to_expr(rule)
+      Builder.add_rule(builder, expr_list)
   """
-  @spec build_add(map()) :: binary()
-  def build_add(%{family: family, table: table, chain: chain, expr: expr}) do
-    "add rule #{family} #{table} #{chain} #{expr}"
-  end
+  @spec to_expr(t()) :: list(map())
+  def to_expr(%__MODULE__{expr_list: expr_list}), do: expr_list
+
+  ## Basic Matching
 
   @doc """
-  Build an nft command to block an IPv4 address (without executing).
-
-  Returns the nft command string that would be sent to block an IP.
-
-  ## Parameters
-
-  - `table` - Table name
-  - `chain` - Chain name
-  - `ip_address` - IPv4 address to block
-  - `opts` - Options:
-    - `:counter` - Add packet counter (default: false)
-
-  ## Returns
-
-  nft command string
+  Match protocol.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_block_ip("filter", "input", "192.168.1.100")
-      #=> "add rule inet filter input ip saddr 192.168.1.100 drop"
-
-      cmd = NFTex.Rule.build_block_ip("filter", "input", "10.0.0.1", counter: true)
-      #=> "add rule inet filter input ip saddr 10.0.0.1 counter drop"
+      rule |> Rule.protocol(:tcp)
+      rule |> Rule.protocol(:udp)
+      rule |> Rule.protocol(:icmp)
   """
-  @spec build_block_ip(String.t(), String.t(), String.t(), keyword()) :: binary()
-  def build_block_ip(table, chain, ip_address, opts \\ []) when is_binary(ip_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip saddr #{ip_address} #{counter}drop"
+  @spec protocol(t(), atom() | String.t()) :: t()
+  def protocol(rule, proto) when is_atom(proto) do
+    protocol(rule, Atom.to_string(proto))
+  end
 
-    build_add(%{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
+  def protocol(rule, proto) when is_binary(proto) do
+    expr = JsonExpr.meta_match("l4proto", proto)
+    add_expr(rule, expr)
   end
 
   @doc """
-  Build an nft command to accept an IPv4 address (without executing).
+  Match source IP address.
 
-  Returns the nft command string that would be sent to accept an IP.
-
-  ## Parameters
-
-  - `table` - Table name
-  - `chain` - Chain name
-  - `ip_address` - IPv4 address to accept
-  - `opts` - Options:
-    - `:counter` - Add packet counter (default: false)
-
-  ## Returns
-
-  nft command string
+  Supports single IPs, CIDR notation, and ranges.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_accept_ip("filter", "input", "10.0.0.1")
-      #=> "add rule inet filter input ip saddr 10.0.0.1 accept"
+      rule |> Rule.source("192.168.1.1")
+      rule |> Rule.source("10.0.0.0/8")
   """
-  @spec build_accept_ip(String.t(), String.t(), String.t(), keyword()) :: binary()
-  def build_accept_ip(table, chain, ip_address, opts \\ []) when is_binary(ip_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip saddr #{ip_address} #{counter}accept"
+  @spec source(t(), String.t()) :: t()
+  def source(rule, ip) when is_binary(ip) do
+    expr =
+      case String.split(ip, "/") do
+        [addr, prefix_len] ->
+          # CIDR notation
+          JsonExpr.payload_match_prefix("ip", "saddr", addr, String.to_integer(prefix_len))
+        _ ->
+          # Single IP
+          JsonExpr.payload_match("ip", "saddr", ip)
+      end
 
-    build_add(%{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
+    add_expr(rule, expr)
   end
 
   @doc """
-  Build an nft command to block an IPv6 address (without executing).
+  Match destination IP address.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_block_ipv6("filter", "input", "2001:db8::1")
-      #=> "add rule inet filter input ip6 saddr 2001:db8::1 drop"
+      rule |> Rule.dest("192.168.1.1")
+      rule |> Rule.dest("10.0.0.0/8")
   """
-  @spec build_block_ipv6(String.t(), String.t(), String.t(), keyword()) :: binary()
-  def build_block_ipv6(table, chain, ipv6_address, opts \\ []) when is_binary(ipv6_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip6 saddr #{ipv6_address} #{counter}drop"
+  @spec dest(t(), String.t()) :: t()
+  def dest(rule, ip) when is_binary(ip) do
+    expr =
+      case String.split(ip, "/") do
+        [addr, prefix_len] ->
+          # CIDR notation
+          JsonExpr.payload_match_prefix("ip", "daddr", addr, String.to_integer(prefix_len))
+        _ ->
+          # Single IP
+          JsonExpr.payload_match("ip", "daddr", ip)
+      end
 
-    build_add(%{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
+    add_expr(rule, expr)
   end
 
   @doc """
-  Build an nft command to accept an IPv6 address (without executing).
+  Match source port.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_accept_ipv6("filter", "input", "2001:db8::1")
-      #=> "add rule inet filter input ip6 saddr 2001:db8::1 accept"
+      rule |> Rule.sport(1024)
   """
-  @spec build_accept_ipv6(String.t(), String.t(), String.t(), keyword()) :: binary()
-  def build_accept_ipv6(table, chain, ipv6_address, opts \\ []) when is_binary(ipv6_address) do
-    counter = if Keyword.get(opts, :counter, false), do: "counter ", else: ""
-    expr = "ip6 saddr #{ipv6_address} #{counter}accept"
-
-    build_add(%{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
+  @spec sport(t(), integer()) :: t()
+  def sport(rule, port) when is_integer(port) and port >= 0 and port <= 65535 do
+    expr = JsonExpr.payload_match("tcp", "sport", port)
+    add_expr(rule, expr)
   end
 
   @doc """
-  Build an nft command for rate limiting (without executing).
-
-  ## Parameters
-
-  - `table` - Table name
-  - `chain` - Chain name
-  - `rate` - Rate limit number
-  - `unit` - Time unit: `:second`, `:minute`, `:hour`, `:day`
-  - `opts` - Options:
-    - `:action` - Action to take (default: `:drop`)
+  Match destination port.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_rate_limit("filter", "input", 10, :second)
-      #=> "add rule inet filter input limit rate 10/second drop"
+      rule |> Rule.dport(80)
+      rule |> Rule.dport(443)
   """
-  @spec build_rate_limit(String.t(), String.t(), integer(), atom(), keyword()) :: binary()
-  def build_rate_limit(table, chain, rate, unit, opts \\ []) do
-    unit_str = case unit do
-      :second -> "second"
-      :minute -> "minute"
-      :hour -> "hour"
-      :day -> "day"
-    end
-
-    action = Keyword.get(opts, :action, :drop)
-    action_str = to_string(action)
-
-    expr = "limit rate #{rate}/#{unit_str} #{action_str}"
-
-    build_add(%{
-      family: :inet,
-      table: table,
-      chain: chain,
-      expr: expr
-    })
+  @spec dport(t(), integer()) :: t()
+  def dport(rule, port) when is_integer(port) and port >= 0 and port <= 65535 do
+    expr = JsonExpr.payload_match("tcp", "dport", port)
+    add_expr(rule, expr)
   end
 
   @doc """
-  Build an nft command to delete a rule by handle (without executing).
+  Match port (both source and destination).
 
-  ## Parameters
-
-  - `table` - Table name
-  - `chain` - Chain name
-  - `family` - Protocol family
-  - `handle` - Rule handle (integer)
-
-  ## Returns
-
-  nft command string
+  Convenience function that matches destination port by default.
 
   ## Examples
 
-      cmd = NFTex.Rule.build_delete("filter", "input", :inet, 42)
-      #=> "delete rule inet filter input handle 42"
+      rule |> Rule.port(22)
+      rule |> Rule.port(80)
   """
-  @spec build_delete(String.t(), String.t(), family(), integer()) :: binary()
-  def build_delete(table, chain, family, handle) when is_integer(handle) do
-    "delete rule #{family} #{table} #{chain} handle #{handle}"
+  @spec port(t(), integer()) :: t()
+  def port(rule, port) when is_integer(port) do
+    dport(rule, port)
+  end
+
+  @doc """
+  Match port range.
+
+  ## Examples
+
+      rule |> Rule.port_range(1024, 65535)
+      rule |> Rule.port_range(8000, 9000)
+  """
+  @spec port_range(t(), integer(), integer()) :: t()
+  def port_range(rule, min_port, max_port)
+      when is_integer(min_port) and is_integer(max_port) do
+    expr = JsonExpr.payload_match_range("tcp", "dport", min_port, max_port)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Match input interface.
+
+  ## Examples
+
+      rule |> Rule.iif("eth0")
+      rule |> Rule.iif("wlan0")
+  """
+  @spec iif(t(), String.t()) :: t()
+  def iif(rule, interface) when is_binary(interface) do
+    expr = JsonExpr.meta_match("iifname", interface)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Match output interface.
+
+  ## Examples
+
+      rule |> Rule.oif("eth0")
+  """
+  @spec oif(t(), String.t()) :: t()
+  def oif(rule, interface) when is_binary(interface) do
+    expr = JsonExpr.meta_match("oifname", interface)
+    add_expr(rule, expr)
+  end
+
+  ## Connection Tracking
+
+  @doc """
+  Match connection tracking state.
+
+  ## States
+
+  - `:invalid`, `:established`, `:related`, `:new`, `:untracked`
+
+  ## Examples
+
+      rule |> Rule.state([:established, :related])
+      rule |> Rule.state([:new])
+      rule |> Rule.state(:invalid)
+  """
+  @spec state(t(), list(atom()) | atom()) :: t()
+  def state(rule, states) when is_list(states) do
+    state_strings = Enum.map(states, &Atom.to_string/1)
+    expr = JsonExpr.ct_match("state", state_strings)
+    add_expr(rule, expr)
+  end
+
+  def state(rule, state) when is_atom(state) do
+    state(rule, [state])
+  end
+
+  @doc """
+  Match connection tracking status.
+
+  ## Examples
+
+      rule |> Rule.status([:assured])
+      rule |> Rule.status([:snat])
+  """
+  @spec status(t(), list(atom())) :: t()
+  def status(rule, statuses) when is_list(statuses) do
+    status_strings = Enum.map(statuses, &Atom.to_string/1)
+    expr = JsonExpr.ct_match("status", status_strings)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Match connection mark.
+
+  ## Examples
+
+      rule |> Rule.connmark(42)
+  """
+  @spec connmark(t(), non_neg_integer()) :: t()
+  def connmark(rule, mark) when is_integer(mark) and mark >= 0 do
+    expr = JsonExpr.ct_match("mark", mark)
+    add_expr(rule, expr)
+  end
+
+  ## Advanced Matching
+
+  @doc """
+  Match packet mark.
+
+  ## Examples
+
+      rule |> Rule.mark(100)
+  """
+  @spec mark(t(), non_neg_integer()) :: t()
+  def mark(rule, mark_val) when is_integer(mark_val) and mark_val >= 0 do
+    expr = JsonExpr.meta_match("mark", mark_val)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Match DSCP value.
+
+  ## Examples
+
+      rule |> Rule.dscp(46)  # Expedited forwarding
+  """
+  @spec dscp(t(), non_neg_integer()) :: t()
+  def dscp(rule, dscp_val) when is_integer(dscp_val) and dscp_val >= 0 and dscp_val <= 63 do
+    expr = JsonExpr.payload_match("ip", "dscp", dscp_val)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Match ICMP type.
+
+  ## Examples
+
+      rule |> Rule.icmp_type(:echo_request)
+      rule |> Rule.icmp_type(8)
+  """
+  @spec icmp_type(t(), atom() | non_neg_integer()) :: t()
+  def icmp_type(rule, type) when is_atom(type) do
+    type_val =
+      case type do
+        :echo_reply -> "echo-reply"
+        :dest_unreachable -> "destination-unreachable"
+        :echo_request -> "echo-request"
+        :time_exceeded -> "time-exceeded"
+        other -> Atom.to_string(other)
+      end
+
+    expr = JsonExpr.payload_match("icmp", "type", type_val)
+    add_expr(rule, expr)
+  end
+
+  def icmp_type(rule, type) when is_integer(type) do
+    expr = JsonExpr.payload_match("icmp", "type", type)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Match against a named set.
+
+  ## Examples
+
+      rule |> Rule.in_set("@blocklist", :saddr)
+      rule |> Rule.in_set("@allowed_ports", :dport)
+  """
+  @spec in_set(t(), String.t(), atom()) :: t()
+  def in_set(rule, set_name, match_type) when is_binary(set_name) do
+    # Ensure set name starts with @
+    set_ref = if String.starts_with?(set_name, "@"), do: set_name, else: "@#{set_name}"
+
+    {protocol, field} =
+      case match_type do
+        :saddr -> {"ip", "saddr"}
+        :daddr -> {"ip", "daddr"}
+        :sport -> {"tcp", "sport"}
+        :dport -> {"tcp", "dport"}
+      end
+
+    expr = JsonExpr.set_match(protocol, field, set_ref)
+    add_expr(rule, expr)
+  end
+
+  ## Actions
+
+  @doc """
+  Add counter.
+
+  ## Examples
+
+      rule |> Rule.counter()
+  """
+  @spec counter(t()) :: t()
+  def counter(rule) do
+    expr = JsonExpr.counter()
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Add log statement.
+
+  ## Examples
+
+      rule |> Rule.log("SSH: ")
+      rule |> Rule.log("DROP: ", level: "warn")
+  """
+  @spec log(t(), String.t(), keyword()) :: t()
+  def log(rule, prefix, opts \\ []) when is_binary(prefix) do
+    level = Keyword.get(opts, :level)
+
+    json_opts =
+      if level do
+        [level: level]
+      else
+        []
+      end
+
+    expr = JsonExpr.log(prefix, json_opts)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Add rate limiting.
+
+  ## Examples
+
+      rule |> Rule.limit(10, :minute)
+      rule |> Rule.limit(100, :second, burst: 200)
+  """
+  @spec limit(t(), non_neg_integer(), atom(), keyword()) :: t()
+  def limit(rule, rate, unit, opts \\ [])
+      when is_integer(rate) and is_atom(unit) do
+    unit_str = Atom.to_string(unit)
+
+    json_opts =
+      if burst = Keyword.get(opts, :burst) do
+        [burst: burst]
+      else
+        []
+      end
+
+    expr = JsonExpr.limit(rate, unit_str, json_opts)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Set packet mark.
+
+  ## Examples
+
+      rule |> Rule.set_mark(100)
+  """
+  @spec set_mark(t(), non_neg_integer()) :: t()
+  def set_mark(rule, mark_val) when is_integer(mark_val) and mark_val >= 0 do
+    expr = JsonExpr.meta_set("mark", mark_val)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Set connection mark.
+
+  ## Examples
+
+      rule |> Rule.set_connmark(42)
+  """
+  @spec set_connmark(t(), non_neg_integer()) :: t()
+  def set_connmark(rule, mark_val) when is_integer(mark_val) and mark_val >= 0 do
+    expr = JsonExpr.ct_set("mark", mark_val)
+    add_expr(rule, expr)
+  end
+
+  ## Verdicts
+
+  @doc """
+  Accept the packet.
+
+  ## Examples
+
+      rule |> Rule.accept()
+  """
+  @spec accept(t()) :: t()
+  def accept(rule) do
+    expr = JsonExpr.verdict("accept")
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Drop the packet silently.
+
+  ## Examples
+
+      rule |> Rule.drop()
+  """
+  @spec drop(t()) :: t()
+  def drop(rule) do
+    expr = JsonExpr.verdict("drop")
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Reject the packet with ICMP message.
+
+  ## Examples
+
+      rule |> Rule.reject()
+      rule |> Rule.reject("tcp reset")
+  """
+  @spec reject(t(), String.t() | nil) :: t()
+  def reject(rule, type \\ nil) do
+    expr = JsonExpr.reject(type)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Jump to another chain.
+
+  ## Examples
+
+      rule |> Rule.jump("custom_chain")
+  """
+  @spec jump(t(), String.t()) :: t()
+  def jump(rule, chain_name) when is_binary(chain_name) do
+    expr = JsonExpr.jump(chain_name)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Return from chain.
+
+  ## Examples
+
+      rule |> Rule.return()
+  """
+  @spec return(t()) :: t()
+  def return(rule) do
+    expr = JsonExpr.verdict("return")
+    add_expr(rule, expr)
+  end
+
+  ## NAT
+
+  @doc """
+  Apply source NAT.
+
+  ## Examples
+
+      rule |> Rule.snat("203.0.113.1")
+      rule |> Rule.snat("203.0.113.1", port: 1024)
+  """
+  @spec snat(t(), String.t(), keyword()) :: t()
+  def snat(rule, addr, opts \\ []) when is_binary(addr) do
+    expr = JsonExpr.snat(addr, opts)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Apply destination NAT.
+
+  ## Examples
+
+      rule |> Rule.dnat("192.168.1.10")
+      rule |> Rule.dnat("192.168.1.10", port: 8080)
+  """
+  @spec dnat(t(), String.t(), keyword()) :: t()
+  def dnat(rule, addr, opts \\ []) when is_binary(addr) do
+    expr = JsonExpr.dnat(addr, opts)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Apply masquerading (dynamic SNAT).
+
+  ## Examples
+
+      rule |> Rule.masquerade()
+      rule |> Rule.masquerade(port_range: "1024-65535")
+  """
+  @spec masquerade(t(), keyword()) :: t()
+  def masquerade(rule, opts \\ []) do
+    expr = JsonExpr.masquerade(opts)
+    add_expr(rule, expr)
+  end
+
+  @doc """
+  Add a comment to the rule.
+
+  ## Examples
+
+      rule |> Rule.comment("Allow SSH from trusted network")
+  """
+  @spec comment(t(), String.t()) :: t()
+  def comment(rule, text) when is_binary(text) do
+    %{rule | comment: text}
+  end
+
+  ## Private Helpers
+
+  # Add an expression to the rule's expression list
+  defp add_expr(%__MODULE__{expr_list: expr_list} = rule, expr) when is_map(expr) do
+    %{rule | expr_list: expr_list ++ [expr]}
   end
 end

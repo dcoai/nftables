@@ -1,4 +1,4 @@
-defmodule NFTex.Batch do
+defmodule NFTablesEx.Batch do
   @moduledoc """
   Batch multiple nftables commands into a single atomic operation.
 
@@ -122,7 +122,9 @@ defmodule NFTex.Batch do
       |> Enum.map(&decode_command/1)
       |> List.flatten()
 
-    Jason.encode!(%{"nftables" => commands})
+    %{"nftables" => commands}
+    |> JSON.encode!()
+    
   end
 
   @doc """
@@ -134,8 +136,8 @@ defmodule NFTex.Batch do
   ## Parameters
 
   - `batch` - The batch to execute
-  - `opts` - Options passed to `NFTex.Executor.execute/2`:
-    - `:pid` - NFTex.Port process
+  - `opts` - Options passed to `NFTablesEx.Executor.execute/2`:
+    - `:pid` - NFTablesEx.Port process
     - `:timeout` - Timeout in milliseconds
 
   ## Returns
@@ -157,7 +159,7 @@ defmodule NFTex.Batch do
   @spec execute(t(), keyword()) :: {:ok, binary()} | {:error, term()}
   def execute(batch, opts \\ []) do
     json = to_json(batch)
-    NFTex.Executor.execute(json, opts)
+    NFTablesEx.Executor.execute(json, opts)
   end
 
   @doc """
@@ -211,7 +213,7 @@ defmodule NFTex.Batch do
 
   # Decode a JSON command string to extract the nftables command object
   defp decode_command(json_str) when is_binary(json_str) do
-    case Jason.decode(json_str) do
+    case JSON.decode(json_str) do
       {:ok, %{"nftables" => commands}} when is_list(commands) ->
         commands
 

@@ -1,4 +1,4 @@
-defmodule NFTex.RuleBuilder.Verdicts do
+defmodule NFTablesEx.RuleBuilder.Verdicts do
   @moduledoc """
   Verdict and control flow functions for RuleBuilder.
 
@@ -6,20 +6,22 @@ defmodule NFTex.RuleBuilder.Verdicts do
   advanced features (queue, synproxy, flow offload), and chain control flow (jump, goto, return).
   """
 
-  alias NFTex.RuleBuilder
+  alias NFTablesEx.{RuleBuilder, JsonExpr}
 
   # Terminal verdicts
 
   @doc "Accept packets"
   @spec accept(RuleBuilder.t()) :: RuleBuilder.t()
   def accept(builder) do
-    RuleBuilder.add_part(builder, "accept")
+    expr = JsonExpr.verdict("accept")
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc "Drop packets silently"
   @spec drop(RuleBuilder.t()) :: RuleBuilder.t()
   def drop(builder) do
-    RuleBuilder.add_part(builder, "drop")
+    expr = JsonExpr.verdict("drop")
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -32,14 +34,14 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec reject(RuleBuilder.t(), atom()) :: RuleBuilder.t()
   def reject(builder, type \\ :icmp_port_unreachable) do
-    reject_str = case type do
-      :tcp_reset -> "reject with tcp reset"
-      :icmp_port_unreachable -> "reject"
-      :icmpx_port_unreachable -> "reject with icmpx type port-unreachable"
-      other -> "reject with #{other}"
+    expr = case type do
+      :tcp_reset -> JsonExpr.reject("tcp reset")
+      :icmp_port_unreachable -> JsonExpr.reject()
+      :icmpx_port_unreachable -> JsonExpr.reject("icmpx type port-unreachable")
+      other -> JsonExpr.reject(to_string(other))
     end
 
-    RuleBuilder.add_part(builder, reject_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Non-terminal actions
@@ -74,7 +76,8 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec continue(RuleBuilder.t()) :: RuleBuilder.t()
   def continue(builder) do
-    RuleBuilder.add_part(builder, "continue")
+    expr = JsonExpr.verdict("continue")
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -111,7 +114,8 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec notrack(RuleBuilder.t()) :: RuleBuilder.t()
   def notrack(builder) do
-    RuleBuilder.add_part(builder, "notrack")
+    expr = %{"notrack" => nil}
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Advanced features
@@ -156,18 +160,20 @@ defmodule NFTex.RuleBuilder.Verdicts do
     bypass = Keyword.get(opts, :bypass, false)
     fanout = Keyword.get(opts, :fanout, false)
 
+    queue_expr = %{"num" => queue_num}
+
     flags = []
     flags = if bypass, do: ["bypass" | flags], else: flags
     flags = if fanout, do: ["fanout" | flags], else: flags
 
-    queue_str = if Enum.empty?(flags) do
-      "queue num #{queue_num}"
+    queue_expr = if not Enum.empty?(flags) do
+      Map.put(queue_expr, "flags", Enum.join(flags, ","))
     else
-      flag_str = Enum.join(flags, ",")
-      "queue num #{queue_num} flags #{flag_str}"
+      queue_expr
     end
 
-    RuleBuilder.add_part(builder, queue_str)
+    expr = %{"queue" => queue_expr}
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -218,25 +224,35 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec synproxy(RuleBuilder.t(), keyword()) :: RuleBuilder.t()
   def synproxy(builder, opts \\ []) do
-    mss = Keyword.get(opts, :mss)
-    wscale = Keyword.get(opts, :wscale)
-    sack_perm = Keyword.get(opts, :sack_perm)
-    timestamp = Keyword.get(opts, :timestamp)
+    synproxy_expr = %{}
 
-    params = []
-    params = if mss, do: ["mss #{mss}" | params], else: params
-    params = if wscale, do: ["wscale #{wscale}" | params], else: params
-    params = if sack_perm, do: ["sack-perm" | params], else: params
-    params = if timestamp, do: ["timestamp" | params], else: params
-
-    synproxy_str = if Enum.empty?(params) do
-      "synproxy"
+    synproxy_expr = if mss = Keyword.get(opts, :mss) do
+      Map.put(synproxy_expr, "mss", mss)
     else
-      param_str = Enum.join(Enum.reverse(params), " ")
-      "synproxy #{param_str}"
+      synproxy_expr
     end
 
-    RuleBuilder.add_part(builder, synproxy_str)
+    synproxy_expr = if wscale = Keyword.get(opts, :wscale) do
+      Map.put(synproxy_expr, "wscale", wscale)
+    else
+      synproxy_expr
+    end
+
+    synproxy_expr = if Keyword.get(opts, :sack_perm) do
+      Map.put(synproxy_expr, "sack-perm", true)
+    else
+      synproxy_expr
+    end
+
+    synproxy_expr = if Keyword.get(opts, :timestamp) do
+      Map.put(synproxy_expr, "timestamp", true)
+    else
+      synproxy_expr
+    end
+
+    synproxy_expr = if map_size(synproxy_expr) == 0, do: nil, else: synproxy_expr
+    expr = %{"synproxy" => synproxy_expr}
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -269,10 +285,24 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec set_tcp_mss(RuleBuilder.t(), non_neg_integer() | :pmtu) :: RuleBuilder.t()
   def set_tcp_mss(builder, :pmtu) do
-    RuleBuilder.add_part(builder, "tcp option maxseg size set rt mtu")
+    # TCP MSS clamping to PMTU
+    expr = %{
+      "mangle" => %{
+        "key" => %{"tcp option" => %{"name" => "maxseg", "field" => "size"}},
+        "value" => %{"rt" => "mtu"}
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
   def set_tcp_mss(builder, mss) when is_integer(mss) and mss > 0 and mss <= 65535 do
-    RuleBuilder.add_part(builder, "tcp option maxseg size set #{mss}")
+    # TCP MSS clamping to specific value
+    expr = %{
+      "mangle" => %{
+        "key" => %{"tcp option" => %{"name" => "maxseg", "field" => "size"}},
+        "value" => mss
+      }
+    }
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -304,7 +334,8 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec duplicate_to(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def duplicate_to(builder, interface) when is_binary(interface) do
-    RuleBuilder.add_part(builder, "dup to device #{inspect(interface)}")
+    expr = %{"dup" => %{"device" => interface}}
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -346,13 +377,13 @@ defmodule NFTex.RuleBuilder.Verdicts do
   def flow_offload(builder, opts \\ []) do
     table = Keyword.get(opts, :table)
 
-    offload_str = if table do
-      "flow add @#{table}"
+    expr = if table do
+      %{"flow" => %{"op" => "add", "flowtable" => "@#{table}"}}
     else
-      "flow offload"
+      %{"flow" => %{"op" => "offload"}}
     end
 
-    RuleBuilder.add_part(builder, offload_str)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   # Chain control flow
@@ -385,7 +416,8 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec jump(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def jump(builder, chain_name) when is_binary(chain_name) do
-    RuleBuilder.add_part(builder, "jump #{chain_name}")
+    expr = JsonExpr.jump(chain_name)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -408,7 +440,8 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec goto(RuleBuilder.t(), String.t()) :: RuleBuilder.t()
   def goto(builder, chain_name) when is_binary(chain_name) do
-    RuleBuilder.add_part(builder, "goto #{chain_name}")
+    expr = JsonExpr.goto(chain_name)
+    RuleBuilder.add_expr(builder, expr)
   end
 
   @doc """
@@ -428,6 +461,7 @@ defmodule NFTex.RuleBuilder.Verdicts do
   """
   @spec return_from_chain(RuleBuilder.t()) :: RuleBuilder.t()
   def return_from_chain(builder) do
-    RuleBuilder.add_part(builder, "return")
+    expr = JsonExpr.verdict("return")
+    RuleBuilder.add_expr(builder, expr)
   end
 end

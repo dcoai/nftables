@@ -1,4 +1,4 @@
-defmodule NFTex.Sysctl do
+defmodule NFTablesEx.Sysctl do
   @moduledoc """
   Manage Linux network sysctl parameters via /proc/sys/net/*.
 
@@ -65,16 +65,16 @@ defmodule NFTex.Sysctl do
   ## Examples
 
       # Get current IP forwarding setting
-      {:ok, "0"} = NFTex.Sysctl.get(pid, "net.ipv4.ip_forward")
+      {:ok, "0"} = NFTablesEx.Sysctl.get(pid, "net.ipv4.ip_forward")
 
       # Enable IP forwarding
-      :ok = NFTex.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
+      :ok = NFTablesEx.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
 
       # Configure connection tracking
-      :ok = NFTex.Sysctl.set(pid, "net.netfilter.nf_conntrack_max", "131072")
+      :ok = NFTablesEx.Sysctl.set(pid, "net.netfilter.nf_conntrack_max", "131072")
 
       # Set local port range
-      :ok = NFTex.Sysctl.set(pid, "net.ipv4.ip_local_port_range", "32768 60999")
+      :ok = NFTablesEx.Sysctl.set(pid, "net.ipv4.ip_local_port_range", "32768 60999")
 
   ## Error Handling
 
@@ -82,7 +82,7 @@ defmodule NFTex.Sysctl do
   - Port validates all parameters and values before applying changes
   """
 
-  alias NFTex.{Executor, JSONBuilder}
+  alias NFTablesEx.Executor
 
   @doc """
   Get a sysctl parameter value.
@@ -99,12 +99,12 @@ defmodule NFTex.Sysctl do
 
   ## Examples
 
-      {:ok, "1"} = NFTex.Sysctl.get(pid, "net.ipv4.ip_forward")
-      {:ok, "131072"} = NFTex.Sysctl.get(pid, "net.netfilter.nf_conntrack_max")
+      {:ok, "1"} = NFTablesEx.Sysctl.get(pid, "net.ipv4.ip_forward")
+      {:ok, "131072"} = NFTablesEx.Sysctl.get(pid, "net.netfilter.nf_conntrack_max")
   """
   @spec get(pid() | keyword(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def get(pid_or_opts, parameter) when is_binary(parameter) do
-    json = JSONBuilder.sysctl_get(parameter)
+    json = build_sysctl_get(parameter)
 
     case Executor.execute(json, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
@@ -130,13 +130,13 @@ defmodule NFTex.Sysctl do
 
   ## Examples
 
-      :ok = NFTex.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
-      :ok = NFTex.Sysctl.set(pid, "net.ipv4.tcp_syncookies", "1")
-      :ok = NFTex.Sysctl.set(pid, "net.ipv4.ip_local_port_range", "32768 60999")
+      :ok = NFTablesEx.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
+      :ok = NFTablesEx.Sysctl.set(pid, "net.ipv4.tcp_syncookies", "1")
+      :ok = NFTablesEx.Sysctl.set(pid, "net.ipv4.ip_local_port_range", "32768 60999")
   """
   @spec set(pid() | keyword(), String.t(), String.t()) :: :ok | {:error, term()}
   def set(pid_or_opts, parameter, value) when is_binary(parameter) and is_binary(value) do
-    json = JSONBuilder.sysctl_set(parameter, value)
+    json = build_sysctl_set(parameter, value)
 
     case Executor.execute(json, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
@@ -160,7 +160,7 @@ defmodule NFTex.Sysctl do
 
   ## Examples
 
-      "1" = NFTex.Sysctl.get!(pid, "net.ipv4.ip_forward")
+      "1" = NFTablesEx.Sysctl.get!(pid, "net.ipv4.ip_forward")
   """
   @spec get!(pid() | keyword(), String.t()) :: String.t()
   def get!(pid_or_opts, parameter) do
@@ -185,7 +185,7 @@ defmodule NFTex.Sysctl do
 
   ## Examples
 
-      :ok = NFTex.Sysctl.set!(pid, "net.ipv4.ip_forward", "1")
+      :ok = NFTablesEx.Sysctl.set!(pid, "net.ipv4.ip_forward", "1")
   """
   @spec set!(pid() | keyword(), String.t(), String.t()) :: :ok
   def set!(pid_or_opts, parameter, value) do
@@ -201,7 +201,7 @@ defmodule NFTex.Sysctl do
   defp normalize_opts(opts) when is_list(opts), do: opts
 
   defp parse_get_response(response, _parameter) do
-    case Jason.decode(response) do
+    case JSON.decode(response) do
       {:ok, %{"sysctl" => %{"value" => value}}} ->
         {:ok, value}
       {:ok, %{"error" => error}} ->
@@ -212,7 +212,7 @@ defmodule NFTex.Sysctl do
   end
 
   defp parse_set_response(response) do
-    case Jason.decode(response) do
+    case JSON.decode(response) do
       {:ok, %{"sysctl" => %{"status" => "ok"}}} ->
         :ok
       {:ok, %{"error" => error}} ->
@@ -220,5 +220,34 @@ defmodule NFTex.Sysctl do
       {:error, _} = error ->
         error
     end
+  end
+
+  # Build sysctl get command JSON
+  defp build_sysctl_get(parameter) when is_binary(parameter) do
+    data = %{
+      "sysctl" => %{
+        "operation" => "get",
+        "parameter" => parameter
+      }
+    }
+
+    data
+    |> JSON.encode!()
+    
+  end
+
+  # Build sysctl set command JSON
+  defp build_sysctl_set(parameter, value) when is_binary(parameter) and is_binary(value) do
+    data = %{
+      "sysctl" => %{
+        "operation" => "set",
+        "parameter" => parameter,
+        "value" => value
+      }
+    }
+
+    data
+    |> JSON.encode!()
+    
   end
 end
