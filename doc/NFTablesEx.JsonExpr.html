@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.1">
+    <meta name="project" content="NFTablesEx v0.4.0">
+
+
+    <title>NFTablesEx.JsonExpr — NFTablesEx v0.4.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
+
+    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-HBZYRXZS.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+NFTablesEx
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v0.4.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of NFTablesEx</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">NFTablesEx.JsonExpr</span> 
+      <small class="app-vsn" translate="no">(NFTablesEx v0.4.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Helper functions for building nftables JSON expression structures.</p><p>This module provides a clean API for constructing the JSON expression
+format used by nftables. These helpers make it easier to build complex
+firewall rules without manually constructing nested maps.</p><p><strong>NOTE</strong>: All functions return maps with <strong>atom keys</strong> (not string keys).
+The built-in <code class="inline">JSON.encode/1</code> will automatically convert atom keys to
+strings when generating JSON for nftables.</p><h2 id="module-json-expression-format" class="section-heading"><a href="#module-json-expression-format" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">JSON Expression Format</span></h2><p>nftables uses JSON expressions that consist of:</p><ul><li><strong>Matches</strong>: Compare packet fields against values</li><li><strong>Statements</strong>: Perform actions (counter, log, limit, mark, etc.)</li><li><strong>Verdicts</strong>: Terminal decisions (accept, drop, reject, etc.)</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Simple IP match</span><span class="w">
+</span><span class="nc">JsonExpr</span><span class="o">.</span><span class="n">payload_match</span><span class="p" data-group-id="9442812082-1">(</span><span class="s">&quot;ip&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;saddr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;192.168.1.1&quot;</span><span class="p" data-group-id="9442812082-1">)</span><span class="w">
+</span><span class="c1">#=&gt; %{match: %{</span><span class="w">
+</span><span class="c1">#     left: %{payload: %{protocol: &quot;ip&quot;, field: &quot;saddr&quot;}},</span><span class="w">
+</span><span class="c1">#     right: &quot;192.168.1.1&quot;,</span><span class="w">
+</span><span class="c1">#     op: &quot;==&quot;</span><span class="w">
+</span><span class="c1">#   }}</span><span class="w">
+
+</span><span class="c1"># Connection tracking match</span><span class="w">
+</span><span class="nc">JsonExpr</span><span class="o">.</span><span class="n">ct_match</span><span class="p" data-group-id="9442812082-2">(</span><span class="s">&quot;state&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9442812082-3">[</span><span class="s">&quot;established&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;related&quot;</span><span class="p" data-group-id="9442812082-3">]</span><span class="p" data-group-id="9442812082-2">)</span><span class="w">
+</span><span class="c1">#=&gt; %{match: %{</span><span class="w">
+</span><span class="c1">#     left: %{ct: %{key: &quot;state&quot;}},</span><span class="w">
+</span><span class="c1">#     right: [&quot;established&quot;, &quot;related&quot;],</span><span class="w">
+</span><span class="c1">#     op: &quot;in&quot;</span><span class="w">
+</span><span class="c1">#   }}</span><span class="w">
+
+</span><span class="c1"># Verdict</span><span class="w">
+</span><span class="nc">JsonExpr</span><span class="o">.</span><span class="n">verdict</span><span class="p" data-group-id="9442812082-4">(</span><span class="s">&quot;drop&quot;</span><span class="p" data-group-id="9442812082-4">)</span><span class="w">
+</span><span class="c1">#=&gt; %{drop: nil}</span></code></pre><h2 id="module-reference" class="section-heading"><a href="#module-reference" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Reference</span></h2><p>Official nftables JSON documentation:
+<a href="https://wiki.nftables.org/wiki-nftables/index.php/JSON_API">https://wiki.nftables.org/wiki-nftables/index.php/JSON_API</a></p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#bitwise_and_match/3" data-no-tooltip="" translate="no">bitwise_and_match(left_expr, mask, value)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a bitwise AND match.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#counter/0" data-no-tooltip="" translate="no">counter()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a counter statement.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#ct_match/3" data-no-tooltip="" translate="no">ct_match(key, value, op \\ nil)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a connection tracking match expression.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#ct_original_match/2" data-no-tooltip="" translate="no">ct_original_match(field, value)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a connection tracking original direction match.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#ct_set/2" data-no-tooltip="" translate="no">ct_set(key, value)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a CT set statement (set connection tracking value).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dnat/2" data-no-tooltip="" translate="no">dnat(addr, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a DNAT (Destination NAT) statement.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#goto/1" data-no-tooltip="" translate="no">goto(chain_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a goto verdict (goto another chain, no return).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#jump/1" data-no-tooltip="" translate="no">jump(chain_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a jump verdict (jump to another chain).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#limit/3" data-no-tooltip="" translate="no">limit(rate, per, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a limit statement (rate limiting).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#log/2" data-no-tooltip="" translate="no">log(prefix, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a log statement.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#masquerade/1" data-no-tooltip="" translate="no">masquerade(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a masquerade statement.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#meta_match/3" data-no-tooltip="" translate="no">meta_match(key, value, op \\ &quot;==&quot;)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a meta expression match.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#meta_set/2" data-no-tooltip="" translate="no">meta_set(key, value)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a meta set statement (set packet mark, priority, etc.).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#payload_match/4" data-no-tooltip="" translate="no">payload_match(protocol, field, value, op \\ &quot;==&quot;)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a payload match expression.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#payload_match_prefix/4" data-no-tooltip="" translate="no">payload_match_prefix(protocol, field, addr, prefix_len)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a payload match with prefix (CIDR notation).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#payload_match_range/4" data-no-tooltip="" translate="no">payload_match_range(protocol, field, min_val, max_val)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a payload range match.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reject/1" data-no-tooltip="" translate="no">reject(type \\ nil)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a reject verdict with optional type.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_match/3" data-no-tooltip="" translate="no">set_match(protocol, field, set_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a set membership match.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#snat/2" data-no-tooltip="" translate="no">snat(addr, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a SNAT (Source NAT) statement.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#verdict/1" data-no-tooltip="" translate="no">verdict(verdict_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a verdict expression.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="bitwise_and_match/3">
+
+  <div class="detail-header">
+    <a href="#bitwise_and_match/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">bitwise_and_match(left_expr, mask, value)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L263" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> bitwise_and_match(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a bitwise AND match.</p><p>Used for TCP flags, fragmentation checks, etc.</p><h2 id="bitwise_and_match/3-examples" class="section-heading"><a href="#bitwise_and_match/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># TCP flags: Check if SYN is set (mask includes SYN, ACK, RST, FIN)</span><span class="w">
+</span><span class="n">bitwise_and_match</span><span class="p" data-group-id="9065058887-1">(</span><span class="w">
+  </span><span class="p" data-group-id="9065058887-2">%{</span><span class="ss">payload</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9065058887-3">%{</span><span class="ss">protocol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tcp&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;flags&quot;</span><span class="p" data-group-id="9065058887-3">}</span><span class="p" data-group-id="9065058887-2">}</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="9065058887-4">[</span><span class="s">&quot;syn&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ack&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;rst&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;fin&quot;</span><span class="p" data-group-id="9065058887-4">]</span><span class="p">,</span><span class="w">
+  </span><span class="p" data-group-id="9065058887-5">[</span><span class="s">&quot;syn&quot;</span><span class="p" data-group-id="9065058887-5">]</span><span class="w">
+</span><span class="p" data-group-id="9065058887-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="counter/0">
+
+  <div class="detail-header">
+    <a href="#counter/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">counter()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L286" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> counter() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a counter statement.</p><p>Counts packets and bytes.</p><h2 id="counter/0-examples" class="section-heading"><a href="#counter/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">counter</span><span class="p" data-group-id="3722494452-1">(</span><span class="p" data-group-id="3722494452-1">)</span><span class="w">
+</span><span class="c1">#=&gt; %{counter: nil}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="ct_match/3">
+
+    <span id="ct_match/2"></span>
+
+  <div class="detail-header">
+    <a href="#ct_match/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">ct_match(key, value, op \\ nil)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L153" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> ct_match(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a connection tracking match expression.</p><h2 id="ct_match/3-parameters" class="section-heading"><a href="#ct_match/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">key</code> - CT key (&quot;state&quot;, &quot;status&quot;, &quot;mark&quot;, &quot;bytes&quot;, &quot;packets&quot;, etc.)</li><li><code class="inline">value</code> - Value to match</li><li><code class="inline">op</code> - Comparison operator (default: &quot;in&quot; for lists, &quot;==&quot; for single values)</li></ul><h2 id="ct_match/3-examples" class="section-heading"><a href="#ct_match/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Match established/related connections</span><span class="w">
+</span><span class="n">ct_match</span><span class="p" data-group-id="8846560476-1">(</span><span class="s">&quot;state&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8846560476-2">[</span><span class="s">&quot;established&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;related&quot;</span><span class="p" data-group-id="8846560476-2">]</span><span class="p" data-group-id="8846560476-1">)</span><span class="w">
+
+</span><span class="c1"># Match connection mark</span><span class="w">
+</span><span class="n">ct_match</span><span class="p" data-group-id="8846560476-3">(</span><span class="s">&quot;mark&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;==&quot;</span><span class="p" data-group-id="8846560476-3">)</span><span class="w">
+
+</span><span class="c1"># Match connection bytes</span><span class="w">
+</span><span class="n">ct_match</span><span class="p" data-group-id="8846560476-4">(</span><span class="s">&quot;bytes&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1000000</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&gt;&quot;</span><span class="p" data-group-id="8846560476-4">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="ct_original_match/2">
+
+  <div class="detail-header">
+    <a href="#ct_original_match/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">ct_original_match(field, value)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L175" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> ct_original_match(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a connection tracking original direction match.</p><h2 id="ct_original_match/2-examples" class="section-heading"><a href="#ct_original_match/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">ct_original_match</span><span class="p" data-group-id="0602634426-1">(</span><span class="s">&quot;saddr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;192.168.1.1&quot;</span><span class="p" data-group-id="0602634426-1">)</span><span class="w">
+</span><span class="c1">#=&gt; Match original source address</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="ct_set/2">
+
+  <div class="detail-header">
+    <a href="#ct_set/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">ct_set(key, value)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L508" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> ct_set(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a CT set statement (set connection tracking value).</p><h2 id="ct_set/2-examples" class="section-heading"><a href="#ct_set/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">ct_set</span><span class="p" data-group-id="5284646596-1">(</span><span class="s">&quot;mark&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">42</span><span class="p" data-group-id="5284646596-1">)</span><span class="w">
+</span><span class="n">ct_set</span><span class="p" data-group-id="5284646596-2">(</span><span class="s">&quot;helper&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ftp&quot;</span><span class="p" data-group-id="5284646596-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="dnat/2">
+
+    <span id="dnat/1"></span>
+
+  <div class="detail-header">
+    <a href="#dnat/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dnat(addr, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L454" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> dnat(
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a DNAT (Destination NAT) statement.</p><h2 id="dnat/2-options" class="section-heading"><a href="#dnat/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:port</code> - Port or port range</li><li><code class="inline">:family</code> - Address family (&quot;ip&quot; or &quot;ip6&quot;, default: &quot;ip&quot;)</li></ul><h2 id="dnat/2-examples" class="section-heading"><a href="#dnat/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">dnat</span><span class="p" data-group-id="4287448062-1">(</span><span class="s">&quot;192.168.1.10&quot;</span><span class="p" data-group-id="4287448062-1">)</span><span class="w">
+</span><span class="n">dnat</span><span class="p" data-group-id="4287448062-2">(</span><span class="s">&quot;192.168.1.10&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">port</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p" data-group-id="4287448062-2">)</span><span class="w">
+</span><span class="n">dnat</span><span class="p" data-group-id="4287448062-3">(</span><span class="s">&quot;192.168.1.10&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">port</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4287448062-4">[</span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="mi">8090</span><span class="p" data-group-id="4287448062-4">]</span><span class="p" data-group-id="4287448062-3">)</span><span class="w">
+</span><span class="n">dnat</span><span class="p" data-group-id="4287448062-5">(</span><span class="s">&quot;2001:db8::10&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ip6&quot;</span><span class="p" data-group-id="4287448062-5">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="goto/1">
+
+  <div class="detail-header">
+    <a href="#goto/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">goto(chain_name)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L408" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> goto(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a goto verdict (goto another chain, no return).</p><h2 id="goto/1-examples" class="section-heading"><a href="#goto/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">goto</span><span class="p" data-group-id="6079029506-1">(</span><span class="s">&quot;custom_chain&quot;</span><span class="p" data-group-id="6079029506-1">)</span><span class="w">
+</span><span class="c1">#=&gt; %{goto: %{target: &quot;custom_chain&quot;}}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="jump/1">
+
+  <div class="detail-header">
+    <a href="#jump/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">jump(chain_name)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L395" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> jump(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a jump verdict (jump to another chain).</p><h2 id="jump/1-examples" class="section-heading"><a href="#jump/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">jump</span><span class="p" data-group-id="0578020092-1">(</span><span class="s">&quot;custom_chain&quot;</span><span class="p" data-group-id="0578020092-1">)</span><span class="w">
+</span><span class="c1">#=&gt; %{jump: %{target: &quot;custom_chain&quot;}}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="limit/3">
+
+    <span id="limit/2"></span>
+
+  <div class="detail-header">
+    <a href="#limit/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">limit(rate, per, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L331" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> limit(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a limit statement (rate limiting).</p><h2 id="limit/3-options" class="section-heading"><a href="#limit/3-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:rate</code> - Rate number (required)</li><li><code class="inline">:per</code> - Time unit (&quot;second&quot;, &quot;minute&quot;, &quot;hour&quot;, &quot;day&quot;) (required)</li><li><code class="inline">:burst</code> - Burst packets (optional)</li><li><code class="inline">:inv</code> - Invert match (rate over) (optional)</li></ul><h2 id="limit/3-examples" class="section-heading"><a href="#limit/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">limit</span><span class="p" data-group-id="7451291133-1">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;minute&quot;</span><span class="p" data-group-id="7451291133-1">)</span><span class="w">
+</span><span class="n">limit</span><span class="p" data-group-id="7451291133-2">(</span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;second&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">burst</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p" data-group-id="7451291133-2">)</span><span class="w">
+</span><span class="n">limit</span><span class="p" data-group-id="7451291133-3">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;minute&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">burst</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="ss">inv</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="7451291133-3">)</span><span class="w">  </span><span class="c1"># Rate over 5/min</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="log/2">
+
+    <span id="log/1"></span>
+
+  <div class="detail-header">
+    <a href="#log/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log(prefix, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L306" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> log(
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a log statement.</p><h2 id="log/2-options" class="section-heading"><a href="#log/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:prefix</code> - Log prefix string (required)</li><li><code class="inline">:level</code> - Syslog level (&quot;emerg&quot;, &quot;alert&quot;, &quot;crit&quot;, &quot;err&quot;, &quot;warn&quot;, &quot;notice&quot;, &quot;info&quot;, &quot;debug&quot;)</li><li><code class="inline">:flags</code> - Log flags list ([&quot;tcp sequence&quot;, &quot;tcp options&quot;, &quot;ip options&quot;, &quot;skuid&quot;, &quot;ether&quot;, &quot;all&quot;])</li></ul><h2 id="log/2-examples" class="section-heading"><a href="#log/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">log</span><span class="p" data-group-id="5484575071-1">(</span><span class="s">&quot;SSH_ATTEMPT: &quot;</span><span class="p" data-group-id="5484575071-1">)</span><span class="w">
+</span><span class="n">log</span><span class="p" data-group-id="5484575071-2">(</span><span class="s">&quot;DROPPED: &quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">level</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;warn&quot;</span><span class="p" data-group-id="5484575071-2">)</span><span class="w">
+</span><span class="n">log</span><span class="p" data-group-id="5484575071-3">(</span><span class="s">&quot;AUDIT: &quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">level</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;info&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">flags</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5484575071-4">[</span><span class="s">&quot;all&quot;</span><span class="p" data-group-id="5484575071-4">]</span><span class="p" data-group-id="5484575071-3">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="masquerade/1">
+
+    <span id="masquerade/0"></span>
+
+  <div class="detail-header">
+    <a href="#masquerade/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">masquerade(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L471" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> masquerade(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a masquerade statement.</p><h2 id="masquerade/1-examples" class="section-heading"><a href="#masquerade/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">masquerade</span><span class="p" data-group-id="0265001745-1">(</span><span class="p" data-group-id="0265001745-1">)</span><span class="w">
+</span><span class="n">masquerade</span><span class="p" data-group-id="0265001745-2">(</span><span class="ss">port</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0265001745-3">[</span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="mi">65535</span><span class="p" data-group-id="0265001745-3">]</span><span class="p" data-group-id="0265001745-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="meta_match/3">
+
+    <span id="meta_match/2"></span>
+
+  <div class="detail-header">
+    <a href="#meta_match/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">meta_match(key, value, op \\ &quot;==&quot;)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L210" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> meta_match(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a meta expression match.</p><p>Meta expressions match packet metadata (not packet contents).</p><h2 id="meta_match/3-parameters" class="section-heading"><a href="#meta_match/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">key</code> - Meta key (&quot;mark&quot;, &quot;iif&quot;, &quot;oif&quot;, &quot;length&quot;, &quot;protocol&quot;, etc.)</li><li><code class="inline">value</code> - Value to match</li><li><code class="inline">op</code> - Comparison operator (default: &quot;==&quot;)</li></ul><h2 id="meta_match/3-examples" class="section-heading"><a href="#meta_match/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Match packet mark</span><span class="w">
+</span><span class="n">meta_match</span><span class="p" data-group-id="9808024745-1">(</span><span class="s">&quot;mark&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="9808024745-1">)</span><span class="w">
+
+</span><span class="c1"># Match input interface</span><span class="w">
+</span><span class="n">meta_match</span><span class="p" data-group-id="9808024745-2">(</span><span class="s">&quot;iifname&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;eth0&quot;</span><span class="p" data-group-id="9808024745-2">)</span><span class="w">
+
+</span><span class="c1"># Match packet length</span><span class="w">
+</span><span class="n">meta_match</span><span class="p" data-group-id="9808024745-3">(</span><span class="s">&quot;length&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&gt;&quot;</span><span class="p" data-group-id="9808024745-3">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="meta_set/2">
+
+  <div class="detail-header">
+    <a href="#meta_set/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">meta_set(key, value)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L490" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> meta_set(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a meta set statement (set packet mark, priority, etc.).</p><h2 id="meta_set/2-examples" class="section-heading"><a href="#meta_set/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">meta_set</span><span class="p" data-group-id="5763472570-1">(</span><span class="s">&quot;mark&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p" data-group-id="5763472570-1">)</span><span class="w">
+</span><span class="n">meta_set</span><span class="p" data-group-id="5763472570-2">(</span><span class="s">&quot;priority&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p" data-group-id="5763472570-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="payload_match/4">
+
+    <span id="payload_match/3"></span>
+
+  <div class="detail-header">
+    <a href="#payload_match/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">payload_match(protocol, field, value, op \\ &quot;==&quot;)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L77" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> payload_match(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a payload match expression.</p><p>Matches a protocol field against a value.</p><h2 id="payload_match/4-parameters" class="section-heading"><a href="#payload_match/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">protocol</code> - Protocol name (&quot;ip&quot;, &quot;ip6&quot;, &quot;tcp&quot;, &quot;udp&quot;, &quot;icmp&quot;, etc.)</li><li><code class="inline">field</code> - Field name (&quot;saddr&quot;, &quot;daddr&quot;, &quot;sport&quot;, &quot;dport&quot;, etc.)</li><li><code class="inline">value</code> - Value to match (string, integer, or list)</li><li><code class="inline">op</code> - Comparison operator (default: &quot;==&quot;)</li></ul><h2 id="payload_match/4-examples" class="section-heading"><a href="#payload_match/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># IPv4 source address</span><span class="w">
+</span><span class="n">payload_match</span><span class="p" data-group-id="8655812837-1">(</span><span class="s">&quot;ip&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;saddr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;192.168.1.1&quot;</span><span class="p" data-group-id="8655812837-1">)</span><span class="w">
+
+</span><span class="c1"># TCP destination port</span><span class="w">
+</span><span class="n">payload_match</span><span class="p" data-group-id="8655812837-2">(</span><span class="s">&quot;tcp&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;dport&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">80</span><span class="p" data-group-id="8655812837-2">)</span><span class="w">
+
+</span><span class="c1"># Port range</span><span class="w">
+</span><span class="n">payload_match</span><span class="p" data-group-id="8655812837-3">(</span><span class="s">&quot;tcp&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;dport&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8655812837-4">%{</span><span class="ss">range</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8655812837-5">[</span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="mi">65535</span><span class="p" data-group-id="8655812837-5">]</span><span class="p" data-group-id="8655812837-4">}</span><span class="p" data-group-id="8655812837-3">)</span><span class="w">
+
+</span><span class="c1"># Not equal</span><span class="w">
+</span><span class="n">payload_match</span><span class="p" data-group-id="8655812837-6">(</span><span class="s">&quot;ip&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;saddr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;10.0.0.0/8&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;!=&quot;</span><span class="p" data-group-id="8655812837-6">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="payload_match_prefix/4">
+
+  <div class="detail-header">
+    <a href="#payload_match_prefix/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">payload_match_prefix(protocol, field, addr, prefix_len)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L96" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> payload_match_prefix(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a payload match with prefix (CIDR notation).</p><h2 id="payload_match_prefix/4-examples" class="section-heading"><a href="#payload_match_prefix/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">payload_match_prefix</span><span class="p" data-group-id="9658289949-1">(</span><span class="s">&quot;ip&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;saddr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;192.168.1.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p" data-group-id="9658289949-1">)</span><span class="w">
+</span><span class="c1">#=&gt; Matches 192.168.1.0/24</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="payload_match_range/4">
+
+  <div class="detail-header">
+    <a href="#payload_match_range/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">payload_match_range(protocol, field, min_val, max_val)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> payload_match_range(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a payload range match.</p><h2 id="payload_match_range/4-examples" class="section-heading"><a href="#payload_match_range/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">payload_match_range</span><span class="p" data-group-id="6953625104-1">(</span><span class="s">&quot;tcp&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;dport&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="mi">65535</span><span class="p" data-group-id="6953625104-1">)</span><span class="w">
+</span><span class="c1">#=&gt; Matches ports 1024-65535</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="reject/1">
+
+    <span id="reject/0"></span>
+
+  <div class="detail-header">
+    <a href="#reject/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reject(type \\ nil)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L378" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> reject(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a reject verdict with optional type.</p><h2 id="reject/1-examples" class="section-heading"><a href="#reject/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">reject</span><span class="p" data-group-id="2151678757-1">(</span><span class="p" data-group-id="2151678757-1">)</span><span class="w">
+</span><span class="n">reject</span><span class="p" data-group-id="2151678757-2">(</span><span class="s">&quot;tcp reset&quot;</span><span class="p" data-group-id="2151678757-2">)</span><span class="w">
+</span><span class="n">reject</span><span class="p" data-group-id="2151678757-3">(</span><span class="s">&quot;icmpx port-unreachable&quot;</span><span class="p" data-group-id="2151678757-3">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="set_match/3">
+
+  <div class="detail-header">
+    <a href="#set_match/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_match(protocol, field, set_name)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L236" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> set_match(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a set membership match.</p><p>Checks if a value is in a named set.</p><h2 id="set_match/3-examples" class="section-heading"><a href="#set_match/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Check if source IP is in blocklist</span><span class="w">
+</span><span class="n">set_match</span><span class="p" data-group-id="7094833964-1">(</span><span class="s">&quot;ip&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;saddr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;@blocklist&quot;</span><span class="p" data-group-id="7094833964-1">)</span><span class="w">
+
+</span><span class="c1"># Check if destination port is in allowed_ports set</span><span class="w">
+</span><span class="n">set_match</span><span class="p" data-group-id="7094833964-2">(</span><span class="s">&quot;tcp&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;dport&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;@allowed_ports&quot;</span><span class="p" data-group-id="7094833964-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="snat/2">
+
+    <span id="snat/1"></span>
+
+  <div class="detail-header">
+    <a href="#snat/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">snat(addr, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L430" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> snat(
+  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a SNAT (Source NAT) statement.</p><h2 id="snat/2-options" class="section-heading"><a href="#snat/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:port</code> - Port or port range</li><li><code class="inline">:family</code> - Address family (&quot;ip&quot; or &quot;ip6&quot;, default: &quot;ip&quot;)</li></ul><h2 id="snat/2-examples" class="section-heading"><a href="#snat/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">snat</span><span class="p" data-group-id="6956915393-1">(</span><span class="s">&quot;203.0.113.1&quot;</span><span class="p" data-group-id="6956915393-1">)</span><span class="w">
+</span><span class="n">snat</span><span class="p" data-group-id="6956915393-2">(</span><span class="s">&quot;203.0.113.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">port</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p" data-group-id="6956915393-2">)</span><span class="w">
+</span><span class="n">snat</span><span class="p" data-group-id="6956915393-3">(</span><span class="s">&quot;203.0.113.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">port</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6956915393-4">[</span><span class="mi">1024</span><span class="p">,</span><span class="w"> </span><span class="mi">65535</span><span class="p" data-group-id="6956915393-4">]</span><span class="p" data-group-id="6956915393-3">)</span><span class="w">
+</span><span class="n">snat</span><span class="p" data-group-id="6956915393-5">(</span><span class="s">&quot;2001:db8::1&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ip6&quot;</span><span class="p" data-group-id="6956915393-5">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="verdict/1">
+
+  <div class="detail-header">
+    <a href="#verdict/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">verdict(verdict_name)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/json_expr.ex#L364" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> verdict(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a verdict expression.</p><h2 id="verdict/1-supported-verdicts" class="section-heading"><a href="#verdict/1-supported-verdicts" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Supported Verdicts</span></h2><ul><li>&quot;accept&quot; - Accept the packet</li><li>&quot;drop&quot; - Drop the packet</li><li>&quot;continue&quot; - Continue to next rule</li><li>&quot;return&quot; - Return from chain</li></ul><h2 id="verdict/1-examples" class="section-heading"><a href="#verdict/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">verdict</span><span class="p" data-group-id="6285683296-1">(</span><span class="s">&quot;accept&quot;</span><span class="p" data-group-id="6285683296-1">)</span><span class="w">
+</span><span class="c1">#=&gt; %{accept: nil}</span><span class="w">
+
+</span><span class="n">verdict</span><span class="p" data-group-id="6285683296-2">(</span><span class="s">&quot;drop&quot;</span><span class="p" data-group-id="6285683296-2">)</span><span class="w">
+</span><span class="c1">#=&gt; %{drop: nil}</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/nftables_ex/0.4.0" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/nftables_ex/0.4.0">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="NFTablesEx.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

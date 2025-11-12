@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.1">
+    <meta name="project" content="NFTablesEx v0.4.0">
+
+
+    <title>NFTablesEx.Batch — NFTablesEx v0.4.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
+
+    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-HBZYRXZS.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+NFTablesEx
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v0.4.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of NFTablesEx</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">NFTablesEx.Batch</span> 
+      <small class="app-vsn" translate="no">(NFTablesEx v0.4.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Batch multiple nftables commands into a single atomic operation.</p><p>The Batch module allows you to combine multiple nftables commands into
+a single JSON request, which is executed atomically. This is useful for:</p><ul><li>Efficient multi-command operations (one round-trip)</li><li>Atomic firewall updates (all-or-nothing)</li><li>Distributed firewalls (send batch over network once)</li><li>Complex rule setups</li></ul><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Create multiple firewall rules at once</span><span class="w">
+</span><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6690050832-1">(</span><span class="p" data-group-id="6690050832-1">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6690050832-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="6690050832-3">(</span><span class="p" data-group-id="6690050832-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6690050832-4">}</span><span class="p" data-group-id="6690050832-3">)</span><span class="p" data-group-id="6690050832-2">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6690050832-5">(</span><span class="nc">Chain</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="6690050832-6">(</span><span class="p" data-group-id="6690050832-7">%{</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6690050832-7">}</span><span class="p" data-group-id="6690050832-6">)</span><span class="p" data-group-id="6690050832-5">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6690050832-8">(</span><span class="nc">Rule</span><span class="o">.</span><span class="n">build_block_ip</span><span class="p" data-group-id="6690050832-9">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;1.2.3.4&quot;</span><span class="p" data-group-id="6690050832-9">)</span><span class="p" data-group-id="6690050832-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6690050832-10">(</span><span class="nc">Rule</span><span class="o">.</span><span class="n">build_block_ip</span><span class="p" data-group-id="6690050832-11">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;5.6.7.8&quot;</span><span class="p" data-group-id="6690050832-11">)</span><span class="p" data-group-id="6690050832-10">)</span><span class="w">
+
+</span><span class="c1"># Execute the batch</span><span class="w">
+</span><span class="p" data-group-id="6690050832-12">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p" data-group-id="6690050832-12">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="6690050832-13">(</span><span class="n">batch</span><span class="p" data-group-id="6690050832-13">)</span><span class="w">
+
+</span><span class="c1"># Or build JSON for remote execution</span><span class="w">
+</span><span class="n">json</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">to_json</span><span class="p" data-group-id="6690050832-14">(</span><span class="n">batch</span><span class="p" data-group-id="6690050832-14">)</span><span class="w">
+</span><span class="nc">MyTransport</span><span class="o">.</span><span class="n">send_to_node</span><span class="p" data-group-id="6690050832-15">(</span><span class="s">&quot;firewall-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">json</span><span class="p" data-group-id="6690050832-15">)</span></code></pre><h2 id="module-atomicity" class="section-heading"><a href="#module-atomicity" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Atomicity</span></h2><p>Batches are executed atomically by nftables. Either all commands succeed
+or all commands are rolled back. This prevents partial firewall updates.</p>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#add/2" data-no-tooltip="" translate="no">add(batch, json_command)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Add a JSON command to the batch.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#add_many/2" data-no-tooltip="" translate="no">add_many(batch, commands)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Add multiple JSON commands to the batch.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#empty?/1" data-no-tooltip="" translate="no">empty?(batch)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Check if batch is empty.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#execute/2" data-no-tooltip="" translate="no">execute(batch, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Execute a batch of commands.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#execute!/2" data-no-tooltip="" translate="no">execute!(batch, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Execute a batch of commands, raising on error.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/0" data-no-tooltip="" translate="no">new()</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Create a new empty batch.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#size/1" data-no-tooltip="" translate="no">size(batch)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Get the number of commands in the batch.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#to_json/1" data-no-tooltip="" translate="no">to_json(batch)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Convert batch to nftables JSON format.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#to_map/1" data-no-tooltip="" translate="no">to_map(batch)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Convert batch to nftables command map.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L37" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: [<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()]</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="add/2">
+
+  <div class="detail-header">
+    <a href="#add/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">add(batch, json_command)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L67" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> add(<a href="#t:t/0">t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="#t:t/0">t</a>()</pre>
+
+      </div>
+
+<p>Add a JSON command to the batch.</p><p>Commands are added to the batch in the order they are called.
+They will be executed in this order.</p><h2 id="add/2-parameters" class="section-heading"><a href="#add/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">batch</code> - The batch to add to</li><li><code class="inline">json_command</code> - A JSON string containing an nftables command</li></ul><h2 id="add/2-examples" class="section-heading"><a href="#add/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6228825118-1">(</span><span class="p" data-group-id="6228825118-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6228825118-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="6228825118-3">(</span><span class="p" data-group-id="6228825118-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="6228825118-4">}</span><span class="p" data-group-id="6228825118-3">)</span><span class="p" data-group-id="6228825118-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6228825118-5">(</span><span class="nc">Chain</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="6228825118-6">(</span><span class="p" data-group-id="6228825118-7">%{</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="6228825118-7">}</span><span class="p" data-group-id="6228825118-6">)</span><span class="p" data-group-id="6228825118-5">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="add_many/2">
+
+  <div class="detail-header">
+    <a href="#add_many/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">add_many(batch, commands)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L90" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> add_many(<a href="#t:t/0">t</a>(), [<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()]) :: <a href="#t:t/0">t</a>()</pre>
+
+      </div>
+
+<p>Add multiple JSON commands to the batch.</p><h2 id="add_many/2-parameters" class="section-heading"><a href="#add_many/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">batch</code> - The batch to add to</li><li><code class="inline">commands</code> - List of JSON command strings</li></ul><h2 id="add_many/2-examples" class="section-heading"><a href="#add_many/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">commands</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="9262887978-1">[</span><span class="w">
+  </span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="9262887978-2">(</span><span class="p" data-group-id="9262887978-3">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="9262887978-3">}</span><span class="p" data-group-id="9262887978-2">)</span><span class="p">,</span><span class="w">
+  </span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="9262887978-4">(</span><span class="p" data-group-id="9262887978-5">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;nat&quot;</span><span class="p" data-group-id="9262887978-5">}</span><span class="p" data-group-id="9262887978-4">)</span><span class="w">
+</span><span class="p" data-group-id="9262887978-1">]</span><span class="w">
+
+</span><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="9262887978-6">(</span><span class="p" data-group-id="9262887978-6">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add_many</span><span class="p" data-group-id="9262887978-7">(</span><span class="n">commands</span><span class="p" data-group-id="9262887978-7">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="empty?/1">
+
+  <div class="detail-header">
+    <a href="#empty?/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">empty?(batch)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L234" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> empty?(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
+
+      </div>
+
+<p>Check if batch is empty.</p><h2 id="empty?/1-examples" class="section-heading"><a href="#empty?/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="9334853554-1">(</span><span class="p" data-group-id="9334853554-1">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">empty?</span><span class="p" data-group-id="9334853554-2">(</span><span class="p" data-group-id="9334853554-2">)</span><span class="w">  </span><span class="c1">#=&gt; true</span><span class="w">
+
+</span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="9334853554-3">(</span><span class="p" data-group-id="9334853554-3">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="9334853554-4">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="9334853554-5">(</span><span class="p" data-group-id="9334853554-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="9334853554-6">}</span><span class="p" data-group-id="9334853554-5">)</span><span class="p" data-group-id="9334853554-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">empty?</span><span class="p" data-group-id="9334853554-7">(</span><span class="p" data-group-id="9334853554-7">)</span><span class="w">  </span><span class="c1">#=&gt; false</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="execute/2">
+
+    <span id="execute/1"></span>
+
+  <div class="detail-header">
+    <a href="#execute/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">execute(batch, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L184" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> execute(
+  <a href="#t:t/0">t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Execute a batch of commands.</p><p>Executes all commands in the batch atomically. Either all succeed
+or all are rolled back.</p><h2 id="execute/2-parameters" class="section-heading"><a href="#execute/2-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">batch</code> - The batch to execute</li><li><code class="inline">opts</code> - Options passed to <a href="NFTablesEx.Executor.html#execute/2"><code class="inline">NFTablesEx.Executor.execute/2</code></a>:<ul><li><code class="inline">:pid</code> - NFTablesEx.Port process</li><li><code class="inline">:timeout</code> - Timeout in milliseconds</li></ul></li></ul><h2 id="execute/2-returns" class="section-heading"><a href="#execute/2-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">{:ok, response}</code> - JSON response on success</li><li><code class="inline">{:error, reason}</code> - On failure</li></ul><h2 id="execute/2-examples" class="section-heading"><a href="#execute/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="4320608707-1">(</span><span class="p" data-group-id="4320608707-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="4320608707-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="4320608707-3">(</span><span class="p" data-group-id="4320608707-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="4320608707-4">}</span><span class="p" data-group-id="4320608707-3">)</span><span class="p" data-group-id="4320608707-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="4320608707-5">(</span><span class="nc">Chain</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="4320608707-6">(</span><span class="p" data-group-id="4320608707-7">%{</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="4320608707-7">}</span><span class="p" data-group-id="4320608707-6">)</span><span class="p" data-group-id="4320608707-5">)</span><span class="w">
+
+</span><span class="p" data-group-id="4320608707-8">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="c">_response</span><span class="p" data-group-id="4320608707-8">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="4320608707-9">(</span><span class="n">batch</span><span class="p" data-group-id="4320608707-9">)</span><span class="w">
+
+</span><span class="c1"># With options</span><span class="w">
+</span><span class="nc">Batch</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="4320608707-10">(</span><span class="n">batch</span><span class="p">,</span><span class="w"> </span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">my_pid</span><span class="p">,</span><span class="w"> </span><span class="ss">timeout</span><span class="p">:</span><span class="w"> </span><span class="mi">10_000</span><span class="p" data-group-id="4320608707-10">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="execute!/2">
+
+    <span id="execute!/1"></span>
+
+  <div class="detail-header">
+    <a href="#execute!/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">execute!(batch, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L201" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> execute!(
+  <a href="#t:t/0">t</a>(),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
+
+      </div>
+
+<p>Execute a batch of commands, raising on error.</p><p>Same as <a href="#execute/2"><code class="inline">execute/2</code></a> but raises <a href="https://hexdocs.pm/elixir/RuntimeError.html"><code class="inline">RuntimeError</code></a> on failure.</p><h2 id="execute!/2-examples" class="section-heading"><a href="#execute!/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="7306290901-1">(</span><span class="p" data-group-id="7306290901-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="7306290901-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="7306290901-3">(</span><span class="p" data-group-id="7306290901-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="7306290901-4">}</span><span class="p" data-group-id="7306290901-3">)</span><span class="p" data-group-id="7306290901-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">execute!</span><span class="p" data-group-id="7306290901-5">(</span><span class="p" data-group-id="7306290901-5">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="new/0">
+
+  <div class="detail-header">
+    <a href="#new/0" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">new()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L47" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> new() :: <a href="#t:t/0">t</a>()</pre>
+
+      </div>
+
+<p>Create a new empty batch.</p><h2 id="new/0-examples" class="section-heading"><a href="#new/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="0592131084-1">(</span><span class="p" data-group-id="0592131084-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="size/1">
+
+  <div class="detail-header">
+    <a href="#size/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">size(batch)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L220" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> size(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()</pre>
+
+      </div>
+
+<p>Get the number of commands in the batch.</p><h2 id="size/1-examples" class="section-heading"><a href="#size/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="6397030653-1">(</span><span class="p" data-group-id="6397030653-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6397030653-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="6397030653-3">(</span><span class="p" data-group-id="6397030653-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="6397030653-4">}</span><span class="p" data-group-id="6397030653-3">)</span><span class="p" data-group-id="6397030653-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6397030653-5">(</span><span class="nc">Chain</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="6397030653-6">(</span><span class="p" data-group-id="6397030653-7">%{</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="6397030653-7">}</span><span class="p" data-group-id="6397030653-6">)</span><span class="p" data-group-id="6397030653-5">)</span><span class="w">
+
+</span><span class="nc">Batch</span><span class="o">.</span><span class="n">size</span><span class="p" data-group-id="6397030653-8">(</span><span class="n">batch</span><span class="p" data-group-id="6397030653-8">)</span><span class="w">  </span><span class="c1">#=&gt; 2</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="to_json/1">
+
+  <div class="detail-header">
+    <a href="#to_json/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_json(batch)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L150" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> to_json(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
+
+      </div>
+
+<p>Convert batch to nftables JSON format.</p><p>Same as <a href="#to_map/1"><code class="inline">to_map/1</code></a> but returns JSON string.</p><h2 id="to_json/1-parameters" class="section-heading"><a href="#to_json/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">batch</code> - The batch to convert</li></ul><h2 id="to_json/1-returns" class="section-heading"><a href="#to_json/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>JSON string containing all batch commands</p><h2 id="to_json/1-examples" class="section-heading"><a href="#to_json/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="9346130865-1">(</span><span class="p" data-group-id="9346130865-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="9346130865-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="9346130865-3">(</span><span class="p" data-group-id="9346130865-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="9346130865-4">}</span><span class="p" data-group-id="9346130865-3">)</span><span class="p" data-group-id="9346130865-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">to_json</span><span class="p" data-group-id="9346130865-5">(</span><span class="p" data-group-id="9346130865-5">)</span><span class="w">
+
+</span><span class="c1">#=&gt; &quot;{&quot;nftables&quot;:[{&quot;add&quot;:{&quot;table&quot;:{...}}}]}&quot;</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="to_map/1">
+
+  <div class="detail-header">
+    <a href="#to_map/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_map(batch)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/batch.ex#L117" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> to_map(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Convert batch to nftables command map.</p><p>Combines all commands in the batch into a single Elixir map
+with an &quot;nftables&quot; array containing all operations.</p><h2 id="to_map/1-parameters" class="section-heading"><a href="#to_map/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">batch</code> - The batch to convert</li></ul><h2 id="to_map/1-returns" class="section-heading"><a href="#to_map/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>Map with string keys containing all batch commands</p><h2 id="to_map/1-examples" class="section-heading"><a href="#to_map/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="7564027962-1">(</span><span class="p" data-group-id="7564027962-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="7564027962-2">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="7564027962-3">(</span><span class="p" data-group-id="7564027962-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="7564027962-4">}</span><span class="p" data-group-id="7564027962-3">)</span><span class="p" data-group-id="7564027962-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">to_map</span><span class="p" data-group-id="7564027962-5">(</span><span class="p" data-group-id="7564027962-5">)</span><span class="w">
+
+</span><span class="c1">#=&gt; %{&quot;nftables&quot; =&gt; [%{&quot;add&quot; =&gt; %{&quot;table&quot; =&gt; ...}}]}</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/nftables_ex/0.4.0" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/nftables_ex/0.4.0">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="NFTablesEx.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

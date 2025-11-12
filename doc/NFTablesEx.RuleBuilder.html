@@ -1,0 +1,3362 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.1">
+    <meta name="project" content="NFTablesEx v0.4.0">
+
+
+    <title>NFTablesEx.RuleBuilder — NFTablesEx v0.4.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
+
+    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-HBZYRXZS.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+NFTablesEx
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v0.4.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of NFTablesEx</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">NFTablesEx.RuleBuilder</span> 
+      <small class="app-vsn" translate="no">(NFTablesEx v0.4.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Fluent API for building nftables rules.</p><p>This module provides an intuitive, chainable interface for building firewall rules
+using nft syntax strings internally.</p><h2 id="module-quick-example" class="section-heading"><a href="#module-quick-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Quick Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="kn">alias</span><span class="w"> </span><span class="nc">NFTablesEx.RuleBuilder</span><span class="w">
+
+</span><span class="c1"># Drop packets from specific IP</span><span class="w">
+</span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="8970161866-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="8970161866-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">match_source_ip</span><span class="p" data-group-id="8970161866-2">(</span><span class="s">&quot;192.168.1.100&quot;</span><span class="p" data-group-id="8970161866-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">log</span><span class="p" data-group-id="8970161866-3">(</span><span class="s">&quot;BLOCKED IP: &quot;</span><span class="p" data-group-id="8970161866-3">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">drop</span><span class="p" data-group-id="8970161866-4">(</span><span class="p" data-group-id="8970161866-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">commit</span><span class="p" data-group-id="8970161866-5">(</span><span class="p" data-group-id="8970161866-5">)</span></code></pre><h2 id="module-common-patterns" class="section-heading"><a href="#module-common-patterns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Common Patterns</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Accept established/related connections</span><span class="w">
+</span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="2199963201-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="2199963201-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">match_ct_state</span><span class="p" data-group-id="2199963201-2">(</span><span class="p" data-group-id="2199963201-3">[</span><span class="ss">:established</span><span class="p">,</span><span class="w"> </span><span class="ss">:related</span><span class="p" data-group-id="2199963201-3">]</span><span class="p" data-group-id="2199963201-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">accept</span><span class="p" data-group-id="2199963201-4">(</span><span class="p" data-group-id="2199963201-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">commit</span><span class="p" data-group-id="2199963201-5">(</span><span class="p" data-group-id="2199963201-5">)</span><span class="w">
+
+</span><span class="c1"># Rate limit SSH connections</span><span class="w">
+</span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="2199963201-6">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="2199963201-6">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">match_dest_port</span><span class="p" data-group-id="2199963201-7">(</span><span class="mi">22</span><span class="p" data-group-id="2199963201-7">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">rate_limit</span><span class="p" data-group-id="2199963201-8">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="ss">:minute</span><span class="p" data-group-id="2199963201-8">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">accept</span><span class="p" data-group-id="2199963201-9">(</span><span class="p" data-group-id="2199963201-9">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">commit</span><span class="p" data-group-id="2199963201-10">(</span><span class="p" data-group-id="2199963201-10">)</span></code></pre><h2 id="module-see-also" class="section-heading"><a href="#module-see-also" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">See Also</span></h2><ul><li><a href="NFTablesEx.Policy.html"><code class="inline">NFTablesEx.Policy</code></a> - Pre-built common policies</li><li><a href="NFTablesEx.Rule.html"><code class="inline">NFTablesEx.Rule</code></a> - Low-level rule operations</li></ul>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#accept/1" data-no-tooltip="" translate="no">accept(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.accept/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#commit/1" data-no-tooltip="" translate="no">commit(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Commit the rule to the kernel.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#continue/1" data-no-tooltip="" translate="no">continue(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.continue/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#counter/1" data-no-tooltip="" translate="no">counter(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.counter/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decrement_hoplimit/1" data-no-tooltip="" translate="no">decrement_hoplimit(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.decrement_hoplimit/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decrement_ttl/1" data-no-tooltip="" translate="no">decrement_ttl(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.decrement_ttl/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dnat_to/2" data-no-tooltip="" translate="no">dnat_to(builder, ip)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.dnat_to/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#dnat_to/3" data-no-tooltip="" translate="no">dnat_to(builder, ip, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.dnat_to/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#drop/1" data-no-tooltip="" translate="no">drop(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.drop/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#duplicate_to/2" data-no-tooltip="" translate="no">duplicate_to(builder, interface)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.duplicate_to/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#flow_offload/1" data-no-tooltip="" translate="no">flow_offload(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.flow_offload/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#flow_offload/2" data-no-tooltip="" translate="no">flow_offload(builder, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.flow_offload/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#goto/2" data-no-tooltip="" translate="no">goto(builder, chain_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.goto/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#increment_hoplimit/1" data-no-tooltip="" translate="no">increment_hoplimit(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.increment_hoplimit/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#increment_ttl/1" data-no-tooltip="" translate="no">increment_ttl(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.increment_ttl/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#jump/2" data-no-tooltip="" translate="no">jump(builder, chain_name)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.jump/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#limit_connections/2" data-no-tooltip="" translate="no">limit_connections(builder, count)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.limit_connections/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#log/2" data-no-tooltip="" translate="no">log(builder, prefix)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.log/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#log/3" data-no-tooltip="" translate="no">log(builder, prefix, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.log/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#masquerade/1" data-no-tooltip="" translate="no">masquerade(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.masquerade/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#masquerade/2" data-no-tooltip="" translate="no">masquerade(builder, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.masquerade/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ah_spi/2" data-no-tooltip="" translate="no">match_ah_spi(builder, spi)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_ah_spi/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_arp_operation/2" data-no-tooltip="" translate="no">match_arp_operation(builder, operation)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_arp_operation/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_cgroup/2" data-no-tooltip="" translate="no">match_cgroup(builder, cgroup_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_cgroup/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_connmark/2" data-no-tooltip="" translate="no">match_connmark(builder, mark)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_connmark/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_bytes/3" data-no-tooltip="" translate="no">match_ct_bytes(builder, op, bytes)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_bytes/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_direction/2" data-no-tooltip="" translate="no">match_ct_direction(builder, direction)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_direction/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_helper/2" data-no-tooltip="" translate="no">match_ct_helper(builder, helper)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_helper/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_label/2" data-no-tooltip="" translate="no">match_ct_label(builder, label)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_label/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_original_daddr/2" data-no-tooltip="" translate="no">match_ct_original_daddr(builder, addr)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_original_daddr/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_original_saddr/2" data-no-tooltip="" translate="no">match_ct_original_saddr(builder, addr)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_original_saddr/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_packets/3" data-no-tooltip="" translate="no">match_ct_packets(builder, op, packets)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_packets/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_state/2" data-no-tooltip="" translate="no">match_ct_state(builder, states)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_state/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_status/2" data-no-tooltip="" translate="no">match_ct_status(builder, statuses)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_status/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ct_zone/2" data-no-tooltip="" translate="no">match_ct_zone(builder, zone)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_zone/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_dest_ip/2" data-no-tooltip="" translate="no">match_dest_ip(builder, ip)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.IPMatching.match_dest_ip/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_dest_mac/2" data-no-tooltip="" translate="no">match_dest_mac(builder, mac)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_dest_mac/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_dest_port/2" data-no-tooltip="" translate="no">match_dest_port(builder, port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_dest_port/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_dscp/2" data-no-tooltip="" translate="no">match_dscp(builder, dscp)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_dscp/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_esp_spi/2" data-no-tooltip="" translate="no">match_esp_spi(builder, spi)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_esp_spi/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_fragmented/2" data-no-tooltip="" translate="no">match_fragmented(builder, is_fragmented)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_fragmented/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_hoplimit/3" data-no-tooltip="" translate="no">match_hoplimit(builder, op, hoplimit)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_hoplimit/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_icmp_code/2" data-no-tooltip="" translate="no">match_icmp_code(builder, code)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmp_code/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_icmp_type/2" data-no-tooltip="" translate="no">match_icmp_type(builder, type)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmp_type/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_icmpv6_code/2" data-no-tooltip="" translate="no">match_icmpv6_code(builder, code)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmpv6_code/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_icmpv6_type/2" data-no-tooltip="" translate="no">match_icmpv6_type(builder, type)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmpv6_type/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_iif/2" data-no-tooltip="" translate="no">match_iif(builder, ifname)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_iif/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_length/3" data-no-tooltip="" translate="no">match_length(builder, op, length)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_length/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_mark/2" data-no-tooltip="" translate="no">match_mark(builder, mark)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_mark/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_oif/2" data-no-tooltip="" translate="no">match_oif(builder, ifname)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_oif/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_pkttype/2" data-no-tooltip="" translate="no">match_pkttype(builder, pkttype)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_pkttype/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_port_range/3" data-no-tooltip="" translate="no">match_port_range(builder, min_port, max_port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_port_range/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_priority/3" data-no-tooltip="" translate="no">match_priority(builder, op, priority)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_priority/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_protocol/2" data-no-tooltip="" translate="no">match_protocol(builder, protocol)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_protocol/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_set/3" data-no-tooltip="" translate="no">match_set(builder, set_name, match_type)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_set/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_skgid/2" data-no-tooltip="" translate="no">match_skgid(builder, gid)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_skgid/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_skuid/2" data-no-tooltip="" translate="no">match_skuid(builder, uid)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_skuid/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_source_ip/2" data-no-tooltip="" translate="no">match_source_ip(builder, ip)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.IPMatching.match_source_ip/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_source_mac/2" data-no-tooltip="" translate="no">match_source_mac(builder, mac)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_source_mac/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_source_port/2" data-no-tooltip="" translate="no">match_source_port(builder, port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_source_port/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_source_port_range/3" data-no-tooltip="" translate="no">match_source_port_range(builder, min_port, max_port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_source_port_range/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_tcp_flags/3" data-no-tooltip="" translate="no">match_tcp_flags(builder, flags, mask)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_tcp_flags/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_ttl/3" data-no-tooltip="" translate="no">match_ttl(builder, op, ttl)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_ttl/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_udp_dport/2" data-no-tooltip="" translate="no">match_udp_dport(builder, port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_dport/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_udp_port_range/3" data-no-tooltip="" translate="no">match_udp_port_range(builder, min_port, max_port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_port_range/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_udp_source_port_range/3" data-no-tooltip="" translate="no">match_udp_source_port_range(builder, min_port, max_port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_source_port_range/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_udp_sport/2" data-no-tooltip="" translate="no">match_udp_sport(builder, port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_sport/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_vlan_id/2" data-no-tooltip="" translate="no">match_vlan_id(builder, vlan_id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_vlan_id/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#match_vlan_pcp/2" data-no-tooltip="" translate="no">match_vlan_pcp(builder, pcp)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_vlan_pcp/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/4" data-no-tooltip="" translate="no">new(pid, table, chain, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Start building a new rule.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#notrack/1" data-no-tooltip="" translate="no">notrack(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.notrack/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#queue_to_userspace/2" data-no-tooltip="" translate="no">queue_to_userspace(builder, queue_num)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.queue_to_userspace/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#queue_to_userspace/3" data-no-tooltip="" translate="no">queue_to_userspace(builder, queue_num, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.queue_to_userspace/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#rate_limit/3" data-no-tooltip="" translate="no">rate_limit(builder, rate, unit)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.rate_limit/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#rate_limit/4" data-no-tooltip="" translate="no">rate_limit(builder, rate, unit, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.rate_limit/4</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#redirect_to/2" data-no-tooltip="" translate="no">redirect_to(builder, port)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.redirect_to/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reject/1" data-no-tooltip="" translate="no">reject(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.reject/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#reject/2" data-no-tooltip="" translate="no">reject(builder, type)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.reject/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#restore_mark/1" data-no-tooltip="" translate="no">restore_mark(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.restore_mark/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#return_from_chain/1" data-no-tooltip="" translate="no">return_from_chain(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.return_from_chain/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#save_mark/1" data-no-tooltip="" translate="no">save_mark(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.save_mark/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_connmark/2" data-no-tooltip="" translate="no">set_connmark(builder, mark)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_connmark/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_ct_helper/2" data-no-tooltip="" translate="no">set_ct_helper(builder, helper)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ct_helper/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_ct_label/2" data-no-tooltip="" translate="no">set_ct_label(builder, label)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ct_label/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_ct_zone/2" data-no-tooltip="" translate="no">set_ct_zone(builder, zone)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ct_zone/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_dscp/2" data-no-tooltip="" translate="no">set_dscp(builder, dscp)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_dscp/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_hoplimit/2" data-no-tooltip="" translate="no">set_hoplimit(builder, hoplimit)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_hoplimit/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_mark/2" data-no-tooltip="" translate="no">set_mark(builder, mark)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_mark/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_tcp_mss/2" data-no-tooltip="" translate="no">set_tcp_mss(builder, mss)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.set_tcp_mss/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_ttl/2" data-no-tooltip="" translate="no">set_ttl(builder, ttl)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ttl/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#snat_to/2" data-no-tooltip="" translate="no">snat_to(builder, ip)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.snat_to/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#snat_to/3" data-no-tooltip="" translate="no">snat_to(builder, ip, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.NAT.snat_to/3</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#synproxy/1" data-no-tooltip="" translate="no">synproxy(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.synproxy/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#synproxy/2" data-no-tooltip="" translate="no">synproxy(builder, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.RuleBuilder.Verdicts.synproxy/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#to_nft_command/1" data-no-tooltip="" translate="no">to_nft_command(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build the nft command string without executing.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L61" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %NFTablesEx.RuleBuilder{
+  chain: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  expr_list: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
+  family: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(),
+  pid: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>(),
+  table: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="accept/1">
+
+  <div class="detail-header">
+    <a href="#accept/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">accept(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L202" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#accept/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.accept/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="commit/1">
+
+  <div class="detail-header">
+    <a href="#commit/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">commit(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L291" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> commit(<a href="#t:t/0">t</a>()) :: :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Commit the rule to the kernel.</p><p>Sends the structured JSON expression list directly to the kernel via
+the libnftables JSON API.</p><p>Returns <code class="inline">:ok</code> on success, <code class="inline">{:error, reason}</code> on failure.</p><h2 id="commit/1-examples" class="section-heading"><a href="#commit/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Build and commit a rule</span><span class="w">
+</span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="3844245707-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="3844245707-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">match_source_ip</span><span class="p" data-group-id="3844245707-2">(</span><span class="s">&quot;192.168.1.100&quot;</span><span class="p" data-group-id="3844245707-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">drop</span><span class="p" data-group-id="3844245707-3">(</span><span class="p" data-group-id="3844245707-3">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">commit</span><span class="p" data-group-id="3844245707-4">(</span><span class="p" data-group-id="3844245707-4">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="continue/1">
+
+  <div class="detail-header">
+    <a href="#continue/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">continue(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L206" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#continue/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.continue/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="counter/1">
+
+  <div class="detail-header">
+    <a href="#counter/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">counter(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L170" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#counter/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.counter/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="decrement_hoplimit/1">
+
+  <div class="detail-header">
+    <a href="#decrement_hoplimit/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decrement_hoplimit(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L188" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#decrement_hoplimit/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.decrement_hoplimit/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="decrement_ttl/1">
+
+  <div class="detail-header">
+    <a href="#decrement_ttl/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decrement_ttl(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L186" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#decrement_ttl/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.decrement_ttl/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="dnat_to/2">
+
+  <div class="detail-header">
+    <a href="#dnat_to/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dnat_to(builder, ip)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L194" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#dnat_to/2"><code class="inline">NFTablesEx.RuleBuilder.NAT.dnat_to/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="dnat_to/3">
+
+  <div class="detail-header">
+    <a href="#dnat_to/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">dnat_to(builder, ip, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L195" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#dnat_to/3"><code class="inline">NFTablesEx.RuleBuilder.NAT.dnat_to/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="drop/1">
+
+  <div class="detail-header">
+    <a href="#drop/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">drop(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L203" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#drop/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.drop/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="duplicate_to/2">
+
+  <div class="detail-header">
+    <a href="#duplicate_to/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">duplicate_to(builder, interface)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L213" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#duplicate_to/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.duplicate_to/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="flow_offload/1">
+
+  <div class="detail-header">
+    <a href="#flow_offload/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">flow_offload(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L214" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#flow_offload/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.flow_offload/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="flow_offload/2">
+
+  <div class="detail-header">
+    <a href="#flow_offload/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">flow_offload(builder, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L215" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#flow_offload/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.flow_offload/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="goto/2">
+
+  <div class="detail-header">
+    <a href="#goto/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">goto(builder, chain_name)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L217" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#goto/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.goto/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="increment_hoplimit/1">
+
+  <div class="detail-header">
+    <a href="#increment_hoplimit/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">increment_hoplimit(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L187" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#increment_hoplimit/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.increment_hoplimit/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="increment_ttl/1">
+
+  <div class="detail-header">
+    <a href="#increment_ttl/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">increment_ttl(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L185" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#increment_ttl/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.increment_ttl/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="jump/2">
+
+  <div class="detail-header">
+    <a href="#jump/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">jump(builder, chain_name)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L216" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#jump/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.jump/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="limit_connections/2">
+
+  <div class="detail-header">
+    <a href="#limit_connections/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">limit_connections(builder, count)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L147" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#limit_connections/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.limit_connections/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="log/2">
+
+  <div class="detail-header">
+    <a href="#log/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log(builder, prefix)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L171" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#log/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.log/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="log/3">
+
+  <div class="detail-header">
+    <a href="#log/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">log(builder, prefix, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L172" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#log/3"><code class="inline">NFTablesEx.RuleBuilder.Actions.log/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="masquerade/1">
+
+  <div class="detail-header">
+    <a href="#masquerade/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">masquerade(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L196" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#masquerade/1"><code class="inline">NFTablesEx.RuleBuilder.NAT.masquerade/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="masquerade/2">
+
+  <div class="detail-header">
+    <a href="#masquerade/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">masquerade(builder, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L197" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#masquerade/2"><code class="inline">NFTablesEx.RuleBuilder.NAT.masquerade/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ah_spi/2">
+
+  <div class="detail-header">
+    <a href="#match_ah_spi/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ah_spi(builder, spi)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L163" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_ah_spi/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_ah_spi/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_arp_operation/2">
+
+  <div class="detail-header">
+    <a href="#match_arp_operation/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_arp_operation(builder, operation)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L165" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_arp_operation/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_arp_operation/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_cgroup/2">
+
+  <div class="detail-header">
+    <a href="#match_cgroup/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_cgroup(builder, cgroup_id)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L160" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_cgroup/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_cgroup/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_connmark/2">
+
+  <div class="detail-header">
+    <a href="#match_connmark/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_connmark(builder, mark)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L139" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_connmark/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_connmark/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_bytes/3">
+
+  <div class="detail-header">
+    <a href="#match_ct_bytes/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_bytes(builder, op, bytes)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L143" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_bytes/3"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_bytes/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_direction/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_direction/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_direction(builder, direction)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L138" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_direction/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_direction/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_helper/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_helper/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_helper(builder, helper)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L142" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_helper/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_helper/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_label/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_label/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_label(builder, label)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L140" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_label/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_label/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_original_daddr/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_original_daddr/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_original_daddr(builder, addr)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L146" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_original_daddr/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_original_daddr/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_original_saddr/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_original_saddr/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_original_saddr(builder, addr)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L145" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_original_saddr/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_original_saddr/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_packets/3">
+
+  <div class="detail-header">
+    <a href="#match_ct_packets/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_packets(builder, op, packets)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L144" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_packets/3"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_packets/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_state/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_state/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_state(builder, states)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L136" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_state/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_state/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_status/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_status/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_status(builder, statuses)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L137" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_status/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_status/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ct_zone/2">
+
+  <div class="detail-header">
+    <a href="#match_ct_zone/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ct_zone(builder, zone)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L141" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.CTMatching.html#match_ct_zone/2"><code class="inline">NFTablesEx.RuleBuilder.CTMatching.match_ct_zone/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_dest_ip/2">
+
+  <div class="detail-header">
+    <a href="#match_dest_ip/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_dest_ip(builder, ip)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L104" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.IPMatching.html#match_dest_ip/2"><code class="inline">NFTablesEx.RuleBuilder.IPMatching.match_dest_ip/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_dest_mac/2">
+
+  <div class="detail-header">
+    <a href="#match_dest_mac/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_dest_mac(builder, mac)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L128" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Layer2Matching.html#match_dest_mac/2"><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_dest_mac/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_dest_port/2">
+
+  <div class="detail-header">
+    <a href="#match_dest_port/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_dest_port(builder, port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L109" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_dest_port/2"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_dest_port/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_dscp/2">
+
+  <div class="detail-header">
+    <a href="#match_dscp/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_dscp(builder, dscp)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L152" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_dscp/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_dscp/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_esp_spi/2">
+
+  <div class="detail-header">
+    <a href="#match_esp_spi/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_esp_spi(builder, spi)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L164" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_esp_spi/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_esp_spi/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_fragmented/2">
+
+  <div class="detail-header">
+    <a href="#match_fragmented/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_fragmented(builder, is_fragmented)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L153" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_fragmented/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_fragmented/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_hoplimit/3">
+
+  <div class="detail-header">
+    <a href="#match_hoplimit/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_hoplimit(builder, op, hoplimit)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L122" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.TCPMatching.html#match_hoplimit/3"><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_hoplimit/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_icmp_code/2">
+
+  <div class="detail-header">
+    <a href="#match_icmp_code/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_icmp_code(builder, code)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_icmp_code/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmp_code/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_icmp_type/2">
+
+  <div class="detail-header">
+    <a href="#match_icmp_type/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_icmp_type(builder, type)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L154" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_icmp_type/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmp_type/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_icmpv6_code/2">
+
+  <div class="detail-header">
+    <a href="#match_icmpv6_code/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_icmpv6_code(builder, code)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L157" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_icmpv6_code/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmpv6_code/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_icmpv6_type/2">
+
+  <div class="detail-header">
+    <a href="#match_icmpv6_type/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_icmpv6_type(builder, type)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L156" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_icmpv6_type/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_icmpv6_type/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_iif/2">
+
+  <div class="detail-header">
+    <a href="#match_iif/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_iif(builder, ifname)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L129" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Layer2Matching.html#match_iif/2"><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_iif/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_length/3">
+
+  <div class="detail-header">
+    <a href="#match_length/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_length(builder, op, length)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L120" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.TCPMatching.html#match_length/3"><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_length/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_mark/2">
+
+  <div class="detail-header">
+    <a href="#match_mark/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_mark(builder, mark)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L151" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_mark/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_mark/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_oif/2">
+
+  <div class="detail-header">
+    <a href="#match_oif/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_oif(builder, ifname)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L130" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Layer2Matching.html#match_oif/2"><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_oif/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_pkttype/2">
+
+  <div class="detail-header">
+    <a href="#match_pkttype/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_pkttype(builder, pkttype)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L158" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_pkttype/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_pkttype/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_port_range/3">
+
+  <div class="detail-header">
+    <a href="#match_port_range/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_port_range(builder, min_port, max_port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L112" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_port_range/3"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_port_range/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_priority/3">
+
+  <div class="detail-header">
+    <a href="#match_priority/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_priority(builder, op, priority)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L159" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_priority/3"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_priority/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_protocol/2">
+
+  <div class="detail-header">
+    <a href="#match_protocol/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_protocol(builder, protocol)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L123" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.TCPMatching.html#match_protocol/2"><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_protocol/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_set/3">
+
+  <div class="detail-header">
+    <a href="#match_set/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_set(builder, set_name, match_type)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L166" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_set/3"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_set/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_skgid/2">
+
+  <div class="detail-header">
+    <a href="#match_skgid/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_skgid(builder, gid)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L162" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_skgid/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_skgid/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_skuid/2">
+
+  <div class="detail-header">
+    <a href="#match_skuid/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_skuid(builder, uid)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L161" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.AdvancedMatching.html#match_skuid/2"><code class="inline">NFTablesEx.RuleBuilder.AdvancedMatching.match_skuid/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_source_ip/2">
+
+  <div class="detail-header">
+    <a href="#match_source_ip/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_source_ip(builder, ip)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L103" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.IPMatching.html#match_source_ip/2"><code class="inline">NFTablesEx.RuleBuilder.IPMatching.match_source_ip/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_source_mac/2">
+
+  <div class="detail-header">
+    <a href="#match_source_mac/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_source_mac(builder, mac)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L127" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Layer2Matching.html#match_source_mac/2"><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_source_mac/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_source_port/2">
+
+  <div class="detail-header">
+    <a href="#match_source_port/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_source_port(builder, port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L108" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_source_port/2"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_source_port/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_source_port_range/3">
+
+  <div class="detail-header">
+    <a href="#match_source_port_range/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_source_port_range(builder, min_port, max_port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L113" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_source_port_range/3"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_source_port_range/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_tcp_flags/3">
+
+  <div class="detail-header">
+    <a href="#match_tcp_flags/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_tcp_flags(builder, flags, mask)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L119" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.TCPMatching.html#match_tcp_flags/3"><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_tcp_flags/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_ttl/3">
+
+  <div class="detail-header">
+    <a href="#match_ttl/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_ttl(builder, op, ttl)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L121" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.TCPMatching.html#match_ttl/3"><code class="inline">NFTablesEx.RuleBuilder.TCPMatching.match_ttl/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_udp_dport/2">
+
+  <div class="detail-header">
+    <a href="#match_udp_dport/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_udp_dport(builder, port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L111" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_udp_dport/2"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_dport/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_udp_port_range/3">
+
+  <div class="detail-header">
+    <a href="#match_udp_port_range/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_udp_port_range(builder, min_port, max_port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L114" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_udp_port_range/3"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_port_range/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_udp_source_port_range/3">
+
+  <div class="detail-header">
+    <a href="#match_udp_source_port_range/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_udp_source_port_range(builder, min_port, max_port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L115" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_udp_source_port_range/3"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_source_port_range/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_udp_sport/2">
+
+  <div class="detail-header">
+    <a href="#match_udp_sport/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_udp_sport(builder, port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L110" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.PortMatching.html#match_udp_sport/2"><code class="inline">NFTablesEx.RuleBuilder.PortMatching.match_udp_sport/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_vlan_id/2">
+
+  <div class="detail-header">
+    <a href="#match_vlan_id/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_vlan_id(builder, vlan_id)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L131" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Layer2Matching.html#match_vlan_id/2"><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_vlan_id/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="match_vlan_pcp/2">
+
+  <div class="detail-header">
+    <a href="#match_vlan_pcp/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">match_vlan_pcp(builder, pcp)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L132" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Layer2Matching.html#match_vlan_pcp/2"><code class="inline">NFTablesEx.RuleBuilder.Layer2Matching.match_vlan_pcp/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="new/4">
+
+    <span id="new/3"></span>
+
+  <div class="detail-header">
+    <a href="#new/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">new(pid, table, chain, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L89" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> new(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="#t:t/0">t</a>()</pre>
+
+      </div>
+
+<p>Start building a new rule.</p><h2 id="new/4-parameters" class="section-heading"><a href="#new/4-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">pid</code> - NFTex process</li><li><code class="inline">table</code> - Table name</li><li><code class="inline">chain</code> - Chain name</li><li><code class="inline">opts</code> - Options:<ul><li><code class="inline">:family</code> - Protocol family (default: <code class="inline">:inet</code>)</li></ul></li></ul><h2 id="new/4-example" class="section-heading"><a href="#new/4-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Create builder with default IPv4/IPv6 family</span><span class="w">
+</span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="4291089044-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="4291089044-1">)</span><span class="w">
+
+</span><span class="c1"># Create builder for IPv6</span><span class="w">
+</span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="4291089044-2">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet6</span><span class="p" data-group-id="4291089044-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="notrack/1">
+
+  <div class="detail-header">
+    <a href="#notrack/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">notrack(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L207" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#notrack/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.notrack/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="queue_to_userspace/2">
+
+  <div class="detail-header">
+    <a href="#queue_to_userspace/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">queue_to_userspace(builder, queue_num)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L208" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#queue_to_userspace/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.queue_to_userspace/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="queue_to_userspace/3">
+
+  <div class="detail-header">
+    <a href="#queue_to_userspace/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">queue_to_userspace(builder, queue_num, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L209" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#queue_to_userspace/3"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.queue_to_userspace/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="rate_limit/3">
+
+  <div class="detail-header">
+    <a href="#rate_limit/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">rate_limit(builder, rate, unit)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L173" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#rate_limit/3"><code class="inline">NFTablesEx.RuleBuilder.Actions.rate_limit/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="rate_limit/4">
+
+  <div class="detail-header">
+    <a href="#rate_limit/4" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">rate_limit(builder, rate, unit, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L174" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#rate_limit/4"><code class="inline">NFTablesEx.RuleBuilder.Actions.rate_limit/4</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="redirect_to/2">
+
+  <div class="detail-header">
+    <a href="#redirect_to/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">redirect_to(builder, port)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L198" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#redirect_to/2"><code class="inline">NFTablesEx.RuleBuilder.NAT.redirect_to/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="reject/1">
+
+  <div class="detail-header">
+    <a href="#reject/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reject(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L204" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#reject/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.reject/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="reject/2">
+
+  <div class="detail-header">
+    <a href="#reject/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">reject(builder, type)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L205" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#reject/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.reject/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="restore_mark/1">
+
+  <div class="detail-header">
+    <a href="#restore_mark/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">restore_mark(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L177" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#restore_mark/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.restore_mark/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="return_from_chain/1">
+
+  <div class="detail-header">
+    <a href="#return_from_chain/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">return_from_chain(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L218" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#return_from_chain/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.return_from_chain/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="save_mark/1">
+
+  <div class="detail-header">
+    <a href="#save_mark/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">save_mark(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L178" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#save_mark/1"><code class="inline">NFTablesEx.RuleBuilder.Actions.save_mark/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_connmark/2">
+
+  <div class="detail-header">
+    <a href="#set_connmark/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_connmark(builder, mark)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L176" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_connmark/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_connmark/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_ct_helper/2">
+
+  <div class="detail-header">
+    <a href="#set_ct_helper/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_ct_helper(builder, helper)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L180" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_ct_helper/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ct_helper/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_ct_label/2">
+
+  <div class="detail-header">
+    <a href="#set_ct_label/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_ct_label(builder, label)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L179" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_ct_label/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ct_label/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_ct_zone/2">
+
+  <div class="detail-header">
+    <a href="#set_ct_zone/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_ct_zone(builder, zone)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L181" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_ct_zone/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ct_zone/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_dscp/2">
+
+  <div class="detail-header">
+    <a href="#set_dscp/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_dscp(builder, dscp)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L182" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_dscp/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_dscp/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_hoplimit/2">
+
+  <div class="detail-header">
+    <a href="#set_hoplimit/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_hoplimit(builder, hoplimit)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L184" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_hoplimit/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_hoplimit/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_mark/2">
+
+  <div class="detail-header">
+    <a href="#set_mark/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_mark(builder, mark)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L175" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_mark/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_mark/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_tcp_mss/2">
+
+  <div class="detail-header">
+    <a href="#set_tcp_mss/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_tcp_mss(builder, mss)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L212" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#set_tcp_mss/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.set_tcp_mss/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_ttl/2">
+
+  <div class="detail-header">
+    <a href="#set_ttl/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_ttl(builder, ttl)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L183" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Actions.html#set_ttl/2"><code class="inline">NFTablesEx.RuleBuilder.Actions.set_ttl/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="snat_to/2">
+
+  <div class="detail-header">
+    <a href="#snat_to/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">snat_to(builder, ip)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L192" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#snat_to/2"><code class="inline">NFTablesEx.RuleBuilder.NAT.snat_to/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="snat_to/3">
+
+  <div class="detail-header">
+    <a href="#snat_to/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">snat_to(builder, ip, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L193" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.NAT.html#snat_to/3"><code class="inline">NFTablesEx.RuleBuilder.NAT.snat_to/3</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="synproxy/1">
+
+  <div class="detail-header">
+    <a href="#synproxy/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">synproxy(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L210" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#synproxy/1"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.synproxy/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="synproxy/2">
+
+  <div class="detail-header">
+    <a href="#synproxy/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">synproxy(builder, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L211" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.RuleBuilder.Verdicts.html#synproxy/2"><code class="inline">NFTablesEx.RuleBuilder.Verdicts.synproxy/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="to_nft_command/1">
+
+  <div class="detail-header">
+    <a href="#to_nft_command/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_nft_command(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/rule_builder.ex#L268" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> to_nft_command(<a href="#t:t/0">t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
+
+      </div>
+
+<p>Build the nft command string without executing.</p><p>Converts the JSON expression list to human-readable nft syntax.
+Returns the nft command string that would be sent to add this rule.
+Useful for batching, remote execution, or inspection.</p><h2 id="to_nft_command/1-returns" class="section-heading"><a href="#to_nft_command/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><p>nft command string</p><h2 id="to_nft_command/1-examples" class="section-heading"><a href="#to_nft_command/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Build command</span><span class="w">
+</span><span class="n">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5926572166-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="5926572166-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">match_source_ip</span><span class="p" data-group-id="5926572166-2">(</span><span class="s">&quot;192.168.1.100&quot;</span><span class="p" data-group-id="5926572166-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">drop</span><span class="p" data-group-id="5926572166-3">(</span><span class="p" data-group-id="5926572166-3">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">to_nft_command</span><span class="p" data-group-id="5926572166-4">(</span><span class="p" data-group-id="5926572166-4">)</span><span class="w">
+</span><span class="c1">#=&gt; &quot;add rule inet filter INPUT ip saddr 192.168.1.100 drop&quot;</span><span class="w">
+
+</span><span class="c1"># Use in batch</span><span class="w">
+</span><span class="n">cmd1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5926572166-5">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="5926572166-5">)</span><span class="w">
+       </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">match_source_ip</span><span class="p" data-group-id="5926572166-6">(</span><span class="s">&quot;1.2.3.4&quot;</span><span class="p" data-group-id="5926572166-6">)</span><span class="w">
+       </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">drop</span><span class="p" data-group-id="5926572166-7">(</span><span class="p" data-group-id="5926572166-7">)</span><span class="w">
+       </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">to_nft_command</span><span class="p" data-group-id="5926572166-8">(</span><span class="p" data-group-id="5926572166-8">)</span><span class="w">
+
+</span><span class="n">cmd2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5926572166-9">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="5926572166-9">)</span><span class="w">
+       </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">match_source_ip</span><span class="p" data-group-id="5926572166-10">(</span><span class="s">&quot;5.6.7.8&quot;</span><span class="p" data-group-id="5926572166-10">)</span><span class="w">
+       </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">drop</span><span class="p" data-group-id="5926572166-11">(</span><span class="p" data-group-id="5926572166-11">)</span><span class="w">
+       </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">to_nft_command</span><span class="p" data-group-id="5926572166-12">(</span><span class="p" data-group-id="5926572166-12">)</span><span class="w">
+
+</span><span class="n">batch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5926572166-13">(</span><span class="p" data-group-id="5926572166-13">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="5926572166-14">(</span><span class="n">cmd1</span><span class="p" data-group-id="5926572166-14">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="5926572166-15">(</span><span class="n">cmd2</span><span class="p" data-group-id="5926572166-15">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="5926572166-16">(</span><span class="p" data-group-id="5926572166-16">)</span><span class="w">
+
+</span><span class="c1"># Send to remote node</span><span class="w">
+</span><span class="n">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">RuleBuilder</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="5926572166-17">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="5926572166-17">)</span><span class="w">
+      </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">match_dest_port</span><span class="p" data-group-id="5926572166-18">(</span><span class="mi">22</span><span class="p" data-group-id="5926572166-18">)</span><span class="w">
+      </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">rate_limit</span><span class="p" data-group-id="5926572166-19">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="ss">:minute</span><span class="p" data-group-id="5926572166-19">)</span><span class="w">
+      </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">accept</span><span class="p" data-group-id="5926572166-20">(</span><span class="p" data-group-id="5926572166-20">)</span><span class="w">
+      </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">to_nft_command</span><span class="p" data-group-id="5926572166-21">(</span><span class="p" data-group-id="5926572166-21">)</span><span class="w">
+
+</span><span class="nc">MyTransport</span><span class="o">.</span><span class="n">send_to_node</span><span class="p" data-group-id="5926572166-22">(</span><span class="s">&quot;firewall-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">cmd</span><span class="p" data-group-id="5926572166-22">)</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/nftables_ex/0.4.0" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/nftables_ex/0.4.0">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="NFTablesEx.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

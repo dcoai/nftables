@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.1">
+    <meta name="project" content="NFTablesEx v0.4.0">
+
+
+    <title>NFTablesEx.Query — NFTablesEx v0.4.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
+
+    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-HBZYRXZS.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+NFTablesEx
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v0.4.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of NFTablesEx</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">NFTablesEx.Query</span> 
+      <small class="app-vsn" translate="no">(NFTablesEx v0.4.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Command builders for querying nftables resources.</p><p>This module provides pure functions that build nftables JSON commands for
+read operations. Commands are meant to be piped through Executor for execution
+and Decoder for transformation.</p><h2 id="module-pipeline-architecture" class="section-heading"><a href="#module-pipeline-architecture" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Pipeline Architecture</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="3471528254-1">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="3471528254-1">)</span><span class="w">  </span><span class="c1"># Build command (pure function)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="3471528254-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="3471528254-2">)</span><span class="w">     </span><span class="c1"># Execute &amp; JSON decode</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="3471528254-3">(</span><span class="p" data-group-id="3471528254-3">)</span><span class="w">               </span><span class="c1"># Transform to idiomatic Elixir</span></code></pre><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># List all tables</span><span class="w">
+</span><span class="p" data-group-id="6536935061-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6536935061-2">%{</span><span class="ss">tables</span><span class="p">:</span><span class="w"> </span><span class="n">tables</span><span class="p" data-group-id="6536935061-2">}</span><span class="p" data-group-id="6536935061-1">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="6536935061-3">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6536935061-3">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="6536935061-4">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="6536935061-4">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="6536935061-5">(</span><span class="p" data-group-id="6536935061-5">)</span><span class="w">
+
+</span><span class="c1"># List rules in a specific chain</span><span class="w">
+</span><span class="p" data-group-id="6536935061-6">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6536935061-7">%{</span><span class="ss">rules</span><span class="p">:</span><span class="w"> </span><span class="n">rules</span><span class="p" data-group-id="6536935061-7">}</span><span class="p" data-group-id="6536935061-6">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Query</span><span class="o">.</span><span class="n">list_rules</span><span class="p" data-group-id="6536935061-8">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="6536935061-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="6536935061-9">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="6536935061-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="6536935061-10">(</span><span class="p" data-group-id="6536935061-10">)</span><span class="w">
+
+</span><span class="c1"># List entire ruleset</span><span class="w">
+</span><span class="p" data-group-id="6536935061-11">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6536935061-12">%{</span><span class="ss">tables</span><span class="p">:</span><span class="w"> </span><span class="n">tables</span><span class="p">,</span><span class="w"> </span><span class="ss">chains</span><span class="p">:</span><span class="w"> </span><span class="n">chains</span><span class="p">,</span><span class="w"> </span><span class="ss">rules</span><span class="p">:</span><span class="w"> </span><span class="n">rules</span><span class="p">,</span><span class="w"> </span><span class="ss">sets</span><span class="p">:</span><span class="w"> </span><span class="n">sets</span><span class="p" data-group-id="6536935061-12">}</span><span class="p" data-group-id="6536935061-11">}</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Query</span><span class="o">.</span><span class="n">list_ruleset</span><span class="p" data-group-id="6536935061-13">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6536935061-13">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="6536935061-14">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="6536935061-14">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="6536935061-15">(</span><span class="p" data-group-id="6536935061-15">)</span><span class="w">
+
+</span><span class="c1"># Build command for remote execution</span><span class="w">
+</span><span class="n">cmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="6536935061-16">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6536935061-16">)</span><span class="w">
+</span><span class="nc">MyTransport</span><span class="o">.</span><span class="n">send_to_node</span><span class="p" data-group-id="6536935061-17">(</span><span class="s">&quot;firewall-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">cmd</span><span class="p" data-group-id="6536935061-17">)</span></code></pre>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:family/0" data-no-tooltip="" translate="no">family()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete_set_elements/5" data-no-tooltip="" translate="no">delete_set_elements(pid, table, set_name, elements, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Delete elements from a set.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#flush_ruleset/1" data-no-tooltip="" translate="no">flush_ruleset(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to flush ruleset.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_chains/1" data-no-tooltip="" translate="no">list_chains(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to list chains.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_rules/1" data-no-tooltip="" translate="no">list_rules(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to list rules.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_rules/2" data-no-tooltip="" translate="no">list_rules(table, chain)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_rules/3" data-no-tooltip="" translate="no">list_rules(table, chain, opts)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_ruleset/1" data-no-tooltip="" translate="no">list_ruleset(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to list the entire ruleset.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_set_elements/3" data-no-tooltip="" translate="no">list_set_elements(table, set_name, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to list set elements.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_sets/1" data-no-tooltip="" translate="no">list_sets(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to list sets.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#list_tables/1" data-no-tooltip="" translate="no">list_tables(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Build a command map to list tables.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:family/0">
+
+  <div class="detail-header">
+    <a href="#t:family/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">family()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L42" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> family() :: :inet | :ip | :ip6 | :arp | :bridge | :netdev</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="delete_set_elements/5">
+
+    <span id="delete_set_elements/4"></span>
+
+  <div class="detail-header">
+    <a href="#delete_set_elements/5" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete_set_elements(pid, table, set_name, elements, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L334" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> delete_set_elements(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">pid</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()], <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) ::
+  :ok | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
+
+      </div>
+
+<p>Delete elements from a set.</p><h2 id="delete_set_elements/5-parameters" class="section-heading"><a href="#delete_set_elements/5-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">pid</code> - NFTex process pid</li><li><code class="inline">table</code> - Table name</li><li><code class="inline">set_name</code> - Set name</li><li><code class="inline">elements</code> - List of element values (strings)</li><li><code class="inline">opts</code> - Keyword list options:<ul><li><code class="inline">:family</code> - Protocol family (default: <code class="inline">:inet</code>)</li><li><code class="inline">:timeout</code> - Operation timeout in ms (default: 5000)</li></ul></li></ul><h2 id="delete_set_elements/5-example" class="section-heading"><a href="#delete_set_elements/5-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Query</span><span class="o">.</span><span class="n">delete_set_elements</span><span class="p" data-group-id="4967730135-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;blocked_ips&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4967730135-2">[</span><span class="s">&quot;192.168.1.100&quot;</span><span class="p" data-group-id="4967730135-2">]</span><span class="p" data-group-id="4967730135-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="flush_ruleset/1">
+
+    <span id="flush_ruleset/0"></span>
+
+  <div class="detail-header">
+    <a href="#flush_ruleset/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">flush_ruleset(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L303" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> flush_ruleset(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to flush ruleset.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="flush_ruleset/1-options" class="section-heading"><a href="#flush_ruleset/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:family</code> - Protocol family (optional, default: flush all families)</li></ul><h2 id="flush_ruleset/1-examples" class="section-heading"><a href="#flush_ruleset/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Flush entire ruleset</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">flush_ruleset</span><span class="p" data-group-id="6279334892-1">(</span><span class="p" data-group-id="6279334892-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="6279334892-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="6279334892-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="6279334892-3">(</span><span class="p" data-group-id="6279334892-3">)</span><span class="w">
+</span><span class="c1">#=&gt; :ok</span><span class="w">
+
+</span><span class="c1"># Flush only specific family</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">flush_ruleset</span><span class="p" data-group-id="6279334892-4">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6279334892-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="6279334892-5">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="6279334892-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="6279334892-6">(</span><span class="p" data-group-id="6279334892-6">)</span><span class="w">
+</span><span class="c1">#=&gt; :ok</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_chains/1">
+
+    <span id="list_chains/0"></span>
+
+  <div class="detail-header">
+    <a href="#list_chains/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_chains(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L94" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_chains(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to list chains.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="list_chains/1-options" class="section-heading"><a href="#list_chains/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:family</code> - Protocol family (optional)</li></ul><h2 id="list_chains/1-examples" class="section-heading"><a href="#list_chains/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Query</span><span class="o">.</span><span class="n">list_chains</span><span class="p" data-group-id="4429776089-1">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="4429776089-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="4429776089-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4429776089-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="4429776089-3">(</span><span class="p" data-group-id="4429776089-3">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_rules/1">
+
+  <div class="detail-header">
+    <a href="#list_rules/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_rules(opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L141" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_rules(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to list rules.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="list_rules/1-parameters" class="section-heading"><a href="#list_rules/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">opts</code> - Keyword list options:<ul><li><code class="inline">:family</code> - Protocol family (default: <code class="inline">:inet</code>)</li></ul></li></ul><p>Or:</p><ul><li><code class="inline">table</code> - Table name (string)</li><li><code class="inline">chain</code> - Chain name (string)</li><li><code class="inline">opts</code> - Keyword list options:<ul><li><code class="inline">:family</code> - Protocol family (default: <code class="inline">:inet</code>)</li></ul></li></ul><h2 id="list_rules/1-examples" class="section-heading"><a href="#list_rules/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># List all rules for a family</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_rules</span><span class="p" data-group-id="3060323655-1">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="3060323655-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="3060323655-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="3060323655-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="3060323655-3">(</span><span class="p" data-group-id="3060323655-3">)</span><span class="w">
+
+</span><span class="c1"># List rules in a specific chain</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_rules</span><span class="p" data-group-id="3060323655-4">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="3060323655-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="3060323655-5">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="3060323655-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="3060323655-6">(</span><span class="p" data-group-id="3060323655-6">)</span><span class="w">
+
+</span><span class="c1"># With options</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_rules</span><span class="p" data-group-id="3060323655-7">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet6</span><span class="p" data-group-id="3060323655-7">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="3060323655-8">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="3060323655-8">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="3060323655-9">(</span><span class="p" data-group-id="3060323655-9">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_rules/2">
+
+  <div class="detail-header">
+    <a href="#list_rules/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_rules(table, chain)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L151" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_rules(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="list_rules/3">
+
+  <div class="detail-header">
+    <a href="#list_rules/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_rules(table, chain, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_rules(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="list_ruleset/1">
+
+    <span id="list_ruleset/0"></span>
+
+  <div class="detail-header">
+    <a href="#list_ruleset/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_ruleset(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L269" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_ruleset(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to list the entire ruleset.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="list_ruleset/1-options" class="section-heading"><a href="#list_ruleset/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:family</code> - Protocol family (optional, default: list all families)</li></ul><h2 id="list_ruleset/1-examples" class="section-heading"><a href="#list_ruleset/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># List entire ruleset</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_ruleset</span><span class="p" data-group-id="1068353314-1">(</span><span class="p" data-group-id="1068353314-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="1068353314-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="1068353314-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="1068353314-3">(</span><span class="p" data-group-id="1068353314-3">)</span><span class="w">
+</span><span class="c1">#=&gt; {:ok, %{</span><span class="w">
+</span><span class="c1">#     tables: [...],</span><span class="w">
+</span><span class="c1">#     chains: [...],</span><span class="w">
+</span><span class="c1">#     rules: [...],</span><span class="w">
+</span><span class="c1">#     sets: [...]</span><span class="w">
+</span><span class="c1">#   }}</span><span class="w">
+
+</span><span class="c1"># List ruleset for specific family</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_ruleset</span><span class="p" data-group-id="1068353314-4">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="1068353314-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="1068353314-5">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="1068353314-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="1068353314-6">(</span><span class="p" data-group-id="1068353314-6">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_set_elements/3">
+
+    <span id="list_set_elements/2"></span>
+
+  <div class="detail-header">
+    <a href="#list_set_elements/3" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_set_elements(table, set_name, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L222" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_set_elements(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to list set elements.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="list_set_elements/3-parameters" class="section-heading"><a href="#list_set_elements/3-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">table</code> - Table name (string)</li><li><code class="inline">set_name</code> - Set name (string)</li><li><code class="inline">opts</code> - Keyword list options:<ul><li><code class="inline">:family</code> - Protocol family (default: <code class="inline">:inet</code>)</li></ul></li></ul><h2 id="list_set_elements/3-examples" class="section-heading"><a href="#list_set_elements/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Query</span><span class="o">.</span><span class="n">list_set_elements</span><span class="p" data-group-id="0182045789-1">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;blocklist&quot;</span><span class="p" data-group-id="0182045789-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="0182045789-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="0182045789-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="0182045789-3">(</span><span class="p" data-group-id="0182045789-3">)</span><span class="w">
+
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_set_elements</span><span class="p" data-group-id="0182045789-4">(</span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;blocklist&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet6</span><span class="p" data-group-id="0182045789-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="0182045789-5">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="0182045789-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="0182045789-6">(</span><span class="p" data-group-id="0182045789-6">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_sets/1">
+
+    <span id="list_sets/0"></span>
+
+  <div class="detail-header">
+    <a href="#list_sets/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_sets(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L189" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_sets(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to list sets.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="list_sets/1-options" class="section-heading"><a href="#list_sets/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:family</code> - Protocol family (optional)</li></ul><h2 id="list_sets/1-examples" class="section-heading"><a href="#list_sets/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">Query</span><span class="o">.</span><span class="n">list_sets</span><span class="p" data-group-id="1149129734-1">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="1149129734-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="1149129734-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="1149129734-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="1149129734-3">(</span><span class="p" data-group-id="1149129734-3">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_tables/1">
+
+    <span id="list_tables/0"></span>
+
+  <div class="detail-header">
+    <a href="#list_tables/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">list_tables(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/query.ex#L68" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_tables(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Build a command map to list tables.</p><p>Returns a map that can be piped to Executor.execute/2.</p><h2 id="list_tables/1-options" class="section-heading"><a href="#list_tables/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:family</code> - Protocol family (optional)</li></ul><h2 id="list_tables/1-examples" class="section-heading"><a href="#list_tables/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># List all tables</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="1143456952-1">(</span><span class="p" data-group-id="1143456952-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="1143456952-2">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="1143456952-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="1143456952-3">(</span><span class="p" data-group-id="1143456952-3">)</span><span class="w">
+
+</span><span class="c1"># List tables for specific family</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="1143456952-4">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="1143456952-4">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="1143456952-5">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="1143456952-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="1143456952-6">(</span><span class="p" data-group-id="1143456952-6">)</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/nftables_ex/0.4.0" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/nftables_ex/0.4.0">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="NFTablesEx.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>

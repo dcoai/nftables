@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.39.1">
+    <meta name="project" content="NFTablesEx v0.4.0">
+
+
+    <title>NFTablesEx.Decoder — NFTablesEx v0.4.0</title>
+
+    <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
+
+    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="docs_config.js"></script>
+    <script defer src="dist/html-HBZYRXZS.js"></script>
+
+  </head>
+  <body>
+    <script>(()=>{var t="ex_doc:settings",e="dark";var o="dark",s="light";var E="sidebar_state",n="closed";var r="sidebar_width";var a="sidebar-open";var i=new URLSearchParams(window.location.search),S=i.get("theme")||JSON.parse(localStorage.getItem(t)||"{}").theme;(S===o||S!==s&&window.matchMedia("(prefers-color-scheme: dark)").matches)&&document.body.classList.add(e);var d=sessionStorage.getItem(E),A=d!==n&&!window.matchMedia(`screen and (max-width: ${768}px)`).matches;document.body.classList.toggle(a,A);var c=sessionStorage.getItem(r);c&&document.body.style.setProperty("--sidebarWidth",`${c}px`);var p=/(Macintosh|iPhone|iPad|iPod)/.test(window.navigator.userAgent);document.documentElement.classList.toggle("apple-os",p);})();
+</script>
+
+<div class="body-wrapper">
+
+<button id="sidebar-menu" class="sidebar-button sidebar-toggle" aria-label="toggle sidebar" aria-controls="sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<nav id="sidebar" class="sidebar">
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectInfo">
+
+      <div>
+        <a href="readme.html" class="sidebar-projectName" translate="no">
+NFTablesEx
+        </a>
+        <div class="sidebar-projectVersion" translate="no">
+          v0.4.0
+        </div>
+      </div>
+    </div>
+    <ul id="sidebar-list-nav" class="sidebar-list-nav" role="tablist" data-extras=""></ul>
+  </div>
+</nav>
+
+<output role="status" id="toast"></output>
+
+<main class="content page-module" id="main" data-type="modules">
+  <div id="content" class="content-inner">
+    <div class="top-search">
+      <div class="search-settings">
+        <form class="search-bar" action="search.html">
+          <label class="search-label">
+            <span class="sr-only">Search documentation of NFTablesEx</span>
+            <div class="search-input-wrapper">
+              <input name="q" type="text" class="search-input" placeholder="Press / to search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+              <button type="button" tabindex="-1" class="search-close-button" aria-hidden="true">
+                <i class="ri-close-line ri-lg" title="Cancel search"></i>
+              </button>
+            </div>
+          </label>
+        </form>
+        <div class="autocomplete">
+        </div>
+        <div class="engine-selector" data-multiple="false">
+          <button type="button" class="engine-button" aria-label="Select search engine" aria-haspopup="true" aria-expanded="false">
+            <i class="ri-search-2-line" aria-hidden="true"></i>
+            <span class="engine-name">Default</span>
+            <i class="ri-arrow-down-s-line" aria-hidden="true"></i>
+          </button>
+          <div class="engine-dropdown" hidden role="menu">
+
+              <button type="button"
+                      class="engine-option"
+                      data-engine-url="search.html?q="
+                      role="menuitemradio"
+                      aria-checked="true">
+                <span class="name">Default</span>
+                <span class="help">In-browser search</span>
+              </button>
+
+          </div>
+        </div>
+        <button class="icon-settings display-settings">
+          <i class="ri-settings-3-line"></i>
+          <span class="sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+
+<div id="top-content">
+  <div class="heading-with-actions top-heading">
+    <h1>
+      <span translate="no">NFTablesEx.Decoder</span> 
+      <small class="app-vsn" translate="no">(NFTablesEx v0.4.0)</small>
+
+    </h1>
+
+      <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/decoder.ex#L1" title="View Source" class="icon-action" rel="help">
+        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        <span class="sr-only">View Source</span>
+      </a>
+
+  </div>
+
+
+    <section id="moduledoc">
+<p>Universal decoder for all nftables responses.</p><p>Handles read operations, write operations, mixed operations, and errors.</p><h2 id="module-architecture" class="section-heading"><a href="#module-architecture" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Architecture</span></h2><p>The Decoder sits between Executor and user code, transforming nftables JSON
+responses into idiomatic Elixir structures:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="9923686824-1">(</span><span class="p" data-group-id="9923686824-1">)</span><span class="w">          </span><span class="c1"># Build command (pure function)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="9923686824-2">(</span><span class="n">pid</span><span class="p" data-group-id="9923686824-2">)</span><span class="w">     </span><span class="c1"># Execute &amp; JSON decode</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="9923686824-3">(</span><span class="p" data-group-id="9923686824-3">)</span><span class="w">          </span><span class="c1"># Transform to Elixir</span></code></pre><h2 id="module-response-types" class="section-heading"><a href="#module-response-types" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Response Types</span></h2><h3 id="module-write-only-responses" class="section-heading"><a href="#module-write-only-responses" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Write-Only Responses</span></h3><p>Empty responses from write operations (add, delete, flush):</p><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span></code></pre><h3 id="module-read-only-responses" class="section-heading"><a href="#module-read-only-responses" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Read-Only Responses</span></h3><p>Data responses from list operations, flat structure matching nftables:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="4027690207-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4027690207-2">%{</span><span class="w">
+  </span><span class="ss">tables</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4027690207-3">[</span><span class="p" data-group-id="4027690207-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4027690207-4">}</span><span class="p" data-group-id="4027690207-3">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">chains</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4027690207-5">[</span><span class="p" data-group-id="4027690207-6">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4027690207-6">}</span><span class="p" data-group-id="4027690207-5">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">rules</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4027690207-7">[</span><span class="p" data-group-id="4027690207-8">%{</span><span class="ss">handle</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">chain</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4027690207-8">}</span><span class="p" data-group-id="4027690207-7">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">sets</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4027690207-9">[</span><span class="p" data-group-id="4027690207-10">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;blocklist&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4027690207-10">}</span><span class="p" data-group-id="4027690207-9">]</span><span class="w">
+</span><span class="p" data-group-id="4027690207-2">}</span><span class="p" data-group-id="4027690207-1">}</span></code></pre><p>Empty lists are filtered out automatically.</p><h3 id="module-mixed-responses" class="section-heading"><a href="#module-mixed-responses" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Mixed Responses</span></h3><p>Batch operations with both writes and reads:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="4536063585-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4536063585-2">%{</span><span class="w">
+  </span><span class="ss">operations</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4536063585-3">[</span><span class="ss">:success</span><span class="p">,</span><span class="w"> </span><span class="ss">:success</span><span class="p" data-group-id="4536063585-3">]</span><span class="p">,</span><span class="w">
+  </span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4536063585-4">%{</span><span class="ss">tables</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4536063585-5">[</span><span class="n">...</span><span class="p" data-group-id="4536063585-5">]</span><span class="p">,</span><span class="w"> </span><span class="ss">chains</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4536063585-6">[</span><span class="n">...</span><span class="p" data-group-id="4536063585-6">]</span><span class="p" data-group-id="4536063585-4">}</span><span class="w">
+</span><span class="p" data-group-id="4536063585-2">}</span><span class="p" data-group-id="4536063585-1">}</span></code></pre><h3 id="module-error-responses" class="section-heading"><a href="#module-error-responses" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Error Responses</span></h3><p>Contextual errors indicating operation type:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="8947056936-1">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8947056936-2">{</span><span class="ss">:write_failed</span><span class="p">,</span><span class="w"> </span><span class="n">reason</span><span class="p" data-group-id="8947056936-2">}</span><span class="p" data-group-id="8947056936-1">}</span><span class="w">
+</span><span class="p" data-group-id="8947056936-3">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8947056936-4">{</span><span class="ss">:read_failed</span><span class="p">,</span><span class="w"> </span><span class="n">reason</span><span class="p" data-group-id="8947056936-4">}</span><span class="p" data-group-id="8947056936-3">}</span><span class="w">
+</span><span class="p" data-group-id="8947056936-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8947056936-6">{</span><span class="ss">:mixed_failed</span><span class="p">,</span><span class="w"> </span><span class="n">reason</span><span class="p" data-group-id="8947056936-6">}</span><span class="p" data-group-id="8947056936-5">}</span></code></pre><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Write operation</span><span class="w">
+</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="0661093213-1">(</span><span class="p" data-group-id="0661093213-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="0661093213-2">}</span><span class="p" data-group-id="0661093213-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="0661093213-3">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="0661093213-3">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="0661093213-4">(</span><span class="p" data-group-id="0661093213-4">)</span><span class="w">
+</span><span class="c1">#=&gt; :ok</span><span class="w">
+
+</span><span class="c1"># Read operation</span><span class="w">
+</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="0661093213-5">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="0661093213-5">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="0661093213-6">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="0661093213-6">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="0661093213-7">(</span><span class="p" data-group-id="0661093213-7">)</span><span class="w">
+</span><span class="c1">#=&gt; {:ok, %{tables: [...]}}</span><span class="w">
+
+</span><span class="c1"># Mixed batch</span><span class="w">
+</span><span class="nc">Batch</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="0661093213-8">(</span><span class="p" data-group-id="0661093213-8">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="0661093213-9">(</span><span class="nc">Table</span><span class="o">.</span><span class="n">build_add</span><span class="p" data-group-id="0661093213-10">(</span><span class="p" data-group-id="0661093213-11">%{</span><span class="n">...</span><span class="p" data-group-id="0661093213-11">}</span><span class="p" data-group-id="0661093213-10">)</span><span class="p" data-group-id="0661093213-9">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Batch</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="0661093213-12">(</span><span class="nc">Query</span><span class="o">.</span><span class="n">list_tables</span><span class="p" data-group-id="0661093213-13">(</span><span class="p" data-group-id="0661093213-13">)</span><span class="p" data-group-id="0661093213-12">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Executor</span><span class="o">.</span><span class="n">execute</span><span class="p" data-group-id="0661093213-14">(</span><span class="ss">pid</span><span class="p">:</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="0661093213-14">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="0661093213-15">(</span><span class="p" data-group-id="0661093213-15">)</span><span class="w">
+</span><span class="c1">#=&gt; {:ok, %{operations: [:success], data: %{tables: [...]}}}</span></code></pre>
+    </section>
+
+</div>
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Summary</span>
+    </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:decoded_data/0" data-no-tooltip="" translate="no">decoded_data()</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:decoded_response/0" data-no-tooltip="" translate="no">decoded_response()</a>
+
+      </div>
+
+    </div>
+
+</div>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#decode/1" data-no-tooltip="" translate="no">decode(arg)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Universal decode function that handles any nftables response.</p></div>
+
+    </div>
+
+</div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Types</span>
+    </h1>
+
+    <div class="types-list">
+<section class="detail" id="t:decoded_data/0">
+
+  <div class="detail-header">
+    <a href="#t:decoded_data/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decoded_data()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/decoder.ex#L75" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> decoded_data() :: %{
+  optional(:tables) =&gt; [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
+  optional(:chains) =&gt; [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
+  optional(:rules) =&gt; [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()],
+  optional(:sets) =&gt; [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()]
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="t:decoded_response/0">
+
+  <div class="detail-header">
+    <a href="#t:decoded_response/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decoded_response()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/decoder.ex#L82" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> decoded_response() ::
+  :ok
+  | {:ok, <a href="#t:decoded_data/0">decoded_data</a>()}
+  | {:ok, %{operations: [:success], data: <a href="#t:decoded_data/0">decoded_data</a>()}}
+  | {:error, {<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+      </a>
+      <span class="text">Functions</span>
+    </h1>
+
+    <div class="functions-list">
+<section class="detail" id="decode/1">
+
+  <div class="detail-header">
+    <a href="#decode/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">decode(arg)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex/decoder.ex#L124" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> decode({:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}) :: <a href="#t:decoded_response/0">decoded_response</a>()</pre>
+
+      </div>
+
+<p>Universal decode function that handles any nftables response.</p><p>Automatically detects response type (write/read/mixed/error) and transforms
+to appropriate Elixir structure.</p><h2 id="decode/1-parameters" class="section-heading"><a href="#decode/1-parameters" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Parameters</span></h2><ul><li><code class="inline">response</code> - The response tuple from Executor.execute/2</li></ul><h2 id="decode/1-returns" class="section-heading"><a href="#decode/1-returns" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Returns</span></h2><ul><li><code class="inline">:ok</code> - For successful write-only operations</li><li><code class="inline">{:ok, %{...}}</code> - For read-only operations with data</li><li><code class="inline">{:ok, %{operations: [...], data: %{...}}}</code> - For mixed operations</li><li><code class="inline">{:error, {context, reason}}</code> - For errors with context</li></ul><h2 id="decode/1-examples" class="section-heading"><a href="#decode/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Write-only (empty response)</span><span class="w">
+</span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="7297691117-1">(</span><span class="p" data-group-id="7297691117-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7297691117-3">%{</span><span class="p" data-group-id="7297691117-3">}</span><span class="p" data-group-id="7297691117-2">}</span><span class="p" data-group-id="7297691117-1">)</span><span class="w">
+</span><span class="c1">#=&gt; :ok</span><span class="w">
+
+</span><span class="c1"># Read-only (has data)</span><span class="w">
+</span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="7297691117-4">(</span><span class="p" data-group-id="7297691117-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7297691117-6">%{</span><span class="s">&quot;nftables&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="7297691117-7">[</span><span class="p" data-group-id="7297691117-8">%{</span><span class="s">&quot;table&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7297691117-8">}</span><span class="p" data-group-id="7297691117-7">]</span><span class="p" data-group-id="7297691117-6">}</span><span class="p" data-group-id="7297691117-5">}</span><span class="p" data-group-id="7297691117-4">)</span><span class="w">
+</span><span class="c1">#=&gt; {:ok, %{tables: [...]}}</span><span class="w">
+
+</span><span class="c1"># Mixed (batch with writes and reads)</span><span class="w">
+</span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="7297691117-9">(</span><span class="p" data-group-id="7297691117-10">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7297691117-11">%{</span><span class="s">&quot;nftables&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p" data-group-id="7297691117-12">[</span><span class="n">empty</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7297691117-13">%{</span><span class="s">&quot;table&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7297691117-13">}</span><span class="p" data-group-id="7297691117-12">]</span><span class="p" data-group-id="7297691117-11">}</span><span class="p" data-group-id="7297691117-10">}</span><span class="p" data-group-id="7297691117-9">)</span><span class="w">
+</span><span class="c1">#=&gt; {:ok, %{operations: [:success], data: %{tables: [...]}}}</span><span class="w">
+
+</span><span class="c1"># Error</span><span class="w">
+</span><span class="nc">Decoder</span><span class="o">.</span><span class="n">decode</span><span class="p" data-group-id="7297691117-14">(</span><span class="p" data-group-id="7297691117-15">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Table already exists&quot;</span><span class="p" data-group-id="7297691117-15">}</span><span class="p" data-group-id="7297691117-14">)</span><span class="w">
+</span><span class="c1">#=&gt; {:error, {:write_failed, &quot;Table already exists&quot;}}</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+    <footer class="footer">
+      <p>
+
+          <span class="line">
+            <a href="https://hex.pm/packages/nftables_ex/0.4.0" class="footer-hex-package">Hex Package</a>
+
+            <a href="https://preview.hex.pm/preview/nftables_ex/0.4.0">Hex Preview</a>
+
+          </span>
+
+        <span class="line">
+          <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+            Search HexDocs
+          </button>
+
+            <a href="NFTablesEx.epub" title="ePub version">
+              Download ePub version
+            </a>
+
+        </span>
+      </p>
+
+      <p class="built-using">
+        Built using
+        <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.39.1) for the
+
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+      </p>
+
+    </footer>
+  </div>
+</main>
+</div>
+
+  </body>
+</html>
