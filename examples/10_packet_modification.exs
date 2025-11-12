@@ -127,56 +127,56 @@ defmodule PacketModificationExample do
     # Expedited Forwarding (EF) - VoIP voice
     IO.puts("  • DSCP 46 (EF) → Critical (Voice)")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dscp(@dscp_ef)
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_voice)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dscp(@dscp_ef)
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_voice)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 4 (AF41) - Video conferencing
     IO.puts("  • DSCP 34 (AF41) → Critical (Video)")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dscp(@dscp_af41)
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_video)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dscp(@dscp_af41)
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_video)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 3 (AF31) - Call signaling
     IO.puts("  • DSCP 26 (AF31) → High (Signaling)")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dscp(@dscp_af31)
-    |> RuleBuilder.set_mark(@mark_high)
-    |> RuleBuilder.set_connmark(@connmark_realtime)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dscp(@dscp_af31)
+    |> Match.set_mark(@mark_high)
+    |> Match.set_connmark(@connmark_realtime)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 2 (AF21) - Streaming media
     IO.puts("  • DSCP 18 (AF21) → Normal (Streaming)")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dscp(@dscp_af21)
-    |> RuleBuilder.set_mark(@mark_normal)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dscp(@dscp_af21)
+    |> Match.set_mark(@mark_normal)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 1 (AF11) - Bulk data
     IO.puts("  • DSCP 10 (AF11) → Bulk")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dscp(@dscp_af11)
-    |> RuleBuilder.set_mark(@mark_bulk)
-    |> RuleBuilder.set_connmark(@connmark_bulk)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dscp(@dscp_af11)
+    |> Match.set_mark(@mark_bulk)
+    |> Match.set_connmark(@connmark_bulk)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("")
   end
@@ -196,22 +196,22 @@ defmodule PacketModificationExample do
     IO.puts("    - RTP (10000-20000 UDP)")
 
     # SIP signaling (UDP 5060)
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_udp_dport(5060)
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_voice)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.udp_dport(5060)
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_voice)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # SIP TLS (TCP 5061)
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dest_port(5061)
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_voice)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dest_port(5061)
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_voice)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Interactive protocols - High
     IO.puts("\n  • Interactive protocols → High")
@@ -220,37 +220,37 @@ defmodule PacketModificationExample do
     IO.puts("    - RDP (3389)")
 
     # SSH
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dest_port(22)
-    |> RuleBuilder.set_mark(@mark_high)
-    |> RuleBuilder.set_connmark(@connmark_interactive)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dest_port(22)
+    |> Match.set_mark(@mark_high)
+    |> Match.set_connmark(@connmark_interactive)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # DNS (UDP and TCP)
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_udp_dport(53)
-    |> RuleBuilder.set_mark(@mark_high)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.udp_dport(53)
+    |> Match.set_mark(@mark_high)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dest_port(53)
-    |> RuleBuilder.set_mark(@mark_high)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dest_port(53)
+    |> Match.set_mark(@mark_high)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # RDP
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dest_port(3389)
-    |> RuleBuilder.set_mark(@mark_high)
-    |> RuleBuilder.set_connmark(@connmark_interactive)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dest_port(3389)
+    |> Match.set_mark(@mark_high)
+    |> Match.set_connmark(@connmark_interactive)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Web protocols - Normal
     IO.puts("\n  • Web protocols → Normal")
@@ -258,13 +258,13 @@ defmodule PacketModificationExample do
     IO.puts("    - HTTPS (443)")
 
     for port <- [80, 443] do
-      RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-      |> RuleBuilder.match_dest_port(port)
-      |> RuleBuilder.set_mark(@mark_normal)
-      |> RuleBuilder.set_connmark(@connmark_web)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "PREROUTING", family: :inet)
+      |> Match.dest_port(port)
+      |> Match.set_mark(@mark_normal)
+      |> Match.set_connmark(@connmark_web)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # Email protocols - Normal
@@ -274,13 +274,13 @@ defmodule PacketModificationExample do
     IO.puts("    - POP3 (110, 995)")
 
     for port <- [25, 587, 143, 993, 110, 995] do
-      RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-      |> RuleBuilder.match_dest_port(port)
-      |> RuleBuilder.set_mark(@mark_normal)
-      |> RuleBuilder.set_connmark(@connmark_email)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "PREROUTING", family: :inet)
+      |> Match.dest_port(port)
+      |> Match.set_mark(@mark_normal)
+      |> Match.set_connmark(@connmark_email)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # Bulk protocols - Bulk
@@ -291,23 +291,23 @@ defmodule PacketModificationExample do
 
     # FTP
     for port <- [20, 21] do
-      RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-      |> RuleBuilder.match_dest_port(port)
-      |> RuleBuilder.set_mark(@mark_bulk)
-      |> RuleBuilder.set_connmark(@connmark_bulk)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "PREROUTING", family: :inet)
+      |> Match.dest_port(port)
+      |> Match.set_mark(@mark_bulk)
+      |> Match.set_connmark(@connmark_bulk)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # rsync
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_dest_port(873)
-    |> RuleBuilder.set_mark(@mark_bulk)
-    |> RuleBuilder.set_connmark(@connmark_bulk)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.dest_port(873)
+    |> Match.set_mark(@mark_bulk)
+    |> Match.set_connmark(@connmark_bulk)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("")
   end
@@ -328,22 +328,22 @@ defmodule PacketModificationExample do
     IO.puts("    - WebRTC (various)")
 
     # Zoom media
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_udp_sport(8801)
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_video)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.udp_sport(8801)
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_video)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Teams STUN/TURN
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_udp_dport(3478)
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_video)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.udp_dport(3478)
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_video)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Database connections - High (interactive queries)
     IO.puts("\n  • Database protocols → High")
@@ -352,12 +352,12 @@ defmodule PacketModificationExample do
     IO.puts("    - MongoDB (27017)")
 
     for port <- [5432, 3306, 27017] do
-      RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-      |> RuleBuilder.match_dest_port(port)
-      |> RuleBuilder.set_mark(@mark_high)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "PREROUTING", family: :inet)
+      |> Match.dest_port(port)
+      |> Match.set_mark(@mark_high)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # Cloud backup services - Bulk
@@ -365,14 +365,14 @@ defmodule PacketModificationExample do
     IO.puts("    - Detection via packet size + connection tracking")
 
     # Large uploads (>1MB packets are likely backups)
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_length(:gt, 1400)  # Near MTU = likely bulk transfer
-    |> RuleBuilder.match_dest_port(443)  # HTTPS backup services
-    |> RuleBuilder.set_mark(@mark_bulk)
-    |> RuleBuilder.set_connmark(@connmark_bulk)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.length(:gt, 1400)  # Near MTU = likely bulk transfer
+    |> Match.dest_port(443)  # HTTPS backup services
+    |> Match.set_mark(@mark_bulk)
+    |> Match.set_connmark(@connmark_bulk)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("")
   end
@@ -389,47 +389,47 @@ defmodule PacketModificationExample do
     # Voice/Video subnet (192.168.1.0/26) - Critical
     IO.puts("  • Voice/Video subnet (192.168.1.0/26) → Critical")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_source_ip("192.168.1.0/26")
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.set_mark(@mark_critical)
-    |> RuleBuilder.set_connmark(@connmark_realtime)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.source_ip("192.168.1.0/26")
+    |> Match.ct_state([:new])
+    |> Match.set_mark(@mark_critical)
+    |> Match.set_connmark(@connmark_realtime)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Management subnet (192.168.1.64/26) - High
     IO.puts("  • Management subnet (192.168.1.64/26) → High")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_source_ip("192.168.1.64/26")
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.set_mark(@mark_high)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.source_ip("192.168.1.64/26")
+    |> Match.ct_state([:new])
+    |> Match.set_mark(@mark_high)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Engineering subnet (192.168.1.128/26) - Normal
     IO.puts("  • Engineering subnet (192.168.1.128/26) → Normal")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_source_ip("192.168.1.128/26")
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.set_mark(@mark_normal)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.source_ip("192.168.1.128/26")
+    |> Match.ct_state([:new])
+    |> Match.set_mark(@mark_normal)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Guest subnet (192.168.1.192/26) - Bulk
     IO.puts("  • Guest subnet (192.168.1.192/26) → Bulk")
 
-    RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-    |> RuleBuilder.match_source_ip("192.168.1.192/26")
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.set_mark(@mark_bulk)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "PREROUTING", family: :inet)
+    |> Match.source_ip("192.168.1.192/26")
+    |> Match.ct_state([:new])
+    |> Match.set_mark(@mark_bulk)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("")
   end
@@ -453,13 +453,13 @@ defmodule PacketModificationExample do
           {@mark_normal, @connmark_web, "Web"},
           {@mark_bulk, @connmark_bulk, "Bulk"}
         ] do
-      RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-      |> RuleBuilder.match_ct_state([:new])
-      |> RuleBuilder.match_mark(mark)
-      |> RuleBuilder.set_connmark(connmark)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "PREROUTING", family: :inet)
+      |> Match.ct_state([:new])
+      |> Match.mark(mark)
+      |> Match.set_connmark(connmark)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     IO.puts("\n  Connection marks ensure:")
@@ -491,13 +491,13 @@ defmodule PacketModificationExample do
           {@connmark_email, @mark_normal, "Email"},
           {@connmark_bulk, @mark_bulk, "Bulk"}
         ] do
-      RuleBuilder.new(pid, "qos", "PREROUTING", family: :inet)
-      |> RuleBuilder.match_ct_state([:established, :related])
-      |> RuleBuilder.match_connmark(connmark)
-      |> RuleBuilder.set_mark(mark)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "PREROUTING", family: :inet)
+      |> Match.ct_state([:established, :related])
+      |> Match.connmark(connmark)
+      |> Match.set_mark(mark)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     IO.puts("\n  Mark restoration ensures:")
@@ -526,23 +526,23 @@ defmodule PacketModificationExample do
           {@mark_normal, "Normal"},
           {@mark_bulk, "Bulk"}
         ] do
-      RuleBuilder.new(pid, "qos", "FORWARD", family: :inet)
-      |> RuleBuilder.match_mark(mark)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "qos", "FORWARD", family: :inet)
+      |> Match.mark(mark)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # Log QoS violations (if any)
     IO.puts("  • Log unmarked traffic (classification failure)")
 
-    RuleBuilder.new(pid, "qos", "FORWARD", family: :inet)
-    |> RuleBuilder.match_mark(0)  # Unmarked
-    |> RuleBuilder.match_ct_state([:established, :related])
-    |> RuleBuilder.rate_limit(10, :second)
-    |> RuleBuilder.log("QOS-UNCLASSIFIED: ")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "qos", "FORWARD", family: :inet)
+    |> Match.mark(0)  # Unmarked
+    |> Match.ct_state([:established, :related])
+    |> Match.rate_limit(10, :second)
+    |> Match.log("QOS-UNCLASSIFIED: ")
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("\n  QoS monitoring:")
     IO.puts("    ✓ Per-tier packet/byte counters")

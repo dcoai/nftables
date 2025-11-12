@@ -248,11 +248,11 @@ defmodule NATGatewayExample do
     IO.puts("    Port 80 → Proxy (#{@lan_proxy}:3128)")
 
     # Only intercept traffic from LAN, not DMZ
-    RuleBuilder.new(pid, "nat", "prerouting")
-    |> RuleBuilder.match_iif(@lan_interface)
-    |> RuleBuilder.match_dest_port(80)
-    |> RuleBuilder.redirect_to(3128)
-    |> RuleBuilder.commit()
+    Match.new(pid, "nat", "prerouting")
+    |> Match.iif(@lan_interface)
+    |> Match.dest_port(80)
+    |> Match.redirect_to(3128)
+    |> Match.commit()
 
     IO.puts("    ✓ HTTP redirection enabled")
 
@@ -260,11 +260,11 @@ defmodule NATGatewayExample do
     IO.puts("\n  • HTTPS Traffic (SSL Bump)")
     IO.puts("    Port 443 → Proxy (#{@lan_proxy}:3129)")
 
-    RuleBuilder.new(pid, "nat", "prerouting")
-    |> RuleBuilder.match_iif(@lan_interface)
-    |> RuleBuilder.match_dest_port(443)
-    |> RuleBuilder.redirect_to(3129)
-    |> RuleBuilder.commit()
+    Match.new(pid, "nat", "prerouting")
+    |> Match.iif(@lan_interface)
+    |> Match.dest_port(443)
+    |> Match.redirect_to(3129)
+    |> Match.commit()
 
     IO.puts("    ✓ HTTPS redirection enabled")
     IO.puts("    ⚠ Requires proxy with SSL inspection certificate")
@@ -297,17 +297,17 @@ defmodule NATGatewayExample do
     IO.puts("  • DNS Enforcement")
     IO.puts("    Force all DNS queries → 192.168.1.1:53")
 
-    RuleBuilder.new(pid, "nat", "prerouting")
-    |> RuleBuilder.match_iif(@lan_interface)
-    |> RuleBuilder.match_udp_dport(53)
-    |> RuleBuilder.dnat_to("192.168.1.1", port: 53)
-    |> RuleBuilder.commit()
+    Match.new(pid, "nat", "prerouting")
+    |> Match.iif(@lan_interface)
+    |> Match.udp_dport(53)
+    |> Match.dnat_to("192.168.1.1", port: 53)
+    |> Match.commit()
 
-    RuleBuilder.new(pid, "nat", "prerouting")
-    |> RuleBuilder.match_iif(@lan_interface)
-    |> RuleBuilder.match_dest_port(53)  # TCP DNS
-    |> RuleBuilder.dnat_to("192.168.1.1", port: 53)
-    |> RuleBuilder.commit()
+    Match.new(pid, "nat", "prerouting")
+    |> Match.iif(@lan_interface)
+    |> Match.dest_port(53)  # TCP DNS
+    |> Match.dnat_to("192.168.1.1", port: 53)
+    |> Match.commit()
 
     IO.puts("    ✓ DNS redirection enabled (UDP+TCP)")
     IO.puts("      Prevents bypassing DNS filtering")
@@ -316,11 +316,11 @@ defmodule NATGatewayExample do
     IO.puts("\n  • NTP Enforcement")
     IO.puts("    Force all NTP queries → 192.168.1.1:123")
 
-    RuleBuilder.new(pid, "nat", "prerouting")
-    |> RuleBuilder.match_iif(@lan_interface)
-    |> RuleBuilder.match_udp_dport(123)
-    |> RuleBuilder.dnat_to("192.168.1.1", port: 123)
-    |> RuleBuilder.commit()
+    Match.new(pid, "nat", "prerouting")
+    |> Match.iif(@lan_interface)
+    |> Match.udp_dport(123)
+    |> Match.dnat_to("192.168.1.1", port: 123)
+    |> Match.commit()
 
     IO.puts("    ✓ NTP redirection enabled")
 
@@ -329,11 +329,11 @@ defmodule NATGatewayExample do
     IO.puts("    Internal clients can access services via public IPs")
 
     # Allow internal clients to reach DMZ via public IPs
-    RuleBuilder.new(pid, "nat", "postrouting")
-    |> RuleBuilder.match_source_ip(@lan_network)
-    |> RuleBuilder.match_dest_ip(@dmz_network)
-    |> RuleBuilder.masquerade()
-    |> RuleBuilder.commit()
+    Match.new(pid, "nat", "postrouting")
+    |> Match.source_ip(@lan_network)
+    |> Match.dest_ip(@dmz_network)
+    |> Match.masquerade()
+    |> Match.commit()
 
     IO.puts("    ✓ Hairpin NAT enabled")
     IO.puts("      LAN can reach DMZ services via public IPs")

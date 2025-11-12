@@ -115,7 +115,7 @@ DDoS protection and resource management through rate limiting.
 - New connection rate limiting
 - Burst handling
 - SYN flood protection
-- RuleBuilder API usage
+- Match API usage
 
 **Use case:** Public-facing servers, API endpoints, DDoS mitigation
 
@@ -172,40 +172,40 @@ High-level functions for common firewall configurations:
 :ok = NFTex.Policy.allow_dns(pid)
 ```
 
-### NFTex.RuleBuilder - Fluent API for Rules
+### NFTex.Match - Fluent API for Rules
 
 Chainable API for building complex rules intuitively:
 
 ```elixir
-alias NFTex.RuleBuilder
+alias NFTex.Match
 
 # Block IP with logging
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_source_ip("192.168.1.100")
-|> RuleBuilder.log("BLOCKED: ")
-|> RuleBuilder.drop()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.source_ip("192.168.1.100")
+|> Match.log("BLOCKED: ")
+|> Match.drop()
+|> Match.commit()
 
 # Rate-limited SSH
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_dest_port(22)
-|> RuleBuilder.rate_limit(10, :minute, burst: 20)
-|> RuleBuilder.counter()
-|> RuleBuilder.accept()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.dest_port(22)
+|> Match.rate_limit(10, :minute, burst: 20)
+|> Match.counter()
+|> Match.accept()
+|> Match.commit()
 
 # Match established connections
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_ct_state([:established, :related])
-|> RuleBuilder.accept()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.ct_state([:established, :related])
+|> Match.accept()
+|> Match.commit()
 
 # Interface-specific rules
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_iif("eth0")
-|> RuleBuilder.match_source_ip("10.0.0.0")
-|> RuleBuilder.reject(:icmp_port_unreachable)
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.iif("eth0")
+|> Match.source_ip("10.0.0.0")
+|> Match.reject(:icmp_port_unreachable)
+|> Match.commit()
 ```
 
 **Available match functions:**

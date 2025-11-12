@@ -6,6 +6,7 @@ High-performance Elixir bindings for Linux nftables via the official libnftables
 
 - **Official API** - Uses libnftables JSON API (no manual netlink messages)
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
+- **Pure Functional Match API** - 🆕 Clean, composable expression builder with no side effects
 - **Sysctl Management** - Safe read/write access to network kernel parameters
 - **Hybrid Approach** - JSON for data operations, nft syntax for complex rules
 - **Distributed Firewall Support** - Build commands centrally, execute on multiple nodes
@@ -14,7 +15,7 @@ High-performance Elixir bindings for Linux nftables via the official libnftables
 - **Dynamic Firewall Management** - Modify firewall rules from your Elixir application
 - **IP Blocklist Management** - Add/remove IPs from blocklists with one function call
 - **Query Operations** - List tables, chains, rules, sets, and elements
-- **Fluent RuleBuilder** - Chainable API for intuitive rule construction
+- **Fluent Builder/Executor** - Clear separation between building and executing commands
 - **Policy Module** - Pre-built firewall policies (SSH, HTTP, rate limiting, etc.)
 - **Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
 - **Secure** - Port runs with minimal privileges (CAP_NET_ADMIN only)
@@ -765,22 +766,52 @@ alias NFTablesEx.{Builder, Rule}
 
 **Note**: The old `Rule.block_ip/4`, `Rule.accept_ip/4`, `Rule.rate_limit/6`, and `Rule.delete/5` functions are deprecated. See the Migration Guide above for how to use the new Builder + Rule API.
 
-### NFTex.RuleBuilder - Fluent Rule Construction
+### NFTex.Match - Pure Expression Builder
+
+The Match module provides a streamlined, pure functional API for building rule expressions:
 
 ```elixir
-alias NFTex.RuleBuilder
+import NFTablesEx.Match
+alias NFTablesEx.{Builder, Executor}
 
-# Build complex rules with chainable API
-:ok = RuleBuilder.new(pid, "filter", "INPUT")
-  |> RuleBuilder.match_source_ip("192.168.1.100")
-  |> RuleBuilder.match_dest_port(22)
-  |> RuleBuilder.rate_limit(5, :minute)
-  |> RuleBuilder.counter()
-  |> RuleBuilder.drop()
-  |> RuleBuilder.commit()
+# Build rule expressions with clean, chainable API
+expr = rule()
+  |> source_ip("192.168.1.100")
+  |> dest_port(22)
+  |> rate_limit(5, :minute)
+  |> counter()
+  |> drop()
+  |> to_expr()
+
+# Execute via Builder/Executor pattern
+Builder.new()
+|> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+|> Executor.execute(pid)
+
+# Or use convenience aliases for more concise code
+:ok = rule()
+  |> source("192.168.1.100")  # alias for source_ip
+  |> dport(22)                 # alias for dest_port
+  |> tcp()                     # match TCP protocol
+  |> limit(5, :minute)         # alias for rate_limit
+  |> counter()
+  |> drop()
+  |> to_expr()
+  |> then(fn expr ->
+    Builder.new()
+    |> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+    |> Executor.execute(pid)
+  end)
 ```
 
-See the [RuleBuilder documentation](lib/nftex/rule_builder.ex) for the full API.
+**Key Features:**
+- **Pure functional** - No side effects, expressions are data
+- **Chainable API** - Build complex rules step by step
+- **Convenience aliases** - `source/1`, `dest/1`, `dport/1`, `sport/1`, `tcp/1`, `udp/1`
+- **Protocol helpers** - `tcp/0`, `udp/0`, `icmp/0` for common protocols
+- **Composable** - Build expressions in one context, execute in another
+
+See the [Match documentation](lib/nftex/match.ex) for the full API.
 
 ### NFTex.Policy - Pre-built Policies
 
@@ -880,28 +911,45 @@ alias NFTex.NAT
 ### Connection Tracking
 
 ```elixir
-alias NFTex.RuleBuilder
+import NFTablesEx.Match
+alias NFTablesEx.{Builder, Executor}
 
 # Track connection state
-:ok = RuleBuilder.new(pid, "filter", "INPUT")
-  |> RuleBuilder.match_ct_state([:established, :related])
-  |> RuleBuilder.accept()
-  |> RuleBuilder.commit()
+expr = rule()
+  |> ct_state([:established, :related])
+  |> accept()
+  |> to_expr()
+
+Builder.new()
+|> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+|> Executor.execute(pid)
+
+# Or using Policy helpers for common patterns
+:ok = NFTablesEx.Policy.accept_established(pid)
 
 # Connection limits
-:ok = RuleBuilder.new(pid, "filter", "INPUT")
-  |> RuleBuilder.match_dest_port(80)
-  |> RuleBuilder.match_ct_state([:new])
-  |> RuleBuilder.limit_connections(100)  # Max 100 concurrent connections
-  |> RuleBuilder.drop()
-  |> RuleBuilder.commit()
+expr = rule()
+  |> tcp()
+  |> dest_port(80)
+  |> ct_state([:new])
+  |> limit_connections(100)  # Max 100 concurrent connections
+  |> drop()
+  |> to_expr()
+
+Builder.new()
+|> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+|> Executor.execute(pid)
 
 # Track connection bytes
-:ok = RuleBuilder.new(pid, "filter", "FORWARD")
-  |> RuleBuilder.match_ct_bytes(:gt, 1_000_000)  # Over 1MB
-  |> RuleBuilder.log("LARGE_TRANSFER: ")
-  |> RuleBuilder.accept()
-  |> RuleBuilder.commit()
+expr = rule()
+  |> ct_bytes(:gt, 1_000_000)  # Over 1MB
+  |> log("LARGE_TRANSFER: ")
+  |> accept()
+  |> to_expr()
+
+Builder.new()
+|> Builder.add_rule(expr, table: "filter", chain: "FORWARD", family: :inet)
+|> Executor.execute(pid)
 ```
 
 ### Raw JSON Commands
@@ -1029,26 +1077,38 @@ json_cmd = NFTex.Table.build_add(%{name: "filter", family: :inet})
 response = NFTex.Executor.execute!(json_cmd, pid: pid)
 ```
 
-### RuleBuilder for Remote Execution
+### Match for Remote Execution
 
-The fluent RuleBuilder API can generate commands without committing:
+The Match API generates pure expressions that can be combined with Builder for remote execution:
 
 ```elixir
-alias NFTex.RuleBuilder
+import NFTablesEx.Match
+alias NFTablesEx.Builder
 
-# Build complex rule without executing
-cmd = RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_source_ip("192.168.1.100")
-|> RuleBuilder.match_dest_port(22)
-|> RuleBuilder.rate_limit(10, :minute)
-|> RuleBuilder.log("SSH_ATTACK: ")
-|> RuleBuilder.drop()
-|> RuleBuilder.to_nft_command()  # Returns nft command string
+# Build complex rule as Builder command (not yet executed)
+builder = Builder.new(family: :inet)
+|> Builder.set_table("filter")
+|> Builder.set_chain("INPUT")
+|> Builder.add_rule(
+  rule()
+  |> source_ip("192.168.1.100")
+  |> dest_port(22)
+  |> rate_limit(10, :minute)
+  |> log("SSH_ATTACK: ")
+  |> drop()
+  |> to_expr()
+)
+
+# Convert to JSON command for remote execution
+json_cmd = Builder.to_json(builder)
 
 # Send to remote nodes
-MyTransport.send_to_node("firewall-1", cmd)
-MyTransport.send_to_node("firewall-2", cmd)
-MyTransport.send_to_node("firewall-3", cmd)
+MyTransport.send_to_node("firewall-1", json_cmd)
+MyTransport.send_to_node("firewall-2", json_cmd)
+MyTransport.send_to_node("firewall-3", json_cmd)
+
+# On remote nodes, execute received command
+NFTablesEx.Executor.execute(Jason.decode!(json_cmd), pid: pid)
 ```
 
 ### Build Functions Reference

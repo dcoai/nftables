@@ -79,7 +79,7 @@ defmodule NFTablesEx.MixProject do
       groups_for_modules: [
         "High-Level API": [
           NFTablesEx.Policy,
-          NFTablesEx.RuleBuilder,
+          NFTablesEx.Match,
           NFTablesEx.Chain,
           NFTablesEx.Table,
           NFTablesEx.Rule,

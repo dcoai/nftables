@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
 
-    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="dist/sidebar_items-CF87DEE9.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-HBZYRXZS.js"></script>
 
@@ -109,17 +109,17 @@ NFTablesEx
     <section id="moduledoc">
 <p>Convenience functions for common network sysctl operations.</p><p>This module provides high-level helpers for frequently-used network
 configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><code class="inline">NFTablesEx.Sysctl</code></a> API.</p><h2 id="module-examples" class="section-heading"><a href="#module-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Enable IP forwarding (for routers)</span><span class="w">
-</span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_ipv4_forwarding</span><span class="p" data-group-id="4047138481-1">(</span><span class="n">pid</span><span class="p" data-group-id="4047138481-1">)</span><span class="w">
+</span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_ipv4_forwarding</span><span class="p" data-group-id="0059195514-1">(</span><span class="n">pid</span><span class="p" data-group-id="0059195514-1">)</span><span class="w">
 
 </span><span class="c1"># Configure router settings</span><span class="w">
-</span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">configure_router</span><span class="p" data-group-id="4047138481-2">(</span><span class="n">pid</span><span class="p">,</span><span class="w">
+</span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">configure_router</span><span class="p" data-group-id="0059195514-2">(</span><span class="n">pid</span><span class="p">,</span><span class="w">
   </span><span class="ss">ipv4_forwarding</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
   </span><span class="ss">ipv6_forwarding</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
   </span><span class="ss">syncookies</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="w">
-</span><span class="p" data-group-id="4047138481-2">)</span><span class="w">
+</span><span class="p" data-group-id="0059195514-2">)</span><span class="w">
 
 </span><span class="c1"># Harden security settings</span><span class="w">
-</span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security</span><span class="p" data-group-id="4047138481-3">(</span><span class="n">pid</span><span class="p" data-group-id="4047138481-3">)</span></code></pre>
+</span><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security</span><span class="p" data-group-id="0059195514-3">(</span><span class="n">pid</span><span class="p" data-group-id="0059195514-3">)</span></code></pre>
     </section>
 
 </div>
@@ -325,7 +325,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Allow ICMP ping requests.</p><h2 id="allow_ping/1-example" class="section-heading"><a href="#allow_ping/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">allow_ping</span><span class="p" data-group-id="6502057343-1">(</span><span class="n">pid</span><span class="p" data-group-id="6502057343-1">)</span></code></pre>
+<p>Allow ICMP ping requests.</p><h2 id="allow_ping/1-example" class="section-heading"><a href="#allow_ping/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">allow_ping</span><span class="p" data-group-id="4835046605-1">(</span><span class="n">pid</span><span class="p" data-group-id="4835046605-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="configure_router/2">
@@ -358,12 +358,12 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Configure router settings.</p><p>Applies common settings for a router/gateway.</p><h2 id="configure_router/2-options" class="section-heading"><a href="#configure_router/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:ipv4_forwarding</code> - Enable IPv4 forwarding (default: false)</li><li><code class="inline">:ipv6_forwarding</code> - Enable IPv6 forwarding (default: false)</li><li><code class="inline">:syncookies</code> - Enable SYN cookies (default: false)</li><li><code class="inline">:send_redirects</code> - Enable ICMP redirects (default: false)</li></ul><h2 id="configure_router/2-example" class="section-heading"><a href="#configure_router/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">configure_router</span><span class="p" data-group-id="8285104952-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w">
+<p>Configure router settings.</p><p>Applies common settings for a router/gateway.</p><h2 id="configure_router/2-options" class="section-heading"><a href="#configure_router/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:ipv4_forwarding</code> - Enable IPv4 forwarding (default: false)</li><li><code class="inline">:ipv6_forwarding</code> - Enable IPv6 forwarding (default: false)</li><li><code class="inline">:syncookies</code> - Enable SYN cookies (default: false)</li><li><code class="inline">:send_redirects</code> - Enable ICMP redirects (default: false)</li></ul><h2 id="configure_router/2-example" class="section-heading"><a href="#configure_router/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">configure_router</span><span class="p" data-group-id="6414639042-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w">
   </span><span class="ss">ipv4_forwarding</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
   </span><span class="ss">ipv6_forwarding</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
   </span><span class="ss">syncookies</span><span class="p">:</span><span class="w"> </span><span class="no">true</span><span class="p">,</span><span class="w">
   </span><span class="ss">send_redirects</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="w">
-</span><span class="p" data-group-id="8285104952-1">)</span></code></pre>
+</span><span class="p" data-group-id="6414639042-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="disable_ipv4_forwarding/1">
@@ -391,7 +391,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Disable IPv4 forwarding.</p><h2 id="disable_ipv4_forwarding/1-example" class="section-heading"><a href="#disable_ipv4_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">disable_ipv4_forwarding</span><span class="p" data-group-id="8453635617-1">(</span><span class="n">pid</span><span class="p" data-group-id="8453635617-1">)</span></code></pre>
+<p>Disable IPv4 forwarding.</p><h2 id="disable_ipv4_forwarding/1-example" class="section-heading"><a href="#disable_ipv4_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">disable_ipv4_forwarding</span><span class="p" data-group-id="5360043304-1">(</span><span class="n">pid</span><span class="p" data-group-id="5360043304-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="disable_ipv6_forwarding/1">
@@ -419,7 +419,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Disable IPv6 forwarding.</p><h2 id="disable_ipv6_forwarding/1-example" class="section-heading"><a href="#disable_ipv6_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">disable_ipv6_forwarding</span><span class="p" data-group-id="7219700728-1">(</span><span class="n">pid</span><span class="p" data-group-id="7219700728-1">)</span></code></pre>
+<p>Disable IPv6 forwarding.</p><h2 id="disable_ipv6_forwarding/1-example" class="section-heading"><a href="#disable_ipv6_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">disable_ipv6_forwarding</span><span class="p" data-group-id="5753934059-1">(</span><span class="n">pid</span><span class="p" data-group-id="5753934059-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="disable_syncookies/1">
@@ -447,7 +447,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Disable TCP SYN cookies.</p><h2 id="disable_syncookies/1-example" class="section-heading"><a href="#disable_syncookies/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">disable_syncookies</span><span class="p" data-group-id="7666501819-1">(</span><span class="n">pid</span><span class="p" data-group-id="7666501819-1">)</span></code></pre>
+<p>Disable TCP SYN cookies.</p><h2 id="disable_syncookies/1-example" class="section-heading"><a href="#disable_syncookies/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">disable_syncookies</span><span class="p" data-group-id="8890642520-1">(</span><span class="n">pid</span><span class="p" data-group-id="8890642520-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="enable_ipv4_forwarding/1">
@@ -475,7 +475,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Enable IPv4 forwarding.</p><p>Enables IP forwarding on all interfaces. Required for routers and NAT gateways.</p><h2 id="enable_ipv4_forwarding/1-example" class="section-heading"><a href="#enable_ipv4_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_ipv4_forwarding</span><span class="p" data-group-id="5255718173-1">(</span><span class="n">pid</span><span class="p" data-group-id="5255718173-1">)</span></code></pre>
+<p>Enable IPv4 forwarding.</p><p>Enables IP forwarding on all interfaces. Required for routers and NAT gateways.</p><h2 id="enable_ipv4_forwarding/1-example" class="section-heading"><a href="#enable_ipv4_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_ipv4_forwarding</span><span class="p" data-group-id="2093508408-1">(</span><span class="n">pid</span><span class="p" data-group-id="2093508408-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="enable_ipv6_forwarding/1">
@@ -503,7 +503,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Enable IPv6 forwarding.</p><h2 id="enable_ipv6_forwarding/1-example" class="section-heading"><a href="#enable_ipv6_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_ipv6_forwarding</span><span class="p" data-group-id="5788279816-1">(</span><span class="n">pid</span><span class="p" data-group-id="5788279816-1">)</span></code></pre>
+<p>Enable IPv6 forwarding.</p><h2 id="enable_ipv6_forwarding/1-example" class="section-heading"><a href="#enable_ipv6_forwarding/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_ipv6_forwarding</span><span class="p" data-group-id="5575594651-1">(</span><span class="n">pid</span><span class="p" data-group-id="5575594651-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="enable_syncookies/1">
@@ -531,7 +531,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Enable TCP SYN cookies for DDoS protection.</p><p>SYN cookies help protect against SYN flood attacks.</p><h2 id="enable_syncookies/1-example" class="section-heading"><a href="#enable_syncookies/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_syncookies</span><span class="p" data-group-id="9304627338-1">(</span><span class="n">pid</span><span class="p" data-group-id="9304627338-1">)</span></code></pre>
+<p>Enable TCP SYN cookies for DDoS protection.</p><p>SYN cookies help protect against SYN flood attacks.</p><h2 id="enable_syncookies/1-example" class="section-heading"><a href="#enable_syncookies/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">enable_syncookies</span><span class="p" data-group-id="5148380901-1">(</span><span class="n">pid</span><span class="p" data-group-id="5148380901-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_conntrack_max/1">
@@ -559,7 +559,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Get current connection tracking max.</p><h2 id="get_conntrack_max/1-example" class="section-heading"><a href="#get_conntrack_max/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="7536333860-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">65536</span><span class="p" data-group-id="7536333860-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">get_conntrack_max</span><span class="p" data-group-id="7536333860-2">(</span><span class="n">pid</span><span class="p" data-group-id="7536333860-2">)</span></code></pre>
+<p>Get current connection tracking max.</p><h2 id="get_conntrack_max/1-example" class="section-heading"><a href="#get_conntrack_max/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="7103775011-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="mi">65536</span><span class="p" data-group-id="7103775011-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">get_conntrack_max</span><span class="p" data-group-id="7103775011-2">(</span><span class="n">pid</span><span class="p" data-group-id="7103775011-2">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="harden_security/1">
@@ -588,7 +588,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
       </div>
 
 <p>Harden network security settings for both IPv4 and IPv6.</p><p>Applies security-focused sysctl settings by calling both
-<a href="#harden_security_ipv4/1"><code class="inline">harden_security_ipv4/1</code></a> and <a href="#harden_security_ipv6/1"><code class="inline">harden_security_ipv6/1</code></a>.</p><h2 id="harden_security/1-example" class="section-heading"><a href="#harden_security/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security</span><span class="p" data-group-id="2039713439-1">(</span><span class="n">pid</span><span class="p" data-group-id="2039713439-1">)</span></code></pre>
+<a href="#harden_security_ipv4/1"><code class="inline">harden_security_ipv4/1</code></a> and <a href="#harden_security_ipv6/1"><code class="inline">harden_security_ipv6/1</code></a>.</p><h2 id="harden_security/1-example" class="section-heading"><a href="#harden_security/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security</span><span class="p" data-group-id="1367991804-1">(</span><span class="n">pid</span><span class="p" data-group-id="1367991804-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="harden_security_ipv4/1">
@@ -616,7 +616,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Harden IPv4 network security settings.</p><p>Applies IPv4 security-focused sysctl settings:</p><ul><li>Enable reverse path filtering (anti-spoofing)</li><li>Disable source routing</li><li>Disable ICMP redirects</li><li>Disable send redirects</li><li>Enable SYN cookies (SYN flood protection)</li></ul><h2 id="harden_security_ipv4/1-example" class="section-heading"><a href="#harden_security_ipv4/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security_ipv4</span><span class="p" data-group-id="8025482544-1">(</span><span class="n">pid</span><span class="p" data-group-id="8025482544-1">)</span></code></pre>
+<p>Harden IPv4 network security settings.</p><p>Applies IPv4 security-focused sysctl settings:</p><ul><li>Enable reverse path filtering (anti-spoofing)</li><li>Disable source routing</li><li>Disable ICMP redirects</li><li>Disable send redirects</li><li>Enable SYN cookies (SYN flood protection)</li></ul><h2 id="harden_security_ipv4/1-example" class="section-heading"><a href="#harden_security_ipv4/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security_ipv4</span><span class="p" data-group-id="4889313636-1">(</span><span class="n">pid</span><span class="p" data-group-id="4889313636-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="harden_security_ipv6/1">
@@ -644,7 +644,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Harden IPv6 network security settings.</p><p>Applies IPv6 security-focused sysctl settings:</p><ul><li>Disable source routing</li><li>Disable ICMP redirects</li><li>Disable Router Advertisements (prevents RA-based attacks)</li><li>Disable RA default router</li><li>Disable RA prefix information</li></ul><h2 id="harden_security_ipv6/1-example" class="section-heading"><a href="#harden_security_ipv6/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security_ipv6</span><span class="p" data-group-id="4616683434-1">(</span><span class="n">pid</span><span class="p" data-group-id="4616683434-1">)</span></code></pre>
+<p>Harden IPv6 network security settings.</p><p>Applies IPv6 security-focused sysctl settings:</p><ul><li>Disable source routing</li><li>Disable ICMP redirects</li><li>Disable Router Advertisements (prevents RA-based attacks)</li><li>Disable RA default router</li><li>Disable RA prefix information</li></ul><h2 id="harden_security_ipv6/1-example" class="section-heading"><a href="#harden_security_ipv6/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">harden_security_ipv6</span><span class="p" data-group-id="6920519050-1">(</span><span class="n">pid</span><span class="p" data-group-id="6920519050-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="ignore_ping/1">
@@ -672,7 +672,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Ignore all ICMP ping requests (stealth mode).</p><h2 id="ignore_ping/1-example" class="section-heading"><a href="#ignore_ping/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">ignore_ping</span><span class="p" data-group-id="0629210995-1">(</span><span class="n">pid</span><span class="p" data-group-id="0629210995-1">)</span></code></pre>
+<p>Ignore all ICMP ping requests (stealth mode).</p><h2 id="ignore_ping/1-example" class="section-heading"><a href="#ignore_ping/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">ignore_ping</span><span class="p" data-group-id="9233783803-1">(</span><span class="n">pid</span><span class="p" data-group-id="9233783803-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="ipv4_forwarding_enabled?/1">
@@ -701,7 +701,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Check if IPv4 forwarding is enabled.</p><p>Returns <code class="inline">{:ok, true}</code> if enabled, <code class="inline">{:ok, false}</code> if disabled.</p><h2 id="ipv4_forwarding_enabled?/1-example" class="section-heading"><a href="#ipv4_forwarding_enabled?/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1184154380-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="1184154380-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">ipv4_forwarding_enabled?</span><span class="p" data-group-id="1184154380-2">(</span><span class="n">pid</span><span class="p" data-group-id="1184154380-2">)</span></code></pre>
+<p>Check if IPv4 forwarding is enabled.</p><p>Returns <code class="inline">{:ok, true}</code> if enabled, <code class="inline">{:ok, false}</code> if disabled.</p><h2 id="ipv4_forwarding_enabled?/1-example" class="section-heading"><a href="#ipv4_forwarding_enabled?/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="6862599838-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="no">true</span><span class="p" data-group-id="6862599838-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">ipv4_forwarding_enabled?</span><span class="p" data-group-id="6862599838-2">(</span><span class="n">pid</span><span class="p" data-group-id="6862599838-2">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="set_conntrack_max/2">
@@ -729,7 +729,7 @@ configuration tasks, wrapping the low-level <a href="NFTablesEx.Sysctl.html"><co
 
       </div>
 
-<p>Set maximum connection tracking entries.</p><p>Higher values allow more concurrent connections but use more memory.</p><h2 id="set_conntrack_max/2-example" class="section-heading"><a href="#set_conntrack_max/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">set_conntrack_max</span><span class="p" data-group-id="3305005366-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="mi">131072</span><span class="p" data-group-id="3305005366-1">)</span></code></pre>
+<p>Set maximum connection tracking entries.</p><p>Higher values allow more concurrent connections but use more memory.</p><h2 id="set_conntrack_max/2-example" class="section-heading"><a href="#set_conntrack_max/2-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="ss">:ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx.Sysctl.Network</span><span class="o">.</span><span class="n">set_conntrack_max</span><span class="p" data-group-id="2799629294-1">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="mi">131072</span><span class="p" data-group-id="2799629294-1">)</span></code></pre>
   </section>
 </section>
 

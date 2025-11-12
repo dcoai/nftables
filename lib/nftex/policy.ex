@@ -28,11 +28,13 @@ defmodule NFTablesEx.Policy do
 
   ## See Also
 
-  - `NFTablesEx.RuleBuilder` - Fluent API for custom rules
-  - `NFTablesEx.Rule` - Low-level rule operations
+  - `NFTablesEx.Match` - Fluent API for custom rules
+  - `NFTablesEx.Builder` - Configuration builder
+  - `NFTablesEx.Executor` - Execute configurations
   """
 
-  alias NFTablesEx.RuleBuilder
+  import NFTablesEx.Match
+  alias NFTablesEx.{Builder, Executor}
 
   @doc """
   Accept all loopback traffic.
@@ -51,10 +53,15 @@ defmodule NFTablesEx.Policy do
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
 
-    RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_iif("lo")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    expr_list =
+      rule(family: family)
+      |> iif("lo")
+      |> accept()
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -73,10 +80,15 @@ defmodule NFTablesEx.Policy do
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
 
-    RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_ct_state([:established, :related])
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    expr_list =
+      rule(family: family)
+      |> state([:established, :related])
+      |> accept()
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -106,27 +118,33 @@ defmodule NFTablesEx.Policy do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
-    rate_limit = Keyword.get(opts, :rate_limit)
+    rate_limit_val = Keyword.get(opts, :rate_limit)
     log_enabled = Keyword.get(opts, :log, false)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_dest_port(22)
+    builder =
+      rule(family: family)
+      |> dest_port(22)
 
-    builder = if rate_limit do
-      RuleBuilder.rate_limit(builder, rate_limit, :minute)
+    builder = if rate_limit_val do
+      limit(builder, rate_limit_val, :minute)
     else
       builder
     end
 
     builder = if log_enabled do
-      RuleBuilder.log(builder, "SSH: ")
+      log(builder, "SSH: ")
     else
       builder
     end
 
-    builder
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> accept()
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -189,10 +207,15 @@ defmodule NFTablesEx.Policy do
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
 
-    RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_ct_state([:invalid])
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    expr_list =
+      rule(family: family)
+      |> ct_state([:invalid])
+    |> drop()
+    |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -249,17 +272,22 @@ defmodule NFTablesEx.Policy do
     family = Keyword.get(opts, :family, :inet)
     log_enabled = Keyword.get(opts, :log, false)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
+    builder = rule(family: family)
 
     builder = if log_enabled do
-      RuleBuilder.log(builder, "ALLOW ANY: ")
+      log(builder, "ALLOW ANY: ")
     else
       builder
     end
 
-    builder
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> accept()
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -287,17 +315,22 @@ defmodule NFTablesEx.Policy do
     family = Keyword.get(opts, :family, :inet)
     log_enabled = Keyword.get(opts, :log, false)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
+    builder = rule(family: family)
 
     builder = if log_enabled do
-      RuleBuilder.log(builder, "DENY ALL: ")
+      log(builder, "DENY ALL: ")
     else
       builder
     end
 
-    builder
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> drop()
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -377,6 +410,14 @@ defmodule NFTablesEx.Policy do
 
   # Private helpers
 
+  # Execute a Builder and convert {:ok, _} to :ok for consistent API
+  defp execute_rule(builder, pid) do
+    case Executor.execute(builder, pid) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp ensure_test_prefix(table_name) do
     if String.starts_with?(table_name, "nftex_test_") do
       table_name
@@ -389,28 +430,34 @@ defmodule NFTablesEx.Policy do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
-    rate_limit = Keyword.get(opts, :rate_limit)
+    rate_limit_val = Keyword.get(opts, :rate_limit)
     log_enabled = Keyword.get(opts, :log, false)
     service = Keyword.get(opts, :service, "PORT #{port}")
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_dest_port(port)
+    builder =
+      rule(family: family)
+      |> dest_port(port)
 
-    builder = if rate_limit do
-      RuleBuilder.rate_limit(builder, rate_limit, :minute)
+    builder = if rate_limit_val do
+      limit(builder, rate_limit_val, :minute)
     else
       builder
     end
 
     builder = if log_enabled do
-      RuleBuilder.log(builder, "#{service}: ")
+      log(builder, "#{service}: ")
     else
       builder
     end
 
-    builder
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> accept()
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   defp apply_services(pid, services, opts) do

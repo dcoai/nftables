@@ -114,12 +114,12 @@ defmodule RateLimiting do
     IO.puts("Limit: 100 requests per second with burst of 200")
 
     # HTTP with high rate limit and burst
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_dest_port(80)
-    |> RuleBuilder.rate_limit(100, :second, burst: 200)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.dest_port(80)
+    |> Match.rate_limit(100, :second, burst: 200)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("✓ HTTP rate limit: 100/second, burst: 200")
   end
@@ -130,11 +130,11 @@ defmodule RateLimiting do
     IO.puts("Limit: 5 ICMP packets per second")
 
     # ICMP rate limit (ping flood protection)
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.rate_limit(5, :second)
-    |> RuleBuilder.log("ICMP-ALLOWED: ")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.rate_limit(5, :second)
+    |> Match.log("ICMP-ALLOWED: ")
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("✓ ICMP rate limit: 5/second")
   end
@@ -145,19 +145,19 @@ defmodule RateLimiting do
     IO.puts("Limit: 30 new connections per minute")
 
     # Limit NEW connections only (established connections are already accepted)
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.rate_limit(30, :minute)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.ct_state([:new])
+    |> Match.rate_limit(30, :minute)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Drop any NEW connections exceeding the limit
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.log("NEW-CONN-DROP: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.ct_state([:new])
+    |> Match.log("NEW-CONN-DROP: ")
+    |> Match.drop()
+    |> Match.commit()
 
     IO.puts("✓ New connection rate limit: 30/minute")
     IO.puts("  Connections exceeding limit will be dropped and logged")

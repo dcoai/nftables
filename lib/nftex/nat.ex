@@ -49,7 +49,8 @@ defmodule NFTablesEx.NAT do
 
   """
 
-  alias NFTablesEx.RuleBuilder
+  import NFTablesEx.Match
+  alias NFTablesEx.{Builder, Executor}
 
   @type family :: :inet | :ip | :ip6
 
@@ -81,10 +82,15 @@ defmodule NFTablesEx.NAT do
     chain = Keyword.get(opts, :chain, "postrouting")
     family = Keyword.get(opts, :family, :inet)
 
-    RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_oif(interface)
-    |> RuleBuilder.masquerade()
-    |> RuleBuilder.commit()
+    expr_list =
+      rule(family: family)
+    |> oif(interface)
+    |> masquerade()
+    |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -128,22 +134,27 @@ defmodule NFTablesEx.NAT do
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
+    builder = rule(family: family)
 
     builder = if interface do
-      RuleBuilder.match_iif(builder, interface)
+      iif(builder, interface)
     else
       builder
     end
 
     builder = case protocol do
-      :tcp -> RuleBuilder.match_dest_port(builder, external_port)
-      :udp -> RuleBuilder.match_udp_dport(builder, external_port)
+      :tcp -> dest_port(builder, external_port)
+      :udp -> udp_dport(builder, external_port)
     end
 
-    builder
-    |> RuleBuilder.dnat_to(internal_ip, port: internal_port)
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> dnat_to(internal_ip, port: internal_port)
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -209,18 +220,24 @@ defmodule NFTablesEx.NAT do
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_source_ip(source)
+    builder =
+      rule(family: family)
+      |> source_ip(source)
 
     builder = if interface do
-      RuleBuilder.match_oif(builder, interface)
+      oif(builder, interface)
     else
       builder
     end
 
-    builder
-    |> RuleBuilder.snat_to(nat_ip)
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> snat_to(nat_ip)
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -250,18 +267,23 @@ defmodule NFTablesEx.NAT do
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
+    builder = rule(family: family)
 
     builder = if interface do
-      RuleBuilder.match_iif(builder, interface)
+      iif(builder, interface)
     else
       builder
     end
 
-    builder
-    |> RuleBuilder.match_dest_ip(dest)
-    |> RuleBuilder.dnat_to(nat_ip)
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> dest_ip(dest)
+      |> dnat_to(nat_ip)
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   @doc """
@@ -283,31 +305,54 @@ defmodule NFTablesEx.NAT do
     chain = Keyword.get(opts, :chain, "prerouting")
     family = Keyword.get(opts, :family, :inet)
 
-    builder = RuleBuilder.new(pid, table, chain, family: family)
+    builder = rule(family: family)
 
     builder = case protocol do
-      :tcp -> RuleBuilder.match_dest_port(builder, from_port)
-      :udp -> RuleBuilder.match_udp_dport(builder, from_port)
+      :tcp -> dest_port(builder, from_port)
+      :udp -> udp_dport(builder, from_port)
     end
 
-    builder
-    |> RuleBuilder.redirect_to(to_port)
-    |> RuleBuilder.commit()
+    expr_list =
+      builder
+      |> redirect_to(to_port)
+      |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   # Private helpers
 
+  # Execute a Builder and convert {:ok, _} to :ok for consistent API
+  defp execute_rule(builder, pid) do
+    case Executor.execute(builder, pid) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   defp dnat_rule(pid, table, chain, family, dest_ip, nat_ip) do
-    RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_dest_ip(dest_ip)
-    |> RuleBuilder.dnat_to(nat_ip)
-    |> RuleBuilder.commit()
+    expr_list =
+      rule(family: family)
+    |> dest_ip(dest_ip)
+    |> dnat_to(nat_ip)
+    |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 
   defp snat_rule(pid, table, chain, family, source_ip, nat_ip) do
-    RuleBuilder.new(pid, table, chain, family: family)
-    |> RuleBuilder.match_source_ip(source_ip)
-    |> RuleBuilder.snat_to(nat_ip)
-    |> RuleBuilder.commit()
+    expr_list =
+      rule(family: family)
+    |> source_ip(source_ip)
+    |> snat_to(nat_ip)
+    |> to_expr()
+
+    Builder.new()
+    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> execute_rule(pid)
   end
 end

@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
 
-    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="dist/sidebar_items-CF87DEE9.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-HBZYRXZS.js"></script>
 
@@ -108,13 +108,13 @@ NFTablesEx
 
     <section id="moduledoc">
 <p>Elixir interface to Linux nftables via libnftables JSON API.</p><p>NFTablesEx provides a high-level, idiomatic Elixir API for managing nftables rules,
-using the official <code class="inline">libnftables</code> library with JSON for all communication.</p><h2 id="module-quick-start" class="section-heading"><a href="#module-quick-start" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Quick Start</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="0631244886-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="0631244886-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="0631244886-2">(</span><span class="p" data-group-id="0631244886-2">)</span><span class="w">
+using the official <code class="inline">libnftables</code> library with JSON for all communication.</p><h2 id="module-quick-start" class="section-heading"><a href="#module-quick-start" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Quick Start</span></h2><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="6155942387-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="6155942387-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="6155942387-2">(</span><span class="p" data-group-id="6155942387-2">)</span><span class="w">
 
 </span><span class="c1"># Create a table</span><span class="w">
-</span><span class="nc">NFTablesEx.Table</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="0631244886-3">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0631244886-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="0631244886-4">}</span><span class="p" data-group-id="0631244886-3">)</span><span class="w">
+</span><span class="nc">NFTablesEx.Table</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6155942387-3">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6155942387-4">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="6155942387-4">}</span><span class="p" data-group-id="6155942387-3">)</span><span class="w">
 
 </span><span class="c1"># Create a chain</span><span class="w">
-</span><span class="nc">NFTablesEx.Chain</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="0631244886-5">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0631244886-6">%{</span><span class="w">
+</span><span class="nc">NFTablesEx.Chain</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6155942387-5">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6155942387-6">%{</span><span class="w">
   </span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;input&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p">,</span><span class="w">
@@ -122,30 +122,30 @@ using the official <code class="inline">libnftables</code> library with JSON for
   </span><span class="ss">hook</span><span class="p">:</span><span class="w"> </span><span class="ss">:input</span><span class="p">,</span><span class="w">
   </span><span class="ss">priority</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
   </span><span class="ss">policy</span><span class="p">:</span><span class="w"> </span><span class="ss">:accept</span><span class="w">
-</span><span class="p" data-group-id="0631244886-6">}</span><span class="p" data-group-id="0631244886-5">)</span><span class="w">
+</span><span class="p" data-group-id="6155942387-6">}</span><span class="p" data-group-id="6155942387-5">)</span><span class="w">
 
 </span><span class="c1"># Create a set for IP blocklist</span><span class="w">
-</span><span class="nc">NFTablesEx.Set</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="0631244886-7">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0631244886-8">%{</span><span class="w">
+</span><span class="nc">NFTablesEx.Set</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6155942387-7">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6155942387-8">%{</span><span class="w">
   </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;blocklist&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p">,</span><span class="w">
   </span><span class="ss">key_type</span><span class="p">:</span><span class="w"> </span><span class="ss">:ipv4_addr</span><span class="p">,</span><span class="w">
-  </span><span class="ss">elements</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0631244886-9">[</span><span class="p" data-group-id="0631244886-9">]</span><span class="w">
-</span><span class="p" data-group-id="0631244886-8">}</span><span class="p" data-group-id="0631244886-7">)</span><span class="w">
+  </span><span class="ss">elements</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6155942387-9">[</span><span class="p" data-group-id="6155942387-9">]</span><span class="w">
+</span><span class="p" data-group-id="6155942387-8">}</span><span class="p" data-group-id="6155942387-7">)</span><span class="w">
 
 </span><span class="c1"># Add IPs to the blocklist (string format)</span><span class="w">
-</span><span class="nc">NFTablesEx.Set</span><span class="o">.</span><span class="n">add_elements</span><span class="p" data-group-id="0631244886-10">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;blocklist&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">:inet</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0631244886-11">[</span><span class="w">
+</span><span class="nc">NFTablesEx.Set</span><span class="o">.</span><span class="n">add_elements</span><span class="p" data-group-id="6155942387-10">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;blocklist&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">:inet</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6155942387-11">[</span><span class="w">
   </span><span class="s">&quot;192.168.1.100&quot;</span><span class="p">,</span><span class="w">
   </span><span class="s">&quot;10.0.0.50&quot;</span><span class="w">
-</span><span class="p" data-group-id="0631244886-11">]</span><span class="p" data-group-id="0631244886-10">)</span><span class="w">
+</span><span class="p" data-group-id="6155942387-11">]</span><span class="p" data-group-id="6155942387-10">)</span><span class="w">
 
 </span><span class="c1"># Add a rule to drop blocklisted IPs</span><span class="w">
-</span><span class="nc">NFTablesEx.Rule</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="0631244886-12">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0631244886-13">%{</span><span class="w">
+</span><span class="nc">NFTablesEx.Rule</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="6155942387-12">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6155942387-13">%{</span><span class="w">
   </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p">,</span><span class="w">
   </span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">chain</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;input&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">expr</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ip saddr @blocklist drop&quot;</span><span class="w">
-</span><span class="p" data-group-id="0631244886-13">}</span><span class="p" data-group-id="0631244886-12">)</span></code></pre><h2 id="module-module-organization" class="section-heading"><a href="#module-module-organization" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Module Organization</span></h2><h3 id="module-high-level-apis" class="section-heading"><a href="#module-high-level-apis" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">High-Level APIs</span></h3><ul><li><a href="NFTablesEx.Table.html"><code class="inline">NFTablesEx.Table</code></a> - Table creation and management</li><li><a href="NFTablesEx.Chain.html"><code class="inline">NFTablesEx.Chain</code></a> - Chain creation and management</li><li><a href="NFTablesEx.Set.html"><code class="inline">NFTablesEx.Set</code></a> - Set creation and element management</li><li><a href="NFTablesEx.Rule.html"><code class="inline">NFTablesEx.Rule</code></a> - Rule creation with expression support</li><li><a href="NFTablesEx.Query.html"><code class="inline">NFTablesEx.Query</code></a> - Query tables, chains, rules, and sets</li></ul><h3 id="module-low-level-apis" class="section-heading"><a href="#module-low-level-apis" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Low-Level APIs</span></h3><ul><li><a href="https://hexdocs.pm/nftables_ex_port/0.4.0/NFTablesEx.Port.html"><code class="inline">NFTablesEx.Port</code></a> - JSON-based port communication (from NFTablesEx.Port package)</li><li><a href="NFTablesEx.Builder.html"><code class="inline">NFTablesEx.Builder</code></a> - Fluent API for building nftables configurations</li></ul><h2 id="module-architecture" class="section-heading"><a href="#module-architecture" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Architecture</span></h2><p>NFTablesEx uses a port-based architecture for fault isolation and security:</p><ul><li>The Zig port process runs with CAP_NET_ADMIN capability</li><li>Port binary: <code class="inline">priv/port_nftables</code> - JSON-only communication</li><li>All operations go through <code class="inline">libnftables</code> library (same as <code class="inline">nft</code> command)</li><li>No manual netlink message construction</li></ul><h2 id="module-json-api" class="section-heading"><a href="#module-json-api" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">JSON API</span></h2><p>The underlying JSON format follows the official nftables JSON schema.
+</span><span class="p" data-group-id="6155942387-13">}</span><span class="p" data-group-id="6155942387-12">)</span></code></pre><h2 id="module-module-organization" class="section-heading"><a href="#module-module-organization" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Module Organization</span></h2><h3 id="module-high-level-apis" class="section-heading"><a href="#module-high-level-apis" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">High-Level APIs</span></h3><ul><li><a href="NFTablesEx.Table.html"><code class="inline">NFTablesEx.Table</code></a> - Table creation and management</li><li><a href="NFTablesEx.Chain.html"><code class="inline">NFTablesEx.Chain</code></a> - Chain creation and management</li><li><a href="NFTablesEx.Set.html"><code class="inline">NFTablesEx.Set</code></a> - Set creation and element management</li><li><a href="NFTablesEx.Rule.html"><code class="inline">NFTablesEx.Rule</code></a> - Rule creation with expression support</li><li><a href="NFTablesEx.Query.html"><code class="inline">NFTablesEx.Query</code></a> - Query tables, chains, rules, and sets</li></ul><h3 id="module-low-level-apis" class="section-heading"><a href="#module-low-level-apis" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Low-Level APIs</span></h3><ul><li><a href="https://hexdocs.pm/nftables_ex_port/0.4.0/NFTablesEx.Port.html"><code class="inline">NFTablesEx.Port</code></a> - JSON-based port communication (from NFTablesEx.Port package)</li><li><a href="NFTablesEx.Builder.html"><code class="inline">NFTablesEx.Builder</code></a> - Fluent API for building nftables configurations</li></ul><h2 id="module-architecture" class="section-heading"><a href="#module-architecture" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Architecture</span></h2><p>NFTablesEx uses a port-based architecture for fault isolation and security:</p><ul><li>The Zig port process runs with CAP_NET_ADMIN capability</li><li>Port binary: <code class="inline">priv/port_nftables</code> - JSON-only communication</li><li>All operations go through <code class="inline">libnftables</code> library (same as <code class="inline">nft</code> command)</li><li>No manual netlink message construction</li></ul><h2 id="module-json-api" class="section-heading"><a href="#module-json-api" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">JSON API</span></h2><p>The underlying JSON format follows the official nftables JSON schema.
 See: <a href="https://wiki.nftables.org/wiki-nftables/index.php/JSON_API">https://wiki.nftables.org/wiki-nftables/index.php/JSON_API</a></p><p>For advanced use cases, you can use <a href="NFTablesEx.Builder.html"><code class="inline">NFTablesEx.Builder</code></a> to construct custom
 firewall configurations with a fluent, functional interface.</p><h2 id="module-migration-from-v0-3-x" class="section-heading"><a href="#module-migration-from-v0-3-x" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Migration from v0.3.x</span></h2><p>v0.4.0 introduces a complete rewrite using JSON instead of ETF/netlink:</p><ul><li><strong>Removed</strong>: All <code class="inline">NFTablesEx.Kernel.*</code> modules (no longer needed with JSON approach)</li><li><strong>Removed</strong>: Resource ID-based API (libnftables handles resources internally)</li><li><strong>Changed</strong>: High-level APIs simplified (no resource management)</li><li><strong>Added</strong>: JSON-based port for simpler, more maintainable implementation</li></ul><p>The high-level API remains similar, but some details have changed. See the
 module documentation for each API (Table, Chain, Set, Rule) for details.</p>
@@ -173,11 +173,179 @@ module documentation for each API (Table, Chain, Set, Rule) for details.</p>
 
     </div>
 
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:t/0" data-no-tooltip="" translate="no">t()</a>
+
+      </div>
+
+    </div>
+
 </div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
   </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#accept_established/2" data-no-tooltip="" translate="no">accept_established(pid, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Policy.accept_established/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#add/1" data-no-tooltip="" translate="no">add(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Contextual add operation (arity-1) - starts new builder.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#add/2" data-no-tooltip="" translate="no">add(builder, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Contextual add operation (arity-2) - continues existing builder.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#allow_http/2" data-no-tooltip="" translate="no">allow_http(pid, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Policy.allow_http/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#allow_https/2" data-no-tooltip="" translate="no">allow_https(pid, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Policy.allow_https/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#allow_ssh/2" data-no-tooltip="" translate="no">allow_ssh(pid, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Policy.allow_ssh/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete/1" data-no-tooltip="" translate="no">delete(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Contextual delete operation (arity-1) - starts new builder.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#delete/2" data-no-tooltip="" translate="no">delete(builder, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Contextual delete operation (arity-2) - continues existing builder.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#drop_invalid/2" data-no-tooltip="" translate="no">drop_invalid(pid, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Policy.drop_invalid/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#flush/1" data-no-tooltip="" translate="no">flush(opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Contextual flush operation (arity-1) - starts new builder.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#flush/2" data-no-tooltip="" translate="no">flush(builder, opts)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Contextual flush operation (arity-2) - continues existing builder.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/1" data-no-tooltip="" translate="no">new(opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Create a new builder (arity-0).</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_chain/2" data-no-tooltip="" translate="no">set_chain(builder, chain)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Builder.set_chain/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_family/2" data-no-tooltip="" translate="no">set_family(builder, family)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Builder.set_family/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#set_table/2" data-no-tooltip="" translate="no">set_table(builder, table)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Builder.set_table/2</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#setup_basic_firewall/2" data-no-tooltip="" translate="no">setup_basic_firewall(pid, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Policy.setup_basic_firewall/2</code></a>.</p></div>
+
+    </div>
 
     <div class="summary-row">
       <div class="summary-signature">
@@ -196,6 +364,26 @@ module documentation for each API (Table, Chain, Set, Rule) for details.</p>
       </div>
 
         <div class="summary-synopsis"><p>Stops the NFTablesEx port process.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#to_json/1" data-no-tooltip="" translate="no">to_json(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Builder.to_json/1</code></a>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#to_map/1" data-no-tooltip="" translate="no">to_map(builder)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>See <a><code class="inline">NFTablesEx.Builder.to_map/1</code></a>.</p></div>
 
     </div>
 
@@ -241,6 +429,34 @@ module documentation for each API (Table, Chain, Set, Rule) for details.</p>
 
   </section>
 </section>
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" data-no-tooltip="" aria-label="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">t()</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L145" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: <a href="NFTablesEx.Builder.html#t:t/0">NFTablesEx.Builder.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
 
     </div>
   </section>
@@ -254,6 +470,389 @@ module documentation for each API (Table, Chain, Set, Rule) for details.</p>
     </h1>
 
     <div class="functions-list">
+<section class="detail" id="accept_established/2">
+
+    <span id="accept_established/1"></span>
+
+  <div class="detail-header">
+    <a href="#accept_established/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">accept_established(pid, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L403" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Policy.html#accept_established/2"><code class="inline">NFTablesEx.Policy.accept_established/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="add/1">
+
+  <div class="detail-header">
+    <a href="#add/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">add(opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L180" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Contextual add operation (arity-1) - starts new builder.</p><p>Detects what to add based on keyword options provided.</p><h2 id="add/1-examples" class="section-heading"><a href="#add/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Add table</span><span class="w">
+</span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3133020587-1">(</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="3133020587-1">)</span><span class="w">
+
+</span><span class="c1"># Add chain</span><span class="w">
+</span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3133020587-2">(</span><span class="ss">chain</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">type</span><span class="p">:</span><span class="w"> </span><span class="ss">:filter</span><span class="p" data-group-id="3133020587-2">)</span><span class="w">
+
+</span><span class="c1"># Add table and chain together</span><span class="w">
+</span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3133020587-3">(</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">chain</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="3133020587-3">)</span><span class="w">
+
+</span><span class="c1"># Add multiple rules</span><span class="w">
+</span><span class="kn">import</span><span class="w"> </span><span class="nc">NFTablesEx.Match</span><span class="w">
+</span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3133020587-4">(</span><span class="ss">rules</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3133020587-5">[</span><span class="w">
+  </span><span class="n">rule</span><span class="p" data-group-id="3133020587-6">(</span><span class="p" data-group-id="3133020587-6">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">tcp</span><span class="p" data-group-id="3133020587-7">(</span><span class="p" data-group-id="3133020587-7">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">dport</span><span class="p" data-group-id="3133020587-8">(</span><span class="mi">22</span><span class="p" data-group-id="3133020587-8">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">accept</span><span class="p" data-group-id="3133020587-9">(</span><span class="p" data-group-id="3133020587-9">)</span><span class="p">,</span><span class="w">
+  </span><span class="n">rule</span><span class="p" data-group-id="3133020587-10">(</span><span class="p" data-group-id="3133020587-10">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">tcp</span><span class="p" data-group-id="3133020587-11">(</span><span class="p" data-group-id="3133020587-11">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">dport</span><span class="p" data-group-id="3133020587-12">(</span><span class="mi">80</span><span class="p" data-group-id="3133020587-12">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">accept</span><span class="p" data-group-id="3133020587-13">(</span><span class="p" data-group-id="3133020587-13">)</span><span class="w">
+</span><span class="p" data-group-id="3133020587-5">]</span><span class="p" data-group-id="3133020587-4">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="add/2">
+
+  <div class="detail-header">
+    <a href="#add/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">add(builder, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L194" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Contextual add operation (arity-2) - continues existing builder.</p><h2 id="add/2-examples" class="section-heading"><a href="#add/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3597792653-1">(</span><span class="ss">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p" data-group-id="3597792653-1">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3597792653-2">(</span><span class="ss">chain</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;INPUT&quot;</span><span class="p" data-group-id="3597792653-2">)</span><span class="w">
+</span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="3597792653-3">(</span><span class="ss">rules</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3597792653-4">[</span><span class="n">rule</span><span class="p" data-group-id="3597792653-5">(</span><span class="p" data-group-id="3597792653-5">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">tcp</span><span class="p" data-group-id="3597792653-6">(</span><span class="p" data-group-id="3597792653-6">)</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="n">accept</span><span class="p" data-group-id="3597792653-7">(</span><span class="p" data-group-id="3597792653-7">)</span><span class="p" data-group-id="3597792653-4">]</span><span class="p" data-group-id="3597792653-3">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="allow_http/2">
+
+    <span id="allow_http/1"></span>
+
+  <div class="detail-header">
+    <a href="#allow_http/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">allow_http(pid, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L401" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Policy.html#allow_http/2"><code class="inline">NFTablesEx.Policy.allow_http/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="allow_https/2">
+
+    <span id="allow_https/1"></span>
+
+  <div class="detail-header">
+    <a href="#allow_https/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">allow_https(pid, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L402" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Policy.html#allow_https/2"><code class="inline">NFTablesEx.Policy.allow_https/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="allow_ssh/2">
+
+    <span id="allow_ssh/1"></span>
+
+  <div class="detail-header">
+    <a href="#allow_ssh/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">allow_ssh(pid, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L400" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Policy.html#allow_ssh/2"><code class="inline">NFTablesEx.Policy.allow_ssh/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="delete/1">
+
+  <div class="detail-header">
+    <a href="#delete/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete(opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L243" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Contextual delete operation (arity-1) - starts new builder.</p>
+  </section>
+</section>
+<section class="detail" id="delete/2">
+
+  <div class="detail-header">
+    <a href="#delete/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">delete(builder, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L251" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Contextual delete operation (arity-2) - continues existing builder.</p>
+  </section>
+</section>
+<section class="detail" id="drop_invalid/2">
+
+    <span id="drop_invalid/1"></span>
+
+  <div class="detail-header">
+    <a href="#drop_invalid/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">drop_invalid(pid, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L404" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Policy.html#drop_invalid/2"><code class="inline">NFTablesEx.Policy.drop_invalid/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="flush/1">
+
+  <div class="detail-header">
+    <a href="#flush/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">flush(opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L264" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Contextual flush operation (arity-1) - starts new builder.</p>
+  </section>
+</section>
+<section class="detail" id="flush/2">
+
+  <div class="detail-header">
+    <a href="#flush/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">flush(builder, opts)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L272" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Contextual flush operation (arity-2) - continues existing builder.</p>
+  </section>
+</section>
+<section class="detail" id="new/1">
+
+    <span id="new/0"></span>
+
+  <div class="detail-header">
+    <a href="#new/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">new(opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L155" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>Create a new builder (arity-0).</p><h2 id="new/1-examples" class="section-heading"><a href="#new/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="2786112561-1">(</span><span class="p" data-group-id="2786112561-1">)</span><span class="w">
+</span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">new</span><span class="p" data-group-id="2786112561-2">(</span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="2786112561-2">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="set_chain/2">
+
+  <div class="detail-header">
+    <a href="#set_chain/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_chain(builder, chain)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L394" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Builder.html#set_chain/2"><code class="inline">NFTablesEx.Builder.set_chain/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_family/2">
+
+  <div class="detail-header">
+    <a href="#set_family/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_family(builder, family)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L392" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Builder.html#set_family/2"><code class="inline">NFTablesEx.Builder.set_family/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="set_table/2">
+
+  <div class="detail-header">
+    <a href="#set_table/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">set_table(builder, table)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L393" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Builder.html#set_table/2"><code class="inline">NFTablesEx.Builder.set_table/2</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="setup_basic_firewall/2">
+
+    <span id="setup_basic_firewall/1"></span>
+
+  <div class="detail-header">
+    <a href="#setup_basic_firewall/2" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">setup_basic_firewall(pid, opts \\ [])</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L405" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Policy.html#setup_basic_firewall/2"><code class="inline">NFTablesEx.Policy.setup_basic_firewall/2</code></a>.</p>
+  </section>
+</section>
 <section class="detail" id="start_link/1">
 
     <span id="start_link/0"></span>
@@ -282,13 +881,13 @@ module documentation for each API (Table, Chain, Set, Rule) for details.</p>
       </div>
 
 <p>Starts the NFTablesEx port process.</p><h2 id="start_link/1-options" class="section-heading"><a href="#start_link/1-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Options</span></h2><ul><li><code class="inline">:name</code> - Register the process with a name (optional)</li><li><code class="inline">:check_capabilities</code> - If <code class="inline">true</code>, checks CAP_NET_ADMIN on startup (default: <code class="inline">true</code>)</li></ul><h2 id="start_link/1-examples" class="section-heading"><a href="#start_link/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Examples</span></h2><pre><code class="makeup elixir" translate="no"><span class="c1"># Default behavior</span><span class="w">
-</span><span class="p" data-group-id="4998939776-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4998939776-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4998939776-2">(</span><span class="p" data-group-id="4998939776-2">)</span><span class="w">
+</span><span class="p" data-group-id="4568928380-1">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4568928380-1">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4568928380-2">(</span><span class="p" data-group-id="4568928380-2">)</span><span class="w">
 
 </span><span class="c1"># Skip capability check (not recommended for production)</span><span class="w">
-</span><span class="p" data-group-id="4998939776-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4998939776-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4998939776-4">(</span><span class="ss">check_capabilities</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4998939776-4">)</span><span class="w">
+</span><span class="p" data-group-id="4568928380-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4568928380-3">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4568928380-4">(</span><span class="ss">check_capabilities</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p" data-group-id="4568928380-4">)</span><span class="w">
 
 </span><span class="c1"># With name registration</span><span class="w">
-</span><span class="p" data-group-id="4998939776-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4998939776-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4998939776-6">(</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="ss">:nftables_ex</span><span class="p" data-group-id="4998939776-6">)</span></code></pre>
+</span><span class="p" data-group-id="4568928380-5">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="n">pid</span><span class="p" data-group-id="4568928380-5">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4568928380-6">(</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="ss">:nftables_ex</span><span class="p" data-group-id="4568928380-6">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="stop/1">
@@ -317,7 +916,51 @@ module documentation for each API (Table, Chain, Set, Rule) for details.</p>
       </div>
 
 <p>Stops the NFTablesEx port process.</p><p>All nftables objects remain in the kernel after stopping.
-Use <code class="inline">NFTablesEx.Query.flush_ruleset/2</code> to clean up if needed.</p><h2 id="stop/1-example" class="section-heading"><a href="#stop/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">stop</span><span class="p" data-group-id="1935252899-1">(</span><span class="n">pid</span><span class="p" data-group-id="1935252899-1">)</span></code></pre>
+Use <code class="inline">NFTablesEx.Query.flush_ruleset/2</code> to clean up if needed.</p><h2 id="stop/1-example" class="section-heading"><a href="#stop/1-example" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Example</span></h2><pre><code class="makeup elixir" translate="no"><span class="nc">NFTablesEx</span><span class="o">.</span><span class="n">stop</span><span class="p" data-group-id="9949105734-1">(</span><span class="n">pid</span><span class="p" data-group-id="9949105734-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="to_json/1">
+
+  <div class="detail-header">
+    <a href="#to_json/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_json(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L390" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Builder.html#to_json/1"><code class="inline">NFTablesEx.Builder.to_json/1</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="to_map/1">
+
+  <div class="detail-header">
+    <a href="#to_map/1" class="detail-link" data-no-tooltip="" aria-label="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+    </a>
+    <div class="heading-with-actions">
+      <h1 class="signature" translate="no">to_map(builder)</h1>
+
+
+        <a href="https://github.com/yourusername/nftables_ex/blob/v0.4.0/lib/nftex.ex#L391" class="icon-action" rel="help" aria-label="View Source">
+          <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+        </a>
+
+    </div>
+  </div>
+
+  <section class="docstring">
+
+<p>See <a href="NFTablesEx.Builder.html#to_map/1"><code class="inline">NFTablesEx.Builder.to_map/1</code></a>.</p>
   </section>
 </section>
 

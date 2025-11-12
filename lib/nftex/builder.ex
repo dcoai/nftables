@@ -23,7 +23,7 @@ defmodule NFTablesEx.Builder do
       |> Builder.add_table("filter")
       |> Builder.add_chain("input", type: :filter, hook: :input, priority: 0, policy: :drop)
 
-      # Add rules (using RuleBuilder or raw expressions)
+      # Add rules (using Match or raw expressions)
       builder = builder
       |> Builder.add_rule([
           %{match: %{left: %{ct: %{key: "state"}}, right: ["established", "related"], op: "in"}},
@@ -194,6 +194,35 @@ defmodule NFTablesEx.Builder do
     add_command(builder, command)
   end
 
+  @doc """
+  Flush the entire ruleset (remove all tables, chains, and rules).
+
+  ## Options
+
+  - `:family` - Optional family to flush (default: all families)
+
+  ## Examples
+
+      # Flush all tables/chains/rules for all families
+      builder |> Builder.flush_ruleset()
+
+      # Flush only inet family
+      builder |> Builder.flush_ruleset(family: :inet)
+  """
+  @spec flush_ruleset(t(), keyword()) :: t()
+  def flush_ruleset(%__MODULE__{} = builder, opts \\ []) do
+    family = Keyword.get(opts, :family)
+
+    command =
+      if family do
+        %{flush: %{ruleset: %{family: family}}}
+      else
+        %{flush: %{ruleset: %{}}}
+      end
+
+    add_command(builder, command)
+  end
+
   ## Chain Operations
 
   @doc """
@@ -345,7 +374,7 @@ defmodule NFTablesEx.Builder do
 
   ## Parameters
 
-  - `expr` - Expression list (from RuleBuilder or manual construction)
+  - `expr` - Expression list (from Match or manual construction)
   - `opts` - Options:
     - `:table` - Table name (default: current_table)
     - `:chain` - Chain name (default: current_chain)

@@ -63,70 +63,70 @@ defmodule AdvancedFeaturesDemo do
 
     IO.puts("1. TCP Flags - Block SYN flood")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-    |> RuleBuilder.rate_limit(100, :second, burst: 20)
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+    |> Match.rate_limit(100, :second, burst: 20)
+    |> Match.drop()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Drop excessive SYN packets (>100/sec)")
 
     IO.puts("\n2. Packet Length - Block jumbo frames")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_length(:gt, 9000)
-    |> RuleBuilder.log("JUMBO: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.length(:gt, 9000)
+    |> Match.log("JUMBO: ")
+    |> Match.drop()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Drop packets > 9000 bytes")
 
     IO.puts("\n3. TTL - Block TTL=1 (traceroute)")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_ttl(:eq, 1)
-    |> RuleBuilder.log("TTL1: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.ttl(:eq, 1)
+    |> Match.log("TTL1: ")
+    |> Match.drop()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Drop packets with TTL=1")
 
     IO.puts("\n4. MAC Address - Allow specific MAC")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_source_mac("aa:bb:cc:dd:ee:ff")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.source_mac("aa:bb:cc:dd:ee:ff")
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Accept from MAC aa:bb:cc:dd:ee:ff")
 
     IO.puts("\n5. DSCP - Prioritize VoIP traffic")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_dscp(46)
+    Match.new(pid, "filter", "INPUT")
+    |> Match.dscp(46)
     # Expedited Forwarding
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Accept DSCP 46 (EF - VoIP)")
 
     IO.puts("\n6. UDP Ports - DNS traffic")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_udp_dport(53)
-    |> RuleBuilder.rate_limit(1000, :second)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.udp_dport(53)
+    |> Match.rate_limit(1000, :second)
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Rate-limit DNS queries (1000/sec)")
 
     IO.puts("\n7. Fragmentation - Block fragments")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_fragmented(true)
-    |> RuleBuilder.log("FRAG: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.fragmented(true)
+    |> Match.log("FRAG: ")
+    |> Match.drop()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Drop fragmented packets")
 
@@ -192,39 +192,39 @@ defmodule AdvancedFeaturesDemo do
 
     IO.puts("1. CT Direction - Match original direction")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_ct_direction(:original)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.ct_direction(:original)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Accept original direction")
 
     IO.puts("\n2. CT Status - Match assured connections")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_ct_status([:assured, :seen_reply])
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.ct_status([:assured, :seen_reply])
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Accept assured connections")
 
     IO.puts("\n3. CT Status - Detect NATed traffic")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_ct_status([:snat])
-    |> RuleBuilder.log("SNAT-CONN: ")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.ct_status([:snat])
+    |> Match.log("SNAT-CONN: ")
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Log SNAT connections")
 
     IO.puts("\n4. Connection Mark - Match marked connections")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_connmark(100)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.connmark(100)
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Accept connections with mark 100")
 
@@ -236,34 +236,34 @@ defmodule AdvancedFeaturesDemo do
 
     IO.puts("1. Set Packet Mark - Policy routing")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_source_ip("192.168.1.0/24")
-    |> RuleBuilder.set_mark(100)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.source_ip("192.168.1.0/24")
+    |> Match.set_mark(100)
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Mark packets from 192.168.1.0/24 with 100")
 
     IO.puts("\n2. Set Connection Mark - Persist across packets")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_dest_port(80)
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.set_connmark(200)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "filter", "INPUT")
+    |> Match.dest_port(80)
+    |> Match.ct_state([:new])
+    |> Match.set_connmark(200)
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Mark new HTTP connections with 200")
 
     IO.puts("\n3. Packet Mark - QoS classification")
 
-    RuleBuilder.new(pid, "filter", "INPUT")
-    |> RuleBuilder.match_dscp(46)
+    Match.new(pid, "filter", "INPUT")
+    |> Match.dscp(46)
     # VoIP
-    |> RuleBuilder.set_mark(1)
+    |> Match.set_mark(1)
     # High priority
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("   ✓ Rule: Mark VoIP packets with priority 1")
 

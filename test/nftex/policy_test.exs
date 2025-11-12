@@ -368,9 +368,9 @@ defmodule NFTablesEx.PolicyTest do
     end
   end
 
-  describe "integration with RuleBuilder" do
-    test "policies use RuleBuilder internally", %{pid: pid, test_table: test_table} do
-      # This tests that Policy module correctly uses RuleBuilder
+  describe "integration with Match" do
+    test "policies use Match internally", %{pid: pid, test_table: test_table} do
+      # This tests that Policy module correctly uses Match
       # by verifying rules are actually created
 
       result = Policy.allow_ssh(pid,

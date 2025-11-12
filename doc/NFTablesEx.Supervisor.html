@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="dist/html-elixir-ZFNMEJKT.css" />
 
-    <script defer src="dist/sidebar_items-C3F2D604.js"></script>
+    <script defer src="dist/sidebar_items-CF87DEE9.js"></script>
     <script defer src="docs_config.js"></script>
     <script defer src="dist/html-HBZYRXZS.js"></script>
 
@@ -108,11 +108,11 @@ NFTablesEx
 
     <section id="moduledoc">
 <p>Supervisor for the NFTex JSON port process.</p><p>This supervisor ensures the JSON port process is restarted if it crashes,
-providing fault tolerance for the nftables interface.</p><h2 id="module-usage" class="section-heading"><a href="#module-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="1043357260-1">[</span><span class="w">
-  </span><span class="p" data-group-id="1043357260-2">{</span><span class="nc">NFTablesEx.Supervisor</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="nc">NFTex</span><span class="p" data-group-id="1043357260-2">}</span><span class="w">
-</span><span class="p" data-group-id="1043357260-1">]</span><span class="w">
+providing fault tolerance for the nftables interface.</p><h2 id="module-usage" class="section-heading"><a href="#module-usage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i></a><span class="text">Usage</span></h2><pre><code class="makeup elixir" translate="no"><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="4910701557-1">[</span><span class="w">
+  </span><span class="p" data-group-id="4910701557-2">{</span><span class="nc">NFTablesEx.Supervisor</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="nc">NFTex</span><span class="p" data-group-id="4910701557-2">}</span><span class="w">
+</span><span class="p" data-group-id="4910701557-1">]</span><span class="w">
 
-</span><span class="nc">Supervisor</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="1043357260-3">(</span><span class="n">children</span><span class="p">,</span><span class="w"> </span><span class="ss">strategy</span><span class="p">:</span><span class="w"> </span><span class="ss">:one_for_one</span><span class="p" data-group-id="1043357260-3">)</span></code></pre><p>Then you can use the registered name:</p><pre><code class="makeup elixir" translate="no"><span class="nc">NFTablesEx.Table</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="4221693658-1">(</span><span class="nc">NFTex</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4221693658-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="4221693658-2">}</span><span class="p" data-group-id="4221693658-1">)</span></code></pre>
+</span><span class="nc">Supervisor</span><span class="o">.</span><span class="n">start_link</span><span class="p" data-group-id="4910701557-3">(</span><span class="n">children</span><span class="p">,</span><span class="w"> </span><span class="ss">strategy</span><span class="p">:</span><span class="w"> </span><span class="ss">:one_for_one</span><span class="p" data-group-id="4910701557-3">)</span></code></pre><p>Then you can use the registered name:</p><pre><code class="makeup elixir" translate="no"><span class="nc">NFTablesEx.Table</span><span class="o">.</span><span class="n">add</span><span class="p" data-group-id="9512545085-1">(</span><span class="nc">NFTex</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9512545085-2">%{</span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;filter&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">family</span><span class="p">:</span><span class="w"> </span><span class="ss">:inet</span><span class="p" data-group-id="9512545085-2">}</span><span class="p" data-group-id="9512545085-1">)</span></code></pre>
     </section>
 
 </div>

@@ -9,7 +9,7 @@ Complete reference guide for the NFTex library.
 3. [NFTex.Table - Table Operations](#nftextable---table-operations)
 4. [NFTex.Chain - Chain Operations](#nftexchain---chain-operations)
 5. [NFTex.Rule - Rule Operations](#nftexrule---rule-operations)
-6. [NFTex.RuleBuilder - Fluent Rule Construction](#nftexrulebuilder---fluent-rule-construction)
+6. [NFTex.Match - Fluent Rule Construction](#nftexrulebuilder---fluent-rule-construction)
 7. [NFTex.Set - Set Operations](#nftexset---set-operations)
 8. [NFTex.Policy - Pre-built Policies](#nftexpolicy---pre-built-policies)
 9. [NFTex.Sysctl - Kernel Parameter Management](#nftexsysctl---kernel-parameter-management)
@@ -48,20 +48,20 @@ Complete reference guide for the NFTex library.
 | `nft list ruleset` | `NFTex.Query.list_rules(pid)` |
 | `nft list tables` | `NFTex.Query.list_tables(pid)` |
 
-#### nftables Syntax → RuleBuilder
+#### nftables Syntax → Match
 
-| nftables Rule Syntax | NFTex RuleBuilder |
+| nftables Rule Syntax | NFTex Match |
 |---------------------|-------------------|
-| `ip saddr 192.168.1.1` | `RuleBuilder.match_source_ip("192.168.1.1")` |
-| `tcp dport 22` | `RuleBuilder.match_dest_port(22)` |
-| `ct state established,related` | `RuleBuilder.match_ct_state([:established, :related])` |
-| `iifname "eth0"` | `RuleBuilder.match_iif("eth0")` |
-| `limit rate 10/minute` | `RuleBuilder.rate_limit(10, :minute)` |
-| `counter` | `RuleBuilder.counter()` |
-| `log prefix "DROPPED: "` | `RuleBuilder.log("DROPPED: ")` |
-| `drop` | `RuleBuilder.drop()` |
-| `accept` | `RuleBuilder.accept()` |
-| `reject` | `RuleBuilder.reject()` |
+| `ip saddr 192.168.1.1` | `Match.source_ip("192.168.1.1")` |
+| `tcp dport 22` | `Match.dest_port(22)` |
+| `ct state established,related` | `Match.ct_state([:established, :related])` |
+| `iifname "eth0"` | `Match.iif("eth0")` |
+| `limit rate 10/minute` | `Match.rate_limit(10, :minute)` |
+| `counter` | `Match.counter()` |
+| `log prefix "DROPPED: "` | `Match.log("DROPPED: ")` |
+| `drop` | `Match.drop()` |
+| `accept` | `Match.accept()` |
+| `reject` | `Match.reject()` |
 
 #### Protocol Families
 
@@ -104,9 +104,9 @@ NFTex uses a **hybrid approach**:
 
 2. **nft syntax strings** for complex rules:
    ```elixir
-   RuleBuilder.new(pid, "filter", "INPUT")
-   |> RuleBuilder.match_source_ip("192.168.1.1")
-   |> RuleBuilder.drop()
+   Match.new(pid, "filter", "INPUT")
+   |> Match.source_ip("192.168.1.1")
+   |> Match.drop()
    # Generates: "add rule inet filter INPUT ip saddr 192.168.1.1 drop"
    ```
 
@@ -358,19 +358,19 @@ Delete a rule by handle.
 
 ---
 
-## NFTex.RuleBuilder - Fluent Rule Construction
+## NFTex.Match - Fluent Rule Construction
 
 Build complex rules using a chainable API.
 
 ### Basic Usage
 
 ```elixir
-alias NFTex.RuleBuilder
+alias NFTex.Match
 
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_source_ip("192.168.1.1")
-|> RuleBuilder.drop()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.source_ip("192.168.1.1")
+|> Match.drop()
+|> Match.commit()
 ```
 
 ### Match Functions
@@ -380,8 +380,8 @@ RuleBuilder.new(pid, "filter", "INPUT")
 Match source IP address.
 
 ```elixir
-RuleBuilder.match_source_ip(builder, "192.168.1.1")
-RuleBuilder.match_source_ip(builder, "10.0.0.0/8")
+Match.source_ip(builder, "192.168.1.1")
+Match.source_ip(builder, "10.0.0.0/8")
 ```
 
 #### `match_dest_ip/2`
@@ -389,7 +389,7 @@ RuleBuilder.match_source_ip(builder, "10.0.0.0/8")
 Match destination IP address.
 
 ```elixir
-RuleBuilder.match_dest_ip(builder, "8.8.8.8")
+Match.dest_ip(builder, "8.8.8.8")
 ```
 
 #### `match_source_port/2`
@@ -397,7 +397,7 @@ RuleBuilder.match_dest_ip(builder, "8.8.8.8")
 Match source port.
 
 ```elixir
-RuleBuilder.match_source_port(builder, 1024)
+Match.source_port(builder, 1024)
 ```
 
 #### `match_dest_port/2`
@@ -405,8 +405,8 @@ RuleBuilder.match_source_port(builder, 1024)
 Match destination port.
 
 ```elixir
-RuleBuilder.match_dest_port(builder, 22)
-RuleBuilder.match_dest_port(builder, 80)
+Match.dest_port(builder, 22)
+Match.dest_port(builder, 80)
 ```
 
 #### `match_protocol/2`
@@ -414,9 +414,9 @@ RuleBuilder.match_dest_port(builder, 80)
 Match protocol.
 
 ```elixir
-RuleBuilder.match_protocol(builder, :tcp)
-RuleBuilder.match_protocol(builder, :udp)
-RuleBuilder.match_protocol(builder, :icmp)
+Match.protocol(builder, :tcp)
+Match.protocol(builder, :udp)
+Match.protocol(builder, :icmp)
 ```
 
 #### `match_ct_state/2`
@@ -424,9 +424,9 @@ RuleBuilder.match_protocol(builder, :icmp)
 Match connection tracking state.
 
 ```elixir
-RuleBuilder.match_ct_state(builder, [:established, :related])
-RuleBuilder.match_ct_state(builder, [:new])
-RuleBuilder.match_ct_state(builder, [:invalid])
+Match.ct_state(builder, [:established, :related])
+Match.ct_state(builder, [:new])
+Match.ct_state(builder, [:invalid])
 ```
 
 #### `match_iif/2`
@@ -434,7 +434,7 @@ RuleBuilder.match_ct_state(builder, [:invalid])
 Match input interface.
 
 ```elixir
-RuleBuilder.match_iif(builder, "eth0")
+Match.iif(builder, "eth0")
 ```
 
 #### `match_oif/2`
@@ -442,7 +442,7 @@ RuleBuilder.match_iif(builder, "eth0")
 Match output interface.
 
 ```elixir
-RuleBuilder.match_oif(builder, "eth1")
+Match.oif(builder, "eth1")
 ```
 
 ### Action Functions
@@ -452,7 +452,7 @@ RuleBuilder.match_oif(builder, "eth1")
 Add packet/byte counter.
 
 ```elixir
-RuleBuilder.counter(builder)
+Match.counter(builder)
 ```
 
 #### `log/2`
@@ -460,8 +460,8 @@ RuleBuilder.counter(builder)
 Log packets with prefix.
 
 ```elixir
-RuleBuilder.log(builder, "DROPPED: ")
-RuleBuilder.log(builder, "ACCEPTED SSH: ")
+Match.log(builder, "DROPPED: ")
+Match.log(builder, "ACCEPTED SSH: ")
 ```
 
 #### `rate_limit/3` or `rate_limit/4`
@@ -470,10 +470,10 @@ Rate limit packets.
 
 ```elixir
 # Simple rate limit
-RuleBuilder.rate_limit(builder, 10, :minute)
+Match.rate_limit(builder, 10, :minute)
 
 # With burst
-RuleBuilder.rate_limit(builder, 10, :minute, burst: 20)
+Match.rate_limit(builder, 10, :minute, burst: 20)
 ```
 
 **Units:** `:second`, `:minute`, `:hour`, `:day`
@@ -485,7 +485,7 @@ RuleBuilder.rate_limit(builder, 10, :minute, burst: 20)
 Accept packets.
 
 ```elixir
-RuleBuilder.accept(builder)
+Match.accept(builder)
 ```
 
 #### `drop/1`
@@ -493,7 +493,7 @@ RuleBuilder.accept(builder)
 Drop packets silently.
 
 ```elixir
-RuleBuilder.drop(builder)
+Match.drop(builder)
 ```
 
 #### `reject/1` or `reject/2`
@@ -502,45 +502,45 @@ Reject packets with ICMP error.
 
 ```elixir
 # Default reject
-RuleBuilder.reject(builder)
+Match.reject(builder)
 
 # With specific rejection type
-RuleBuilder.reject(builder, :icmp_port_unreachable)
-RuleBuilder.reject(builder, :tcp_reset)
+Match.reject(builder, :icmp_port_unreachable)
+Match.reject(builder, :tcp_reset)
 ```
 
 ### Complete Examples
 
 ```elixir
 # Rate-limited SSH
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_dest_port(22)
-|> RuleBuilder.rate_limit(10, :minute, burst: 20)
-|> RuleBuilder.log("SSH: ")
-|> RuleBuilder.counter()
-|> RuleBuilder.accept()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.dest_port(22)
+|> Match.rate_limit(10, :minute, burst: 20)
+|> Match.log("SSH: ")
+|> Match.counter()
+|> Match.accept()
+|> Match.commit()
 
 # Block specific IP with logging
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_source_ip("192.168.1.100")
-|> RuleBuilder.log("BLOCKED IP: ")
-|> RuleBuilder.drop()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.source_ip("192.168.1.100")
+|> Match.log("BLOCKED IP: ")
+|> Match.drop()
+|> Match.commit()
 
 # Allow established connections
-RuleBuilder.new(pid, "filter", "INPUT")
-|> RuleBuilder.match_ct_state([:established, :related])
-|> RuleBuilder.accept()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "INPUT")
+|> Match.ct_state([:established, :related])
+|> Match.accept()
+|> Match.commit()
 
 # Interface-based rule
-RuleBuilder.new(pid, "filter", "FORWARD")
-|> RuleBuilder.match_iif("eth0")
-|> RuleBuilder.match_oif("eth1")
-|> RuleBuilder.match_ct_state([:established, :related])
-|> RuleBuilder.accept()
-|> RuleBuilder.commit()
+Match.new(pid, "filter", "FORWARD")
+|> Match.iif("eth0")
+|> Match.oif("eth1")
+|> Match.ct_state([:established, :related])
+|> Match.accept()
+|> Match.commit()
 ```
 
 ---

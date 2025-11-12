@@ -68,54 +68,54 @@ defmodule MatchExpressionsExample do
     # SYN flood protection
     IO.puts("  • SYN flood protection (100/sec burst 20)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-    |> RuleBuilder.rate_limit(100, :second, burst: 20)
-    |> RuleBuilder.log("SYN-FLOOD-DROP: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+    |> Match.rate_limit(100, :second, burst: 20)
+    |> Match.log("SYN-FLOOD-DROP: ")
+    |> Match.drop()
+    |> Match.commit()
 
     # Accept valid SYN packets below rate limit
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Block packets over 9000 bytes (jumbo frames attack)
     IO.puts("  • Block oversized packets (>9000 bytes)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_length(:gt, 9000)
-    |> RuleBuilder.log("JUMBO-PACKET: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.length(:gt, 9000)
+    |> Match.log("JUMBO-PACKET: ")
+    |> Match.drop()
+    |> Match.commit()
 
     # Rate limit small packets (potential packet flood)
     IO.puts("  • Rate limit small packets (<64 bytes, 1000/sec)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_length(:lt, 64)
-    |> RuleBuilder.rate_limit(1000, :second)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.length(:lt, 64)
+    |> Match.rate_limit(1000, :second)
+    |> Match.accept()
+    |> Match.commit()
 
     # UDP flood protection
     IO.puts("  • UDP flood protection (500/sec per port)")
 
     # DNS
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_udp_dport(53)
-    |> RuleBuilder.rate_limit(500, :second, burst: 100)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.udp_dport(53)
+    |> Match.rate_limit(500, :second, burst: 100)
+    |> Match.accept()
+    |> Match.commit()
 
     # NTP
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_udp_dport(123)
-    |> RuleBuilder.rate_limit(100, :second)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.udp_dport(123)
+    |> Match.rate_limit(100, :second)
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("")
   end
@@ -132,42 +132,42 @@ defmodule MatchExpressionsExample do
     # Expedited Forwarding (EF) - VoIP voice
     IO.puts("  • Priority traffic: DSCP 46 (EF - VoIP voice)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_dscp(46)
-    |> RuleBuilder.set_mark(1)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.dscp(46)
+    |> Match.set_mark(1)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 4 (AF41) - Video conferencing
     IO.puts("  • Video conferencing: DSCP 34 (AF41)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_dscp(34)
-    |> RuleBuilder.set_mark(2)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.dscp(34)
+    |> Match.set_mark(2)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 3 (AF31) - Signaling
     IO.puts("  • Call signaling: DSCP 26 (AF31)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_dscp(26)
-    |> RuleBuilder.set_mark(3)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.dscp(26)
+    |> Match.set_mark(3)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Assured Forwarding Class 2 (AF21) - Streaming
     IO.puts("  • Streaming media: DSCP 18 (AF21)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_dscp(18)
-    |> RuleBuilder.set_mark(4)
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.dscp(18)
+    |> Match.set_mark(4)
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     IO.puts("\n  Packet marks set for policy routing:")
     IO.puts("    Mark 1: EF (highest priority)")
@@ -189,29 +189,29 @@ defmodule MatchExpressionsExample do
     # Block fragmented packets (fragment attack prevention)
     IO.puts("  • Block fragmented packets (fragment attacks)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_fragmented(true)
-    |> RuleBuilder.log("FRAGMENT-ATTACK: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.fragmented(true)
+    |> Match.log("FRAGMENT-ATTACK: ")
+    |> Match.drop()
+    |> Match.commit()
 
     # Block TTL=1 (traceroute/reconnaissance)
     IO.puts("  • Block TTL=1 packets (traceroute)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_ttl(:eq, 1)
-    |> RuleBuilder.log("TTL-1-DROP: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.ttl(:eq, 1)
+    |> Match.log("TTL-1-DROP: ")
+    |> Match.drop()
+    |> Match.commit()
 
     # Block low TTL packets (potential spoofing)
     IO.puts("  • Block TTL<10 (potential spoofing)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_ttl(:lt, 10)
-    |> RuleBuilder.log("LOW-TTL: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.ttl(:lt, 10)
+    |> Match.log("LOW-TTL: ")
+    |> Match.drop()
+    |> Match.commit()
 
     # MAC-based authentication (whitelist trusted devices)
     IO.puts("  • MAC whitelist (trusted devices)")
@@ -226,23 +226,23 @@ defmodule MatchExpressionsExample do
     ]
 
     for mac <- trusted_macs do
-      RuleBuilder.new(pid, "security_filter", "INPUT")
-      |> RuleBuilder.match_source_mac(mac)
-      |> RuleBuilder.match_dest_port(22)  # SSH only
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "security_filter", "INPUT")
+      |> Match.source_mac(mac)
+      |> Match.dest_port(22)  # SSH only
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # Block TCP packets with invalid flag combinations
     IO.puts("  • Block invalid TCP flags (Xmas scan, NULL scan)")
 
     # XMAS scan (FIN+PSH+URG)
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_tcp_flags([:fin, :psh, :urg], [:fin, :psh, :urg, :syn, :ack, :rst])
-    |> RuleBuilder.log("XMAS-SCAN: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.tcp_flags([:fin, :psh, :urg], [:fin, :psh, :urg, :syn, :ack, :rst])
+    |> Match.log("XMAS-SCAN: ")
+    |> Match.drop()
+    |> Match.commit()
 
     # NULL scan (no flags)
     # Note: This is simplified - actual implementation would check for zero flags
@@ -262,52 +262,52 @@ defmodule MatchExpressionsExample do
     # Allow established connections (stateful filtering)
     IO.puts("  • Accept established/related connections")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_ct_state([:established, :related])
-    |> RuleBuilder.counter()
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.ct_state([:established, :related])
+    |> Match.counter()
+    |> Match.accept()
+    |> Match.commit()
 
     # Accept loopback
     IO.puts("  • Accept loopback traffic (lo)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_iif("lo")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.iif("lo")
+    |> Match.accept()
+    |> Match.commit()
 
     # Web services with rate limiting
     IO.puts("  • HTTP/HTTPS (1000 conn/sec per service)")
 
     for port <- [80, 443] do
-      RuleBuilder.new(pid, "security_filter", "INPUT")
-      |> RuleBuilder.match_dest_port(port)
-      |> RuleBuilder.match_ct_state([:new])
-      |> RuleBuilder.rate_limit(1000, :second, burst: 500)
-      |> RuleBuilder.counter()
-      |> RuleBuilder.accept()
-      |> RuleBuilder.commit()
+      Match.new(pid, "security_filter", "INPUT")
+      |> Match.dest_port(port)
+      |> Match.ct_state([:new])
+      |> Match.rate_limit(1000, :second, burst: 500)
+      |> Match.counter()
+      |> Match.accept()
+      |> Match.commit()
     end
 
     # SSH with strict rate limiting
     IO.puts("  • SSH (5 conn/min - brute force protection)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_dest_port(22)
-    |> RuleBuilder.match_ct_state([:new])
-    |> RuleBuilder.rate_limit(5, :minute)
-    |> RuleBuilder.log("SSH-ACCEPT: ")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.dest_port(22)
+    |> Match.ct_state([:new])
+    |> Match.rate_limit(5, :minute)
+    |> Match.log("SSH-ACCEPT: ")
+    |> Match.accept()
+    |> Match.commit()
 
     # VoIP SIP signaling (UDP 5060)
     IO.puts("  • SIP signaling (UDP 5060, rate limited)")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_udp_dport(5060)
-    |> RuleBuilder.rate_limit(200, :second)
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.udp_dport(5060)
+    |> Match.rate_limit(200, :second)
+    |> Match.accept()
+    |> Match.commit()
 
     # RTP media (UDP 10000-20000)
     IO.puts("  • RTP media streams (handled via ct state)")
@@ -329,32 +329,32 @@ defmodule MatchExpressionsExample do
     IO.puts("  • Log privileged port access (<1024)")
 
     for port <- [21, 23, 25, 110, 143, 445, 3389] do
-      RuleBuilder.new(pid, "security_filter", "INPUT")
-      |> RuleBuilder.match_dest_port(port)
-      |> RuleBuilder.log("PRIV-PORT-#{port}: ")
-      |> RuleBuilder.drop()
-      |> RuleBuilder.commit()
+      Match.new(pid, "security_filter", "INPUT")
+      |> Match.dest_port(port)
+      |> Match.log("PRIV-PORT-#{port}: ")
+      |> Match.drop()
+      |> Match.commit()
     end
 
     # Log port scans (common scanner behavior)
     IO.puts("  • Log potential port scans")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-    |> RuleBuilder.rate_limit(50, :second)
-    |> RuleBuilder.log("POSSIBLE-PORTSCAN: ")
-    |> RuleBuilder.accept()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+    |> Match.rate_limit(50, :second)
+    |> Match.log("POSSIBLE-PORTSCAN: ")
+    |> Match.accept()
+    |> Match.commit()
 
     # Count invalid packets
     IO.puts("  • Track invalid connection states")
 
-    RuleBuilder.new(pid, "security_filter", "INPUT")
-    |> RuleBuilder.match_ct_state([:invalid])
-    |> RuleBuilder.counter()
-    |> RuleBuilder.log("INVALID-CT: ")
-    |> RuleBuilder.drop()
-    |> RuleBuilder.commit()
+    Match.new(pid, "security_filter", "INPUT")
+    |> Match.ct_state([:invalid])
+    |> Match.counter()
+    |> Match.log("INVALID-CT: ")
+    |> Match.drop()
+    |> Match.commit()
 
     IO.puts("")
   end

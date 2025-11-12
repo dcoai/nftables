@@ -40,15 +40,17 @@ defmodule NFTablesEx.Executor do
 
   """
 
+  alias NFTablesEx.Builder
+
   @doc """
-  Execute an nftables command from Elixir data structures.
+  Execute an nftables command from a Builder struct or Elixir data structures.
 
   This is the only place where JSON encoding/decoding happens. All other
   modules should work with pure Elixir maps, atoms, lists, etc.
 
   ## Parameters
 
-  - `command` - Map containing nftables commands (will be encoded to JSON)
+  - `builder_or_command` - Builder struct or Map containing nftables commands
   - `opts` - Options:
     - `:pid` - NFTablesEx.Port process (default: looks up registered process)
     - `:timeout` - Timeout in milliseconds (default: 5000)
@@ -59,6 +61,11 @@ defmodule NFTablesEx.Executor do
   - `{:error, reason}` - On failure
 
   ## Examples
+
+      # Execute with Builder
+      Builder.new()
+      |> Builder.add_table("filter")
+      |> Executor.execute(pid)
 
       # Execute with Elixir map
       command = %{nftables: [%{list: %{tables: %{family: "inet"}}}]}
@@ -71,8 +78,19 @@ defmodule NFTablesEx.Executor do
       # Custom timeout for long operations
       Executor.execute(command, timeout: 30_000)
   """
-  @spec execute(map(), keyword()) :: {:ok, term()} | {:error, term()}
-  def execute(command, opts \\ []) when is_map(command) do
+  @spec execute(Builder.t() | map(), keyword() | pid()) :: {:ok, term()} | {:error, term()}
+  # Default value header
+  def execute(command_or_builder, opts_or_pid \\ [])
+
+  # Handle Builder struct - convert to JSON map first
+  def execute(%Builder{} = builder, opts_or_pid) do
+    command = Builder.to_map(builder)
+    execute(command, normalize_opts(opts_or_pid))
+  end
+
+  # Handle raw command map
+  def execute(command, opts_or_pid) when is_map(command) do
+    opts = normalize_opts(opts_or_pid)
     # Encode Elixir map to JSON (this is the ONLY place JSON encoding happens)
     json_string = JSON.encode!(command)
     pid = get_port_pid(opts)
@@ -138,6 +156,10 @@ defmodule NFTablesEx.Executor do
   end
 
   # Private helpers
+
+  # Normalize opts_or_pid to keyword list
+  defp normalize_opts(opts) when is_list(opts), do: opts
+  defp normalize_opts(pid) when is_pid(pid), do: [pid: pid]
 
   defp get_port_pid(opts) do
     case Keyword.fetch(opts, :pid) do
