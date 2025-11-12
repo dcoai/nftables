@@ -30,3 +30,8 @@ nftables-*.tar
 # Compiled native binary
 /priv/libnf_ex
 
+# Emacs
+*~
+\#*\#
+.\#*
+.DS_Store

@@ -1,0 +1,329 @@
+defmodule NFTablesEx.MatchTest do
+  use ExUnit.Case, async: true
+
+  import NFTablesEx.Match
+
+  describe "rule/1" do
+    test "creates empty rule struct with default family" do
+      builder = rule()
+
+      assert %NFTablesEx.Match{} = builder
+      assert builder.family == :inet
+      assert builder.expr_list == []
+      assert builder.comment == nil
+    end
+
+    test "creates rule with custom family" do
+      builder = rule(family: :inet6)
+
+      assert builder.family == :inet6
+    end
+  end
+
+  describe "match functions" do
+    test "source_ip/2 adds expression to builder" do
+      builder = rule() |> source_ip("192.168.1.100")
+
+      assert %NFTablesEx.Match{} = builder
+      assert length(builder.expr_list) == 1
+    end
+
+    test "dest_ip/2 adds expression to builder" do
+      builder = rule() |> dest_ip("10.0.0.1")
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "source_port/2 adds expression to builder" do
+      builder = rule() |> source_port(1234)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "dest_port/2 adds expression to builder" do
+      builder = rule() |> dest_port(80)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "dest_port/2 validates port range" do
+      # Valid ports
+      assert %NFTablesEx.Match{} = rule() |> dest_port(0)
+      assert %NFTablesEx.Match{} = rule() |> dest_port(65535)
+
+      # Invalid ports should raise (guard clause)
+      assert_raise FunctionClauseError, fn ->
+        rule() |> dest_port(-1)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        rule() |> dest_port(65536)
+      end
+    end
+
+    test "ct_state/2 with single state" do
+      builder = rule() |> ct_state([:established])
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "ct_state/2 with multiple states" do
+      builder = rule() |> ct_state([:established, :related])
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "ct_state/2 with all states" do
+      builder = rule() |> ct_state([:invalid, :established, :related, :new])
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "iif/2 adds expression to builder" do
+      builder = rule() |> iif("eth0")
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "oif/2 adds expression to builder" do
+      builder = rule() |> oif("eth1")
+
+      assert length(builder.expr_list) == 1
+    end
+  end
+
+  describe "action functions" do
+    test "counter/1 adds counter expression" do
+      builder = rule() |> counter()
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "log/2 adds log expression with prefix" do
+      builder = rule() |> log("TEST: ")
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "log/3 adds log expression with options" do
+      builder = rule() |> log("TEST: ", level: :warning)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "rate_limit/3 adds rate limit expression" do
+      builder = rule() |> rate_limit(10, :minute)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "rate_limit/4 with burst option" do
+      builder = rule() |> rate_limit(100, :second, burst: 50)
+
+      assert length(builder.expr_list) == 1
+    end
+  end
+
+  describe "verdict functions" do
+    test "accept/1 adds accept verdict" do
+      builder = rule() |> accept()
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "drop/1 adds drop verdict" do
+      builder = rule() |> drop()
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "reject/1 adds reject verdict with default type" do
+      builder = rule() |> reject()
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "reject/2 adds reject verdict with custom type" do
+      builder = rule() |> reject(:tcp_reset)
+
+      assert length(builder.expr_list) == 1
+    end
+  end
+
+  describe "convenience aliases" do
+    test "source/2 is alias for source_ip/2" do
+      builder = rule() |> source("192.168.1.1")
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "dest/2 is alias for dest_ip/2" do
+      builder = rule() |> dest("10.0.0.1")
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "sport/2 is alias for source_port/2" do
+      builder = rule() |> sport(1024)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "dport/2 is alias for dest_port/2" do
+      builder = rule() |> dport(443)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "port/2 matches destination port" do
+      builder = rule() |> port(22)
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "state/2 is alias for ct_state/2" do
+      builder = rule() |> state([:established, :related])
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "limit/3 is alias for rate_limit/3" do
+      builder = rule() |> limit(10, :minute)
+
+      assert length(builder.expr_list) == 1
+    end
+  end
+
+  describe "protocol helpers" do
+    test "tcp/1 matches TCP protocol" do
+      builder = rule() |> tcp()
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "udp/1 matches UDP protocol" do
+      builder = rule() |> udp()
+
+      assert length(builder.expr_list) == 1
+    end
+
+    test "icmp/1 matches ICMP protocol" do
+      builder = rule() |> icmp()
+
+      assert length(builder.expr_list) == 1
+    end
+  end
+
+  describe "chaining" do
+    test "chains multiple match expressions" do
+      builder =
+        rule()
+        |> source("192.168.1.100")
+        |> dport(22)
+
+      assert length(builder.expr_list) == 2
+    end
+
+    test "chains match, action, and verdict" do
+      builder =
+        rule()
+        |> dport(80)
+        |> counter()
+        |> accept()
+
+      assert length(builder.expr_list) == 3
+    end
+
+    test "preserves expression order" do
+      builder =
+        rule()
+        |> source("192.168.1.100")
+        |> dport(22)
+        |> log("SSH: ")
+        |> drop()
+
+      assert length(builder.expr_list) == 4
+      # Expressions should be in the order they were added
+    end
+  end
+
+  describe "to_expr/1" do
+    test "extracts expression list from rule" do
+      expr_list =
+        rule()
+        |> tcp()
+        |> dport(22)
+        |> accept()
+        |> to_expr()
+
+      assert is_list(expr_list)
+      assert length(expr_list) == 3
+    end
+  end
+
+  describe "comment/2" do
+    test "adds comment to rule" do
+      builder =
+        rule()
+        |> dport(22)
+        |> comment("Allow SSH")
+        |> accept()
+
+      assert builder.comment == "Allow SSH"
+    end
+  end
+
+  describe "complex rule patterns" do
+    test "builds SSH rate limiting rule" do
+      builder =
+        rule()
+        |> dport(22)
+        |> limit(10, :minute, burst: 5)
+        |> log("SSH: ")
+        |> accept()
+
+      assert length(builder.expr_list) == 4
+    end
+
+    test "builds IP blocking rule with logging" do
+      builder =
+        rule()
+        |> source("192.168.1.100")
+        |> counter()
+        |> log("BLOCKED: ")
+        |> drop()
+
+      assert length(builder.expr_list) == 4
+    end
+
+    test "builds established connection acceptance rule" do
+      builder =
+        rule()
+        |> state([:established, :related])
+        |> counter()
+        |> accept()
+
+      assert length(builder.expr_list) == 3
+    end
+
+    test "builds loopback acceptance rule" do
+      builder =
+        rule()
+        |> iif("lo")
+        |> accept()
+
+      assert length(builder.expr_list) == 2
+    end
+
+    test "builds web server rule with rate limiting" do
+      builder =
+        rule()
+        |> dport(80)
+        |> limit(100, :second, burst: 200)
+        |> counter()
+        |> accept()
+
+      assert length(builder.expr_list) == 4
+    end
+  end
+end
