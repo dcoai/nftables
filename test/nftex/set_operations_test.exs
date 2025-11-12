@@ -5,6 +5,7 @@ defmodule NFTablesEx.SetOperationsTest do
   require Logger
 
   alias NFTablesEx.{Set, Table, TestHelpers}
+  import NFTablesEx.QueryHelpers
 
   @moduletag :integration
 
@@ -189,7 +190,7 @@ defmodule NFTablesEx.SetOperationsTest do
       :ok = Set.add_elements(pid, table, set_name, :inet, ips)
 
       # List them
-      {:ok, elements} = Set.list_elements(pid, table, set_name)
+      {:ok, elements} = list_set_elements(pid, table, set_name)
       assert is_list(elements)
       assert length(elements) >= 2
 
@@ -206,7 +207,7 @@ defmodule NFTablesEx.SetOperationsTest do
       ip = "192.168.88.90"
       :ok = Set.add_elements(pid, table, set_name, :inet, [ip])
 
-      {:ok, elements} = Set.list_elements(pid, table, set_name)
+      {:ok, elements} = list_set_elements(pid, table, set_name)
 
       # Find our element
       our_elem = Enum.find(elements, fn e ->
@@ -219,7 +220,7 @@ defmodule NFTablesEx.SetOperationsTest do
     end
 
     test "returns error for non-existent set", %{pid: pid, table: table} do
-      result = Set.list_elements(pid, table, "nonexistent_set")
+      result = list_set_elements(pid, table, "nonexistent_set")
       # Should return error or empty list
       assert match?({:ok, []}, result) or match?({:error, _}, result)
     end
@@ -254,17 +255,17 @@ defmodule NFTablesEx.SetOperationsTest do
 
     @tag :requires_set
     test "returns true for existing set", %{pid: pid, table: table, set: set_name} do
-      result = Set.exists?(pid, table, set_name, :inet)
+      result = set_exists?(pid, table, set_name, :inet)
       assert result == true
     end
 
     test "returns false for non-existent set", %{pid: pid, table: table} do
-      result = Set.exists?(pid, table, "definitely_does_not_exist", :inet)
+      result = set_exists?(pid, table, "definitely_does_not_exist", :inet)
       assert result == false
     end
 
     test "returns false for non-existent table", %{pid: pid} do
-      result = Set.exists?(pid, "nonexistent_table", "test_blocklist", :inet)
+      result = set_exists?(pid, "nonexistent_table", "test_blocklist", :inet)
       assert result == false
     end
   end
@@ -288,7 +289,7 @@ defmodule NFTablesEx.SetOperationsTest do
     end
 
     test "lists all sets for family", %{pid: pid} do
-      {:ok, sets} = Set.list(pid, family: :inet)
+      {:ok, sets} = list_sets(pid, family: :inet)
       assert is_list(sets)
 
       for set <- sets do
@@ -337,7 +338,7 @@ defmodule NFTablesEx.SetOperationsTest do
       :ok = Set.add_elements(pid, table, set_name, :inet, ips)
 
       # List and verify they're there
-      {:ok, elements_before} = Set.list_elements(pid, table, set_name)
+      {:ok, elements_before} = list_set_elements(pid, table, set_name)
       count_before = length(elements_before)
       assert count_before >= 3
 
@@ -345,7 +346,7 @@ defmodule NFTablesEx.SetOperationsTest do
       :ok = Set.delete_elements(pid, table, set_name, :inet, [hd(ips)])
 
       # Verify count decreased
-      {:ok, elements_after} = Set.list_elements(pid, table, set_name)
+      {:ok, elements_after} = list_set_elements(pid, table, set_name)
       count_after = length(elements_after)
       assert count_after == count_before - 1
     end

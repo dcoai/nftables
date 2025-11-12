@@ -94,7 +94,7 @@ defmodule NFTablesEx.Chain do
 
   To list existing chains, use `NFTablesEx.Query.list_chains/2`:
 
-      {:ok, chains} = NFTablesEx.Query.list_chains(pid, family: :inet)
+      {:ok, chains} = NFTablesEx.Query.fetch_chains(pid, family: :inet)
 
   ## Integration with nft Command
 
@@ -123,8 +123,6 @@ defmodule NFTablesEx.Chain do
   - `NFTablesEx.Rule` - Add rules to chains
   - `NFTablesEx.Query` - Query existing chains
   """
-
-  alias NFTablesEx.Port
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type chain_type :: :filter | :nat | :route
@@ -197,177 +195,32 @@ defmodule NFTablesEx.Chain do
         {:error, :empty_name}
 
       true ->
-        create_chain(pid, spec)
-    end
-  end
-
-  defp create_chain(pid, spec) do
-    is_base_chain = Map.has_key?(spec, :hook)
-
-    # Build chain spec
-    chain_spec =
-      if is_base_chain do
-        %{
-          "family" => to_string(spec.family),
-          "table" => spec.table,
-          "name" => spec.name,
-          "type" => to_string(spec.type),
-          "hook" => to_string(spec.hook),
-          "prio" => spec.priority,
-          "policy" => to_string(spec.policy)
-        }
-      else
-        %{
-          "family" => to_string(spec.family),
-          "table" => spec.table,
-          "name" => spec.name
-        }
-      end
-
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "add" => %{
-            "chain" => chain_spec
-          }
-        }
-      ]
-    }
-
-    json = JSON.encode!(cmd)
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+        build_add(spec)
+        |> NFTablesEx.Executor.execute(pid: pid)
+        |> NFTablesEx.Decoder.decode()
     end
   end
 
   @doc """
   Delete a chain.
 
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `name` - Chain name (string)
+  - `family` - Protocol family (default: `:inet`)
+
   ## Example
 
-      NFTablesEx.Chain.delete(pid, "filter", "input", :inet)
+      :ok = NFTablesEx.Chain.delete(pid, "filter", "input", :inet)
 
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
-  def delete(pid, table, name, family) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "delete" => %{
-            "chain" => %{
-              "family" => to_string(family),
-              "table" => table,
-              "name" => name
-            }
-          }
-        }
-      ]
-    }
-
-    json = JSON.encode!(cmd)
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @doc """
-  List all chains for a given protocol family.
-
-  This is a convenience function that calls `NFTablesEx.Query.list_chains/2`.
-
-  ## Parameters
-
-  - `pid` - NFTex process pid
-  - `opts` - Keyword list options:
-    - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
-    - `:timeout` - Operation timeout in ms (default: 5000)
-
-  ## Examples
-
-      {:ok, chains} = NFTablesEx.Chain.list(pid)
-      {:ok, chains} = NFTablesEx.Chain.list(pid, family: :inet6)
-
-      for c <- chains do
-        IO.puts("Chain: \#{c.name} in table \#{c.table}")
-      end
-
-  """
-  @spec list(pid(), keyword()) :: {:ok, [map()]} | {:error, term()}
-  def list(pid, opts \\ []) do
-    NFTablesEx.Query.list_chains(pid, opts)
-  end
-
-  @doc """
-  Check if a chain exists.
-
-  ## Parameters
-
-  - `pid` - NFTex process pid
-  - `table` - Table name
-  - `name` - Chain name
-  - `family` - Protocol family (default: `:inet`)
-
-  ## Examples
-
-      if NFTablesEx.Chain.exists?(pid, "filter", "INPUT", :inet) do
-        IO.puts("Chain exists")
-      end
-
-  """
-  @spec exists?(pid(), String.t(), String.t(), family()) :: boolean()
-  def exists?(pid, table, name, family \\ :inet) do
-    case NFTablesEx.Query.list_chains(pid, family: family) do
-      {:ok, chains} ->
-        Enum.any?(chains, fn chain ->
-          chain.name == name and chain.table == table
-        end)
-
-      {:error, _} ->
-        false
-    end
+  def delete(pid, table, name, family \\ :inet) do
+    build_delete(table, name, family)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
@@ -400,9 +253,9 @@ defmodule NFTablesEx.Chain do
   end
 
   @doc """
-  Build a JSON command to add a chain (without executing).
+  Build a command map to add a chain (without executing).
 
-  Returns the JSON string that would be sent to add a chain.
+  Returns a map that would be sent to add a chain.
   Useful for batching, remote execution, or inspection.
 
   ## Parameters
@@ -411,12 +264,12 @@ defmodule NFTablesEx.Chain do
 
   ## Returns
 
-  JSON string containing the chain add command
+  Map containing the chain add command
 
   ## Examples
 
       # Build base chain command
-      json = NFTablesEx.Chain.build_add(%{
+      cmd = NFTablesEx.Chain.build_add(%{
         table: "filter",
         name: "input",
         family: :inet,
@@ -425,10 +278,10 @@ defmodule NFTablesEx.Chain do
         priority: 0,
         policy: :accept
       })
-      #=> "{\\\"nftables\\\":[{\\\"add\\\":{\\\"chain\\\":{...}}}]}"
+      #=> %{"nftables" => [%{"add" => %{"chain" => ...}}]}
 
       # Build regular chain command
-      json = NFTablesEx.Chain.build_add(%{
+      cmd = NFTablesEx.Chain.build_add(%{
         table: "filter",
         name: "my_rules",
         family: :inet
@@ -441,9 +294,9 @@ defmodule NFTablesEx.Chain do
         |> Batch.add(Chain.build_add(%{...}))
 
       # Execute later
-      NFTablesEx.Executor.execute(json)
+      NFTablesEx.Executor.execute(cmd)
   """
-  @spec build_add(chain_spec()) :: binary()
+  @spec build_add(chain_spec()) :: map()
   def build_add(spec) do
     is_base_chain = Map.has_key?(spec, :hook)
 
@@ -451,24 +304,24 @@ defmodule NFTablesEx.Chain do
     chain_spec =
       if is_base_chain do
         %{
-          "family" => to_string(spec.family),
+          "family" => spec.family,
           "table" => spec.table,
           "name" => spec.name,
-          "type" => to_string(spec.type),
-          "hook" => to_string(spec.hook),
+          "type" => spec.type,
+          "hook" => spec.hook,
           "prio" => spec.priority,
-          "policy" => to_string(spec.policy)
+          "policy" => spec.policy
         }
       else
         %{
-          "family" => to_string(spec.family),
+          "family" => spec.family,
           "table" => spec.table,
           "name" => spec.name
         }
       end
 
-    # Build JSON command
-    cmd = %{
+    # Build command map
+    %{
       "nftables" => [
         %{
           "add" => %{
@@ -477,14 +330,12 @@ defmodule NFTablesEx.Chain do
         }
       ]
     }
-
-    cmd |> JSON.encode!()
   end
 
   @doc """
-  Build a JSON command to delete a chain (without executing).
+  Build a command map to delete a chain (without executing).
 
-  Returns the JSON string that would be sent to delete a chain.
+  Returns a map that would be sent to delete a chain.
 
   ## Parameters
 
@@ -494,21 +345,21 @@ defmodule NFTablesEx.Chain do
 
   ## Returns
 
-  JSON string containing the chain delete command
+  Map containing the chain delete command
 
   ## Examples
 
-      json = NFTablesEx.Chain.build_delete("filter", "input", :inet)
-      NFTablesEx.Executor.execute(json)
+      cmd = NFTablesEx.Chain.build_delete("filter", "input", :inet)
+      NFTablesEx.Executor.execute(cmd)
   """
-  @spec build_delete(String.t(), String.t(), family()) :: binary()
+  @spec build_delete(String.t(), String.t(), family()) :: map()
   def build_delete(table, name, family) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "delete" => %{
             "chain" => %{
-              "family" => to_string(family),
+              "family" => family,
               "table" => table,
               "name" => name
             }
@@ -516,7 +367,5 @@ defmodule NFTablesEx.Chain do
         }
       ]
     }
-
-    cmd |> JSON.encode!()
   end
 end

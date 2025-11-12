@@ -2,6 +2,7 @@ defmodule NFTablesEx.PolicyTest do
   use ExUnit.Case, async: false
 
   alias NFTablesEx.{Policy, Table, Chain, Query, TestHelpers}
+  import NFTablesEx.QueryHelpers
 
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
   # the host's network connectivity. Never use production tables like "filter"!
@@ -211,10 +212,10 @@ defmodule NFTablesEx.PolicyTest do
       assert result == :ok
 
       # Verify table was created
-      assert Table.exists?(pid, filter_test, :inet)
+      assert table_exists?(pid, filter_test, :inet)
 
       # Verify INPUT chain was created
-      assert Chain.exists?(pid, filter_test, "INPUT", :inet)
+      assert chain_exists?(pid, filter_test, "INPUT", :inet)
 
       # Cleanup
       Table.delete(pid, filter_test, :inet)
@@ -227,7 +228,7 @@ defmodule NFTablesEx.PolicyTest do
       result = Policy.setup_basic_firewall(pid, table: custom_test, test_mode: true)
 
       assert result == :ok
-      assert Table.exists?(pid, custom_test, :inet)
+      assert table_exists?(pid, custom_test, :inet)
 
       # Cleanup
       Table.delete(pid, custom_test, :inet)
@@ -383,7 +384,7 @@ defmodule NFTablesEx.PolicyTest do
 
       # The rule should now exist in the chain
       # We can verify by listing rules (if Rule.list works)
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
 
       # Should have at least one rule
       assert length(rules) >= 1

@@ -521,6 +521,7 @@ defmodule NFTablesEx.JsonExpr do
   defp normalize_value(value) when is_integer(value), do: value
   defp normalize_value(value) when is_list(value), do: value
   defp normalize_value(value) when is_map(value), do: value
+  defp normalize_value({:range, min, max}), do: [min, max]
   defp normalize_value(value), do: to_string(value)
 
   # Conditionally add key to map if value is not nil

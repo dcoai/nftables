@@ -41,59 +41,64 @@ defmodule NFTablesEx.Executor do
   """
 
   @doc """
-  Execute an nftables JSON command.
+  Execute an nftables command from Elixir data structures.
+
+  This is the only place where JSON encoding/decoding happens. All other
+  modules should work with pure Elixir maps, atoms, lists, etc.
 
   ## Parameters
 
-  - `command` - JSON string containing nftables commands
+  - `command` - Map containing nftables commands (will be encoded to JSON)
   - `opts` - Options:
     - `:pid` - NFTablesEx.Port process (default: looks up registered process)
     - `:timeout` - Timeout in milliseconds (default: 5000)
 
   ## Returns
 
-  - `{:ok, response}` - JSON response string on success
+  - `{:ok, response}` - Decoded response map on success
   - `{:error, reason}` - On failure
 
   ## Examples
 
-      # Execute with default port
-      json = ~s({"nftables": [{"list": {"tables": {"family": "inet"}}}]})
-      {:ok, response} = Executor.execute(json)
+      # Execute with Elixir map
+      command = %{nftables: [%{list: %{tables: %{family: "inet"}}}]}
+      {:ok, response} = Executor.execute(command)
 
       # Execute with specific port pid
       {:ok, pid} = NFTablesEx.start_link()
-      Executor.execute(json, pid: pid)
+      Executor.execute(command, pid: pid)
 
       # Custom timeout for long operations
-      Executor.execute(json, timeout: 30_000)
+      Executor.execute(command, timeout: 30_000)
   """
-  @spec execute(binary(), keyword()) :: {:ok, binary()} | {:error, term()}
-  def execute(command, opts \\ []) when is_binary(command) do
+  @spec execute(map(), keyword()) :: {:ok, term()} | {:error, term()}
+  def execute(command, opts \\ []) when is_map(command) do
+    # Encode Elixir map to JSON (this is the ONLY place JSON encoding happens)
+    json_string = JSON.encode!(command)
     pid = get_port_pid(opts)
     timeout = Keyword.get(opts, :timeout, 5000)
 
-    case NFTablesEx.Port.commit(pid, command, timeout) do
+    case NFTablesEx.Port.commit(pid, json_string, timeout) do
       {:ok, ""} ->
         # Empty response is success
-        {:ok, ""}
+        {:ok, %{}}
 
       {:ok, response_json} ->
-        # Check if response contains an error
+        # Decode JSON response to Elixir structures (ONLY place JSON decoding happens)
         case JSON.decode(response_json) do
-          {:ok, %{"nftables" => items}} when is_list(items) ->
+          {:ok, %{"nftables" => items} = decoded} when is_list(items) ->
             # Check if any item contains an error
             case Enum.find(items, fn item -> Map.has_key?(item, "error") end) do
               %{"error" => error} -> {:error, error}
-              nil -> {:ok, response_json}
+              nil -> {:ok, decoded}  # Return decoded Elixir map
             end
 
           {:ok, %{"error" => error}} ->
             {:error, error}
 
-          {:ok, _other} ->
-            # Valid JSON but unexpected format, return as success
-            {:ok, response_json}
+          {:ok, decoded} ->
+            # Valid JSON but unexpected format, return decoded data
+            {:ok, decoded}
 
           {:error, _reason} ->
             # Not valid JSON, could be plain error text
@@ -103,7 +108,8 @@ defmodule NFTablesEx.Executor do
                String.contains?(response_json, "Error:") do
               {:error, response_json}
             else
-              {:ok, response_json}
+              # Return raw response wrapped in a map
+              {:ok, %{raw_response: response_json}}
             end
         end
 
@@ -113,18 +119,18 @@ defmodule NFTablesEx.Executor do
   end
 
   @doc """
-  Execute an nftables JSON command, raising on error.
+  Execute an nftables command, raising on error.
 
   Same as `execute/2` but raises `RuntimeError` on failure instead of
   returning `{:error, reason}`.
 
   ## Examples
 
-      json = Table.build_add(%{name: "filter", family: :inet})
-      response = Executor.execute!(json)
+      command = %{nftables: [%{add: %{table: %{family: "inet", name: "filter"}}}]}
+      response = Executor.execute!(command)
   """
-  @spec execute!(binary(), keyword()) :: binary()
-  def execute!(command, opts \\ []) when is_binary(command) do
+  @spec execute!(map(), keyword()) :: term()
+  def execute!(command, opts \\ []) when is_map(command) do
     case execute(command, opts) do
       {:ok, response} -> response
       {:error, reason} -> raise "NFTex execution failed: #{inspect(reason)}"

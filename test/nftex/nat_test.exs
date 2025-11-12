@@ -6,6 +6,7 @@ defmodule NFTablesEx.NATTest do
   @moduletag :nat
 
   alias NFTablesEx.{Table, Chain, NAT, Query}
+  import NFTablesEx.QueryHelpers
 
   setup do
     # Start NFTex
@@ -46,7 +47,7 @@ defmodule NFTablesEx.NATTest do
       assert :ok = NAT.setup_masquerade(pid, "eth0", table: "nftex_test_nat")
 
       # Verify rule was created
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -55,7 +56,7 @@ defmodule NFTablesEx.NATTest do
     test "creates port forwarding rule", %{pid: pid} do
       assert :ok = NAT.port_forward(pid, 80, "192.168.1.100", 8080, table: "nftex_test_nat")
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
 
@@ -66,7 +67,7 @@ defmodule NFTablesEx.NATTest do
                  table: "nftex_test_nat"
                )
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
 
@@ -77,7 +78,7 @@ defmodule NFTablesEx.NATTest do
                  table: "nftex_test_nat"
                )
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -87,8 +88,8 @@ defmodule NFTablesEx.NATTest do
       assert :ok = NAT.static_nat(pid, "203.0.113.1", "192.168.1.100", table: "nftex_test_nat")
 
       # Should create rules in both directions
-      {:ok, pre_rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
-      {:ok, post_rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      {:ok, pre_rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, post_rules} = list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
 
       assert length(pre_rules) > 0
       assert length(post_rules) > 0
@@ -99,14 +100,14 @@ defmodule NFTablesEx.NATTest do
     test "creates SNAT rule", %{pid: pid} do
       assert :ok = NAT.source_nat(pid, "192.168.1.0/24", "203.0.113.1", table: "nftex_test_nat")
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
       assert length(rules) > 0
     end
 
     test "supports single IP", %{pid: pid} do
       assert :ok = NAT.source_nat(pid, "192.168.1.100", "203.0.113.1", table: "nftex_test_nat")
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "postrouting", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -115,7 +116,7 @@ defmodule NFTablesEx.NATTest do
     test "creates DNAT rule", %{pid: pid} do
       assert :ok = NAT.destination_nat(pid, "203.0.113.1", "192.168.1.100", table: "nftex_test_nat")
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -124,14 +125,14 @@ defmodule NFTablesEx.NATTest do
     test "creates port redirect rule", %{pid: pid} do
       assert :ok = NAT.redirect_port(pid, 80, 3128, table: "nftex_test_nat")
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
 
     test "supports UDP protocol", %{pid: pid} do
       assert :ok = NAT.redirect_port(pid, 53, 5353, protocol: :udp, table: "nftex_test_nat")
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
   end

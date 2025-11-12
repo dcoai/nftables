@@ -1211,10 +1211,15 @@ defmodule NFTablesEx.Builder do
   def from_ruleset(pid, opts \\ []) when is_pid(pid) do
     family = Keyword.get(opts, :family, :inet)
 
-    with {:ok, tables} <- NFTablesEx.Query.list_tables(pid, family: family),
-         {:ok, chains} <- NFTablesEx.Query.list_chains(pid, family: family),
-         {:ok, rules} <- NFTablesEx.Query.list_rules(pid, family: family),
-         {:ok, sets} <- NFTablesEx.Query.list_sets(pid, family: family) do
+    # Use new pipeline pattern: Query -> Executor -> Decoder
+    with {:ok, decoded} <- NFTablesEx.Query.list_ruleset(family: family)
+                          |> NFTablesEx.Executor.execute(pid: pid)
+                          |> NFTablesEx.Decoder.decode() do
+
+      tables = Map.get(decoded, :tables, [])
+      chains = Map.get(decoded, :chains, [])
+      sets = Map.get(decoded, :sets, [])
+      rules = Map.get(decoded, :rules, [])
 
       builder = new(family: family)
 
@@ -1244,8 +1249,8 @@ defmodule NFTablesEx.Builder do
   @doc """
   Execute the accumulated commands.
 
-  Converts the builder commands to nftables JSON format and executes them
-  via the Executor module.
+  Passes the builder commands (as Elixir maps) to the Executor module.
+  The Executor is responsible for JSON encoding.
 
   ## Parameters
 
@@ -1261,23 +1266,43 @@ defmodule NFTablesEx.Builder do
   """
   @spec execute(t(), pid()) :: :ok | {:error, term()}
   def execute(%__MODULE__{commands: commands}, pid) when is_pid(pid) do
-    # Wrap commands in nftables JSON envelope
-    nftables_json = %{
+    # Wrap commands in nftables envelope (Elixir map, not JSON)
+    command_map = %{
       nftables: commands
     }
 
-    # Encode to JSON using Elixir's JSON module (returns binary)
-    json_string = JSON.encode!(nftables_json)
-
-    # Execute via Executor
-    case NFTablesEx.Executor.execute(json_string, pid: pid) do
+    # Pass Elixir map to Executor (it will handle JSON encoding)
+    case NFTablesEx.Executor.execute(command_map, pid: pid) do
       {:ok, _response} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
+  Convert builder to Elixir map structure.
+
+  Returns the raw Elixir data structure that will be sent to nftables.
+  No JSON encoding happens here - this is pure Elixir data.
+
+  ## Examples
+
+      builder |> Builder.to_map()
+      #=> %{nftables: [%{add: %{table: %{family: "inet", name: "filter"}}}]}
+
+  For backwards compatibility, `to_json/1` is an alias that returns JSON.
+  """
+  @spec to_map(t()) :: map()
+  def to_map(%__MODULE__{commands: commands}) do
+    %{
+      nftables: commands
+    }
+  end
+
+  @doc """
   Convert builder to JSON string for inspection.
+
+  This delegates to Executor for JSON encoding to maintain the principle
+  that only Executor does JSON encoding/decoding.
 
   ## Examples
 
@@ -1285,12 +1310,10 @@ defmodule NFTablesEx.Builder do
       #=> "{\"nftables\":[{\"add\":{\"table\":{...}}}]}"
   """
   @spec to_json(t()) :: String.t()
-  def to_json(%__MODULE__{commands: commands}) do
-    nftables_json = %{
-      nftables: commands
-    }
-
-    JSON.encode!(nftables_json)
+  def to_json(%__MODULE__{} = builder) do
+    builder
+    |> to_map()
+    |> JSON.encode!()
   end
 
   ## Private Helpers

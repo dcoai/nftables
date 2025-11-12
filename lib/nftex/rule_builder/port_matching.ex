@@ -52,7 +52,7 @@ defmodule NFTablesEx.RuleBuilder.PortMatching do
              min_port >= 0 and min_port <= 65535 and
              max_port >= 0 and max_port <= 65535 and
              min_port <= max_port do
-    expr = JsonExpr.payload_match("tcp", "dport", {:range, min_port, max_port})
+    expr = JsonExpr.payload_match_range("tcp", "dport", min_port, max_port)
     RuleBuilder.add_expr(builder, expr)
   end
 
@@ -87,7 +87,7 @@ defmodule NFTablesEx.RuleBuilder.PortMatching do
              min_port >= 0 and min_port <= 65535 and
              max_port >= 0 and max_port <= 65535 and
              min_port <= max_port do
-    expr = JsonExpr.payload_match("udp", "dport", {:range, min_port, max_port})
+    expr = JsonExpr.payload_match_range("udp", "dport", min_port, max_port)
     RuleBuilder.add_expr(builder, expr)
   end
 

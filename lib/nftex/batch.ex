@@ -92,10 +92,43 @@ defmodule NFTablesEx.Batch do
   end
 
   @doc """
+  Convert batch to nftables command map.
+
+  Combines all commands in the batch into a single Elixir map
+  with an "nftables" array containing all operations.
+
+  ## Parameters
+
+  - `batch` - The batch to convert
+
+  ## Returns
+
+  Map with string keys containing all batch commands
+
+  ## Examples
+
+      batch = Batch.new()
+      |> Batch.add(Table.build_add(%{name: "filter"}))
+      |> Batch.to_map()
+
+      #=> %{"nftables" => [%{"add" => %{"table" => ...}}]}
+  """
+  @spec to_map(t()) :: map()
+  def to_map(batch) do
+    # Reverse to maintain insertion order
+    commands =
+      batch
+      |> Enum.reverse()
+      |> Enum.map(&decode_command/1)
+      |> List.flatten()
+
+    %{"nftables" => commands}
+  end
+
+  @doc """
   Convert batch to nftables JSON format.
 
-  Combines all commands in the batch into a single JSON object
-  with an "nftables" array containing all operations.
+  Same as `to_map/1` but returns JSON string.
 
   ## Parameters
 
@@ -115,16 +148,7 @@ defmodule NFTablesEx.Batch do
   """
   @spec to_json(t()) :: binary()
   def to_json(batch) do
-    # Reverse to maintain insertion order
-    commands =
-      batch
-      |> Enum.reverse()
-      |> Enum.map(&decode_command/1)
-      |> List.flatten()
-
-    %{"nftables" => commands}
-    |> JSON.encode!()
-    
+    batch |> to_map() |> JSON.encode!()
   end
 
   @doc """
@@ -158,8 +182,8 @@ defmodule NFTablesEx.Batch do
   """
   @spec execute(t(), keyword()) :: {:ok, binary()} | {:error, term()}
   def execute(batch, opts \\ []) do
-    json = to_json(batch)
-    NFTablesEx.Executor.execute(json, opts)
+    command_map = to_map(batch)
+    NFTablesEx.Executor.execute(command_map, opts)
   end
 
   @doc """

@@ -44,7 +44,7 @@ defmodule NFTablesEx.Table do
 
   To list existing tables, use `NFTablesEx.Query.list_tables/2`:
 
-      {:ok, tables} = NFTablesEx.Query.list_tables(pid, family: :inet)
+      {:ok, tables} = NFTablesEx.Query.fetch_tables(pid, family: :inet)
 
   ## Integration with nft Command
 
@@ -64,8 +64,6 @@ defmodule NFTablesEx.Table do
   - `NFTablesEx.Query` - Query existing tables and configuration
   """
 
-  alias NFTablesEx.Port
-
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type table_spec :: %{
           name: String.t(),
@@ -77,8 +75,8 @@ defmodule NFTablesEx.Table do
 
   ## Parameters
 
-  - `name` - Table name (required)
-  - `family` - Protocol family (required)
+  - `pid` - NFTex process pid
+  - `table_spec` - Map with `:name` and `:family` keys
 
   ## Families
 
@@ -91,52 +89,17 @@ defmodule NFTablesEx.Table do
 
   ## Example
 
-      NFTablesEx.Table.add(pid, %{
+      :ok = NFTablesEx.Table.add(pid, %{
         name: "filter",
         family: :inet
       })
 
   """
   @spec add(pid(), table_spec()) :: :ok | {:error, term()}
-  def add(pid, %{name: name, family: family}) when is_binary(name) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "add" => %{
-            "table" => %{
-              "family" => to_string(family),
-              "name" => name
-            }
-          }
-        }
-      ]
-    }
-
-    json = JSON.encode!(cmd)
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def add(pid, %{name: name} = spec) when is_binary(name) do
+    build_add(spec)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
@@ -144,57 +107,28 @@ defmodule NFTablesEx.Table do
 
   This will also delete all chains, rules, and sets within the table.
 
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `name` - Table name (string)
+  - `family` - Protocol family (default: `:inet`)
+
   ## Example
 
-      NFTablesEx.Table.delete(pid, "filter", :inet)
+      :ok = NFTablesEx.Table.delete(pid, "filter", :inet)
 
   """
   @spec delete(pid(), String.t(), family()) :: :ok | {:error, term()}
-  def delete(pid, name, family) when is_binary(name) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "delete" => %{
-            "table" => %{
-              "family" => to_string(family),
-              "name" => name
-            }
-          }
-        }
-      ]
-    }
-
-    json = JSON.encode!(cmd)
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, _reason} ->
-            handle_non_json_response(response_json)
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def delete(pid, name, family \\ :inet) when is_binary(name) do
+    build_delete(name, family)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
-  Build a JSON command to add a table (without executing).
+  Build a command map to add a table (without executing).
 
-  Returns the JSON string that would be sent to add a table.
+  Returns a map that would be sent to add a table.
   Useful for batching, remote execution, or inspection.
 
   ## Parameters
@@ -203,13 +137,13 @@ defmodule NFTablesEx.Table do
 
   ## Returns
 
-  JSON string containing the table add command
+  Map containing the table add command
 
   ## Examples
 
       # Build command
-      json = NFTablesEx.Table.build_add(%{name: "filter", family: :inet})
-      #=> "{\"nftables\":[{\"add\":{\"table\":{...}}}]}"
+      cmd = NFTablesEx.Table.build_add(%{name: "filter", family: :inet})
+      #=> %{"nftables" => [%{"add" => %{"table" => ...}}]}
 
       # Use in batch
       batch =
@@ -218,33 +152,31 @@ defmodule NFTablesEx.Table do
         |> Batch.add(Table.build_add(%{name: "nat", family: :inet}))
 
       # Execute later
-      NFTablesEx.Executor.execute(json)
+      NFTablesEx.Executor.execute(cmd)
 
       # Send to remote node
-      MyTransport.send_to_node("firewall-1", json)
+      MyTransport.send_to_node("firewall-1", cmd)
   """
-  @spec build_add(table_spec()) :: binary()
+  @spec build_add(table_spec()) :: map()
   def build_add(%{name: name, family: family}) when is_binary(name) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "add" => %{
             "table" => %{
-              "family" => to_string(family),
+              "family" => family,
               "name" => name
             }
           }
         }
       ]
     }
-
-    JSON.encode!(cmd)
   end
 
   @doc """
-  Build a JSON command to delete a table (without executing).
+  Build a command map to delete a table (without executing).
 
-  Returns the JSON string that would be sent to delete a table.
+  Returns a map that would be sent to delete a table.
 
   ## Parameters
 
@@ -253,75 +185,27 @@ defmodule NFTablesEx.Table do
 
   ## Returns
 
-  JSON string containing the table delete command
+  Map containing the table delete command
 
   ## Examples
 
-      json = NFTablesEx.Table.build_delete("filter", :inet)
-      NFTablesEx.Executor.execute(json)
+      cmd = NFTablesEx.Table.build_delete("filter", :inet)
+      NFTablesEx.Executor.execute(cmd)
   """
-  @spec build_delete(String.t(), family()) :: binary()
+  @spec build_delete(String.t(), family()) :: map()
   def build_delete(name, family) when is_binary(name) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "delete" => %{
             "table" => %{
-              "family" => to_string(family),
+              "family" => family,
               "name" => name
             }
           }
         }
       ]
     }
-
-    JSON.encode!(cmd)
   end
 
-  @doc """
-  Check if a table exists.
-
-  ## Parameters
-
-  - `pid` - NFTex process pid
-  - `name` - Table name (string)
-  - `family` - Protocol family (default: `:inet`)
-
-  ## Examples
-
-      if NFTablesEx.Table.exists?(pid, "filter", :inet) do
-        IO.puts("Table exists")
-      end
-
-  """
-  @spec exists?(pid(), String.t(), family()) :: boolean()
-  def exists?(pid, name, family \\ :inet) do
-    case NFTablesEx.Query.list_tables(pid, family: family) do
-      {:ok, tables} ->
-        Enum.any?(tables, fn table ->
-          table.name == name
-        end)
-
-      {:error, _} ->
-        false
-    end
-  end
-
-  # Private helper to handle non-JSON responses
-  defp handle_non_json_response(response_json) do
-    # Response is not valid JSON - probably a plain error string
-    # Common case: deleting a table that doesn't exist
-    cond do
-      String.contains?(response_json, "No such file or directory") ->
-        # Table doesn't exist - that's fine, consider it deleted
-        :ok
-
-      String.contains?(response_json, "does not exist") ->
-        # Table doesn't exist - that's fine
-        :ok
-
-      true ->
-        {:error, response_json}
-    end
-  end
 end

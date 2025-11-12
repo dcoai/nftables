@@ -2,6 +2,7 @@ defmodule NFTablesEx.IntegrationTest do
   use ExUnit.Case, async: false
 
   alias NFTablesEx.{Table, Chain, RuleBuilder, Policy, TestHelpers, Builder, Rule}
+  import NFTablesEx.QueryHelpers
 
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
   # the host's network connectivity. All tables are prefixed with "nftex_test_"
@@ -78,9 +79,9 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.commit()
 
       # Verify chain exists and has rules
-      assert Chain.exists?(pid, test_table, "INPUT", :inet)
+      assert chain_exists?(pid, test_table, "INPUT", :inet)
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 5
     end
 
@@ -97,10 +98,10 @@ defmodule NFTablesEx.IntegrationTest do
       )
 
       # Verify it's all set up
-      assert Table.exists?(pid, filter_test_table, :inet)
-      assert Chain.exists?(pid, filter_test_table, "INPUT", :inet)
+      assert table_exists?(pid, filter_test_table, :inet)
+      assert chain_exists?(pid, filter_test_table, "INPUT", :inet)
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, filter_test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, filter_test_table, "INPUT", family: :inet)
       # Should have loopback, established, invalid drop, and 3 services
       assert length(rules) >= 6
     end
@@ -141,8 +142,8 @@ defmodule NFTablesEx.IntegrationTest do
       # but not yet in RuleBuilder
 
       # Verify setup
-      assert Chain.exists?(pid, nat_test_table, "POSTROUTING", :inet)
-      assert Chain.exists?(pid, nat_test_table, "PREROUTING", :inet)
+      assert chain_exists?(pid, nat_test_table, "POSTROUTING", :inet)
+      assert chain_exists?(pid, nat_test_table, "PREROUTING", :inet)
     end
   end
 
@@ -179,7 +180,7 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 3
     end
   end
@@ -216,7 +217,7 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.log("DROP-DEFAULT: ")
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 3
     end
   end
@@ -266,9 +267,9 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.commit()
 
       # Verify all chains exist
-      assert Chain.exists?(pid, test_table, "INPUT", :inet)
-      assert Chain.exists?(pid, test_table, "FORWARD", :inet)
-      assert Chain.exists?(pid, test_table, "custom_rules", :inet)
+      assert chain_exists?(pid, test_table, "INPUT", :inet)
+      assert chain_exists?(pid, test_table, "FORWARD", :inet)
+      assert chain_exists?(pid, test_table, "custom_rules", :inet)
     end
   end
 
@@ -297,15 +298,15 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.commit()
 
       # Verify everything exists
-      assert Table.exists?(pid, test_table, :inet)
-      assert Chain.exists?(pid, test_table, "INPUT", :inet)
+      assert table_exists?(pid, test_table, :inet)
+      assert chain_exists?(pid, test_table, "INPUT", :inet)
 
       # Delete table (should clean up chains and rules)
       assert :ok = Table.delete(pid, test_table, :inet)
 
       # Verify cleanup
-      refute Table.exists?(pid, test_table, :inet)
-      refute Chain.exists?(pid, test_table, "INPUT", :inet)
+      refute table_exists?(pid, test_table, :inet)
+      refute chain_exists?(pid, test_table, "INPUT", :inet)
     end
   end
 
@@ -332,7 +333,7 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -362,7 +363,7 @@ defmodule NFTablesEx.IntegrationTest do
         |> RuleBuilder.accept()
         |> RuleBuilder.commit()
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 2
     end
   end
@@ -413,7 +414,7 @@ defmodule NFTablesEx.IntegrationTest do
       assert result == :ok
 
       # Verify rule was added
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -452,7 +453,7 @@ defmodule NFTablesEx.IntegrationTest do
       assert result == :ok
 
       # Verify all rules were added
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 3
     end
 
@@ -479,7 +480,7 @@ defmodule NFTablesEx.IntegrationTest do
 
       assert result == :ok
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -502,7 +503,7 @@ defmodule NFTablesEx.IntegrationTest do
 
       assert result == :ok
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -523,7 +524,7 @@ defmodule NFTablesEx.IntegrationTest do
 
       assert result == :ok
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
+      {:ok, rules} = list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -544,7 +545,7 @@ defmodule NFTablesEx.IntegrationTest do
 
       assert result == :ok
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
+      {:ok, rules} = list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -566,7 +567,7 @@ defmodule NFTablesEx.IntegrationTest do
 
       assert result == :ok
 
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 1
     end
 
@@ -608,7 +609,7 @@ defmodule NFTablesEx.IntegrationTest do
       assert result == :ok
 
       # Verify all rules were added
-      {:ok, rules} = NFTablesEx.Query.list_rules(pid, test_table, "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
       assert length(rules) >= 5
     end
   end

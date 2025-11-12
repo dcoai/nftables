@@ -2,6 +2,7 @@ defmodule NFTablesEx.ChainTest do
   use ExUnit.Case, async: false
 
   alias NFTablesEx.{Chain, Table}
+  import NFTablesEx.QueryHelpers
 
   setup do
     # Note: These tests require CAP_NET_ADMIN capability
@@ -34,10 +35,10 @@ defmodule NFTablesEx.ChainTest do
       })
 
       # Verify chain exists
-      assert Chain.exists?(pid, "nftex_test_chain", "test_input", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "test_input", :inet)
 
       # Verify it appears in list
-      {:ok, chains} = Chain.list(pid, family: :inet)
+      {:ok, chains} = list_chains(pid, family: :inet)
       assert Enum.any?(chains, fn c ->
         c.name == "test_input" and c.table == "nftex_test_chain"
       end)
@@ -56,7 +57,7 @@ defmodule NFTablesEx.ChainTest do
           family: :inet
         })
 
-        assert Chain.exists?(pid, "nftex_test_chain", chain_name, :inet)
+        assert chain_exists?(pid, "nftex_test_chain", chain_name, :inet)
       end
     end
 
@@ -70,7 +71,7 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "test_nat", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "test_nat", :inet)
     end
 
     test "creates chain without hook (safe - policy not applicable)", %{pid: pid} do
@@ -84,7 +85,7 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "test_drop", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "test_drop", :inet)
     end
 
     test "creates multiple chains without hooks (safe - priority not applicable)", %{pid: pid} do
@@ -101,7 +102,7 @@ defmodule NFTablesEx.ChainTest do
           family: :inet
         })
 
-        assert Chain.exists?(pid, "nftex_test_chain", chain_name, :inet)
+        assert chain_exists?(pid, "nftex_test_chain", chain_name, :inet)
       end
     end
   end
@@ -116,7 +117,7 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "my_custom_rules", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "my_custom_rules", :inet)
     end
 
     test "creates multiple regular chains in same table", %{pid: pid} do
@@ -134,8 +135,8 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "custom1", :inet)
-      assert Chain.exists?(pid, "nftex_test_chain", "custom2", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "custom1", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "custom2", :inet)
     end
   end
 
@@ -149,11 +150,11 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "temp_chain", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "temp_chain", :inet)
 
       assert :ok = Chain.delete(pid, "nftex_test_chain", "temp_chain", :inet)
 
-      refute Chain.exists?(pid, "nftex_test_chain", "temp_chain", :inet)
+      refute chain_exists?(pid, "nftex_test_chain", "temp_chain", :inet)
     end
 
     test "returns error for non-existent chain", %{pid: pid} do
@@ -183,7 +184,7 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      {:ok, chains} = Chain.list(pid, family: :inet)
+      {:ok, chains} = list_chains(pid, family: :inet)
 
       assert is_list(chains)
       assert length(chains) >= 2
@@ -196,7 +197,7 @@ defmodule NFTablesEx.ChainTest do
 
     test "returns empty list when no chains exist", %{pid: pid} do
       # Don't create any chains, just query
-      {:ok, chains} = Chain.list(pid, family: :inet)
+      {:ok, chains} = list_chains(pid, family: :inet)
 
       # May have system chains, but should be a list
       assert is_list(chains)
@@ -212,7 +213,7 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      {:ok, chains} = Chain.list(pid, family: :inet)
+      {:ok, chains} = list_chains(pid, family: :inet)
 
       test_chain = Enum.find(chains, fn c ->
         c.name == "test_metadata" and c.table == "nftex_test_chain"
@@ -234,22 +235,22 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "exists_test", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "exists_test", :inet)
     end
 
     test "returns false for non-existent chain", %{pid: pid} do
       :ok = Table.add(pid, %{name: "nftex_test_chain", family: :inet})
 
-      refute Chain.exists?(pid, "nftex_test_chain", "does_not_exist", :inet)
+      refute chain_exists?(pid, "nftex_test_chain", "does_not_exist", :inet)
     end
 
     test "returns false for chain in non-existent table", %{pid: pid} do
-      refute Chain.exists?(pid, "nonexistent_table", "some_chain", :inet)
+      refute chain_exists?(pid, "nonexistent_table", "some_chain", :inet)
     end
 
     test "returns false when query fails", %{pid: pid} do
       # This should handle query errors gracefully
-      refute Chain.exists?(pid, "", "", :inet)
+      refute chain_exists?(pid, "", "", :inet)
     end
   end
 
@@ -310,7 +311,7 @@ defmodule NFTablesEx.ChainTest do
         family: :inet
       })
 
-      assert Chain.exists?(pid, "nftex_test_chain", "inet_chain", :inet)
+      assert chain_exists?(pid, "nftex_test_chain", "inet_chain", :inet)
     end
 
     # Note: inet6 tests would require IPv6 support and appropriate kernel config

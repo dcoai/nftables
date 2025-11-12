@@ -104,9 +104,9 @@ defmodule NFTablesEx.Sysctl do
   """
   @spec get(pid() | keyword(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def get(pid_or_opts, parameter) when is_binary(parameter) do
-    json = build_sysctl_get(parameter)
+    command_map = build_sysctl_get(parameter)
 
-    case Executor.execute(json, normalize_opts(pid_or_opts)) do
+    case Executor.execute(command_map, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
         parse_get_response(response, parameter)
       {:error, reason} ->
@@ -136,9 +136,9 @@ defmodule NFTablesEx.Sysctl do
   """
   @spec set(pid() | keyword(), String.t(), String.t()) :: :ok | {:error, term()}
   def set(pid_or_opts, parameter, value) when is_binary(parameter) and is_binary(value) do
-    json = build_sysctl_set(parameter, value)
+    command_map = build_sysctl_set(parameter, value)
 
-    case Executor.execute(json, normalize_opts(pid_or_opts)) do
+    case Executor.execute(command_map, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
         parse_set_response(response)
       {:error, reason} ->
@@ -201,53 +201,45 @@ defmodule NFTablesEx.Sysctl do
   defp normalize_opts(opts) when is_list(opts), do: opts
 
   defp parse_get_response(response, _parameter) do
-    case JSON.decode(response) do
-      {:ok, %{"sysctl" => %{"value" => value}}} ->
+    case response do
+      %{"sysctl" => %{"value" => value}} ->
         {:ok, value}
-      {:ok, %{"error" => error}} ->
+      %{"error" => error} ->
         {:error, error}
-      {:error, _} = error ->
-        error
+      _ ->
+        {:error, :invalid_response}
     end
   end
 
   defp parse_set_response(response) do
-    case JSON.decode(response) do
-      {:ok, %{"sysctl" => %{"status" => "ok"}}} ->
+    case response do
+      %{"sysctl" => %{"status" => "ok"}} ->
         :ok
-      {:ok, %{"error" => error}} ->
+      %{"error" => error} ->
         {:error, error}
-      {:error, _} = error ->
-        error
+      _ ->
+        {:error, :invalid_response}
     end
   end
 
-  # Build sysctl get command JSON
+  # Build sysctl get command map
   defp build_sysctl_get(parameter) when is_binary(parameter) do
-    data = %{
+    %{
       "sysctl" => %{
         "operation" => "get",
         "parameter" => parameter
       }
     }
-
-    data
-    |> JSON.encode!()
-    
   end
 
-  # Build sysctl set command JSON
+  # Build sysctl set command map
   defp build_sysctl_set(parameter, value) when is_binary(parameter) and is_binary(value) do
-    data = %{
+    %{
       "sysctl" => %{
         "operation" => "set",
         "parameter" => parameter,
         "value" => value
       }
     }
-
-    data
-    |> JSON.encode!()
-    
   end
 end

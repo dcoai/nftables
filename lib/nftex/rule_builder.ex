@@ -289,8 +289,8 @@ defmodule NFTablesEx.RuleBuilder do
   """
   @spec commit(t()) :: :ok | {:error, term()}
   def commit(%__MODULE__{} = builder) do
-    # Convert expr_list to nftables JSON format
-    nftables_json = %{
+    # Convert expr_list to nftables command map
+    command_map = %{
       nftables: [
         %{
           add: %{
@@ -305,14 +305,10 @@ defmodule NFTablesEx.RuleBuilder do
       ]
     }
 
-    # Encode to JSON using Elixir's JSON module (returns binary)
-    json_string = JSON.encode!(nftables_json)
-
-    # Execute via Executor
-    case NFTablesEx.Executor.execute(json_string, pid: builder.pid) do
-      {:ok, _response} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
+    # Execute via Executor and decode response
+    command_map
+    |> NFTablesEx.Executor.execute(pid: builder.pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   # Private helpers

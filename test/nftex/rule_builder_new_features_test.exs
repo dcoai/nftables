@@ -6,6 +6,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
   @moduletag :new_features
 
   alias NFTablesEx.{Table, Chain, RuleBuilder, Query}
+  import NFTablesEx.QueryHelpers
 
   setup do
     {:ok, pid} = NFTablesEx.start_link(port: NFTablesEx.Port, check_capabilities: false)
@@ -39,7 +40,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
 
@@ -50,7 +51,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -63,7 +64,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
 
@@ -74,7 +75,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
 
@@ -86,7 +87,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -99,7 +100,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -112,7 +113,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.drop()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
 
@@ -123,7 +124,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -137,7 +138,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
 
@@ -148,7 +149,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -162,7 +163,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
 
@@ -175,7 +176,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end
@@ -193,7 +194,7 @@ defmodule NFTablesEx.RuleBuilderNewFeaturesTest do
                |> RuleBuilder.accept()
                |> RuleBuilder.commit()
 
-      {:ok, rules} = Query.list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
+      {:ok, rules} = list_rules(pid, "nftex_test_features", "INPUT", family: :inet)
       assert length(rules) > 0
     end
   end

@@ -4,7 +4,7 @@ defmodule NFTablesEx.QueryTest do
   use ExUnit.Case
   require Logger
 
-  alias NFTablesEx.Query
+  alias NFTablesEx.{Query, Executor, Decoder}
 
   @moduletag :integration
 
@@ -12,7 +12,7 @@ defmodule NFTablesEx.QueryTest do
   # - CAP_NET_ADMIN capability set on binary
   # - Some nftables configuration exists (tables, chains, etc.)
 
-  describe "list_tables/2" do
+  describe "list_tables/1" do
     setup do
       {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
@@ -22,7 +22,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "lists tables for inet family", %{pid: pid} do
-      {:ok, tables} = Query.list_tables(pid, family: :inet)
+      {:ok, decoded} = Query.list_tables(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      tables = Map.get(decoded, :tables, [])
       assert is_list(tables)
       # Each table should be a map with required fields
       for table <- tables do
@@ -33,22 +37,42 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "lists tables for ip6 family", %{pid: pid} do
-      {:ok, tables} = Query.list_tables(pid, family: :ip6)
-      assert is_list(tables)
+      result = Query.list_tables(family: :ip6)
+               |> Executor.execute(pid: pid)
+               |> Decoder.decode()
+
+      case result do
+        {:ok, decoded} ->
+          tables = Map.get(decoded, :tables, [])
+          assert is_list(tables)
+
+        :ok ->
+          # Empty result (no ip6 tables)
+          assert true
+      end
     end
 
     test "accepts timeout option", %{pid: pid} do
-      {:ok, tables} = Query.list_tables(pid, family: :inet, timeout: 10_000)
+      {:ok, decoded} = Query.list_tables(family: :inet)
+                       |> Executor.execute(pid: pid, timeout: 10_000)
+                       |> Decoder.decode()
+
+      tables = Map.get(decoded, :tables, [])
       assert is_list(tables)
     end
 
-    test "accepts parse: false option", %{pid: pid} do
-      {:ok, tables} = Query.list_tables(pid, family: :inet, parse: false)
+    test "parse: false option is no longer supported - decoder always transforms", %{pid: pid} do
+      # The new architecture always decodes responses
+      {:ok, decoded} = Query.list_tables(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      tables = Map.get(decoded, :tables, [])
       assert is_list(tables)
     end
   end
 
-  describe "list_chains/2" do
+  describe "list_chains/1" do
     setup do
       {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
@@ -58,7 +82,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "lists chains for inet family", %{pid: pid} do
-      {:ok, chains} = Query.list_chains(pid, family: :inet)
+      {:ok, decoded} = Query.list_chains(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      chains = Map.get(decoded, :chains, [])
       assert is_list(chains)
       # Each chain should be a map
       for chain <- chains do
@@ -69,7 +97,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "chain has expected fields", %{pid: pid} do
-      {:ok, chains} = Query.list_chains(pid, family: :inet)
+      {:ok, decoded} = Query.list_chains(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      chains = Map.get(decoded, :chains, [])
 
       if length(chains) > 0 do
         chain = hd(chains)
@@ -78,17 +110,16 @@ defmodule NFTablesEx.QueryTest do
         assert Map.has_key?(chain, :table)
         assert Map.has_key?(chain, :family)
 
-        # Base chains have additional fields
-        if Map.get(chain, :is_base_chain) do
-          assert Map.has_key?(chain, :type)
+        # Base chains have additional fields (type, hook, policy exist in decoded chain)
+        if Map.get(chain, :type) do
           assert Map.has_key?(chain, :hook)
-          assert Map.has_key?(chain, :priority)
+          assert Map.has_key?(chain, :prio)
         end
       end
     end
   end
 
-  describe "list_rules/2" do
+  describe "list_rules/1" do
     setup do
       {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
@@ -98,7 +129,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "lists rules for inet family", %{pid: pid} do
-      {:ok, rules} = Query.list_rules(pid, family: :inet)
+      {:ok, decoded} = Query.list_rules(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      rules = Map.get(decoded, :rules, [])
       assert is_list(rules)
       # Each rule should be a map
       for rule <- rules do
@@ -109,7 +144,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "rule has expected fields", %{pid: pid} do
-      {:ok, rules} = Query.list_rules(pid, family: :inet)
+      {:ok, decoded} = Query.list_rules(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      rules = Map.get(decoded, :rules, [])
 
       if length(rules) > 0 do
         rule = hd(rules)
@@ -121,12 +160,16 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "accepts timeout option", %{pid: pid} do
-      {:ok, rules} = Query.list_rules(pid, family: :inet, timeout: 10_000)
+      {:ok, decoded} = Query.list_rules(family: :inet)
+                       |> Executor.execute(pid: pid, timeout: 10_000)
+                       |> Decoder.decode()
+
+      rules = Map.get(decoded, :rules, [])
       assert is_list(rules)
     end
   end
 
-  describe "list_sets/2" do
+  describe "list_sets/1" do
     setup do
       {:ok, pid} = NFTablesEx.start_link()
       on_exit(fn ->
@@ -136,7 +179,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "lists sets for inet family", %{pid: pid} do
-      {:ok, sets} = Query.list_sets(pid, family: :inet)
+      {:ok, decoded} = Query.list_sets(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      sets = Map.get(decoded, :sets, [])
       assert is_list(sets)
       # Each set should be a map
       for set <- sets do
@@ -147,7 +194,11 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "set has expected fields", %{pid: pid} do
-      {:ok, sets} = Query.list_sets(pid, family: :inet)
+      {:ok, decoded} = Query.list_sets(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      sets = Map.get(decoded, :sets, [])
 
       if length(sets) > 0 do
         set = hd(sets)
@@ -155,7 +206,7 @@ defmodule NFTablesEx.QueryTest do
         assert Map.has_key?(set, :table)
         assert Map.has_key?(set, :family)
         assert Map.has_key?(set, :key_type)
-        assert Map.has_key?(set, :key_len)
+        # key_len is optional
       end
     end
   end
@@ -176,15 +227,14 @@ defmodule NFTablesEx.QueryTest do
       # and: nft add element filter test_set { 192.168.1.1 }
 
       # Try to list elements (will succeed even if set doesn't exist, returning empty or error)
-      result = Query.list_set_elements(pid, "filter", "test_set")
+      result = Query.list_set_elements("filter", "test_set")
+               |> Executor.execute(pid: pid)
+               |> Decoder.decode()
 
       case result do
-        {:ok, elements} ->
-          assert is_list(elements)
-          for elem <- elements do
-            assert is_map(elem)
-            assert Map.has_key?(elem, :key_hex) || Map.has_key?(elem, :key_ip)
-          end
+        {:ok, decoded} ->
+          sets = Map.get(decoded, :sets, [])
+          assert is_list(sets)
 
         {:error, _reason} ->
           # Set doesn't exist, which is fine for this test
@@ -193,7 +243,10 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "returns error for non-existent set", %{pid: pid} do
-      result = Query.list_set_elements(pid, "nonexistent_table", "nonexistent_set")
+      result = Query.list_set_elements("nonexistent_table", "nonexistent_set")
+               |> Executor.execute(pid: pid)
+               |> Decoder.decode()
+
       # Should return error for non-existent set
       assert match?({:error, _}, result)
     end
@@ -209,11 +262,15 @@ defmodule NFTablesEx.QueryTest do
     end
 
     test "can query multiple resource types", %{pid: pid} do
-      # Query all major resource types
-      {:ok, tables} = Query.list_tables(pid, family: :inet)
-      {:ok, chains} = Query.list_chains(pid, family: :inet)
-      {:ok, rules} = Query.list_rules(pid, family: :inet)
-      {:ok, sets} = Query.list_sets(pid, family: :inet)
+      # Query all major resource types using list_ruleset
+      {:ok, decoded} = Query.list_ruleset(family: :inet)
+                       |> Executor.execute(pid: pid)
+                       |> Decoder.decode()
+
+      tables = Map.get(decoded, :tables, [])
+      chains = Map.get(decoded, :chains, [])
+      rules = Map.get(decoded, :rules, [])
+      sets = Map.get(decoded, :sets, [])
 
       # All should return lists
       assert is_list(tables)

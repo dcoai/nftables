@@ -32,8 +32,6 @@ defmodule NFTablesEx.Set do
 
   """
 
-  alias NFTablesEx.Port
-
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type key_type :: :ipv4_addr | :ipv6_addr | :ether_addr | :inet_protocol | :inet_service
   @type set_spec :: %{
@@ -72,98 +70,32 @@ defmodule NFTablesEx.Set do
 
   """
   @spec add(pid(), set_spec()) :: :ok | {:error, term()}
-  def add(pid, %{name: name, table: table, family: family, key_type: key_type}) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "add" => %{
-            "set" => %{
-              "family" => to_string(family),
-              "table" => table,
-              "name" => name,
-              "type" => key_type_to_string(key_type)
-            }
-          }
-        }
-      ]
-    }
-
-    json = cmd |> JSON.encode!()
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def add(pid, %{name: _name, table: _table, family: _family, key_type: _key_type} = spec) do
+    build_add(spec)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
   Delete a set.
 
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `name` - Set name (string)
+  - `family` - Protocol family (default: `:inet`)
+
   ## Example
 
-      NFTablesEx.Set.delete(pid, "filter", "banned_ips", :inet)
+      :ok = NFTablesEx.Set.delete(pid, "filter", "banned_ips", :inet)
 
   """
   @spec delete(pid(), String.t(), String.t(), family()) :: :ok | {:error, term()}
-  def delete(pid, table, name, family) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "delete" => %{
-            "set" => %{
-              "family" => to_string(family),
-              "table" => table,
-              "name" => name
-            }
-          }
-        }
-      ]
-    }
-
-    json = cmd |> JSON.encode!()
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def delete(pid, table, name, family \\ :inet) do
+    build_delete(table, name, family)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
@@ -176,9 +108,17 @@ defmodule NFTablesEx.Set do
   - Protocol: "tcp" or number
   - Port: "80" or number
 
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `name` - Set name (string)
+  - `family` - Protocol family (default: `:inet`)
+  - `elements` - List of element strings
+
   ## Example
 
-      NFTablesEx.Set.add_elements(pid, "filter", "banned_ips", :inet, [
+      :ok = NFTablesEx.Set.add_elements(pid, "filter", "banned_ips", :inet, [
         "192.168.1.200",
         "10.0.0.50"
       ])
@@ -186,191 +126,42 @@ defmodule NFTablesEx.Set do
   """
   @spec add_elements(pid(), String.t(), String.t(), family(), [String.t()]) ::
           :ok | {:error, term()}
-  def add_elements(pid, table, name, family, elements) when is_list(elements) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "add" => %{
-            "element" => %{
-              "family" => to_string(family),
-              "table" => table,
-              "name" => name,
-              "elem" => elements
-            }
-          }
-        }
-      ]
-    }
-
-    json = cmd |> JSON.encode!()
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def add_elements(pid, table, name, family \\ :inet, elements) when is_list(elements) do
+    build_add_elements(table, name, family, elements)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
   Remove elements from a set.
 
+  ## Parameters
+
+  - `pid` - NFTex process pid
+  - `table` - Table name (string)
+  - `name` - Set name (string)
+  - `family` - Protocol family (default: `:inet`)
+  - `elements` - List of element strings
+
   ## Example
 
-      NFTablesEx.Set.delete_elements(pid, "filter", "banned_ips", :inet, [
+      :ok = NFTablesEx.Set.delete_elements(pid, "filter", "banned_ips", :inet, [
         "192.168.1.100"
       ])
 
   """
   @spec delete_elements(pid(), String.t(), String.t(), family(), [String.t()]) ::
           :ok | {:error, term()}
-  def delete_elements(pid, table, name, family, elements) when is_list(elements) do
-    # Build JSON command
-    cmd = %{
-      "nftables" => [
-        %{
-          "delete" => %{
-            "element" => %{
-              "family" => to_string(family),
-              "table" => table,
-              "name" => name,
-              "elem" => elements
-            }
-          }
-        }
-      ]
-    }
-
-    json = cmd |> JSON.encode!()
-
-    # Send to port
-    case Port.commit(pid, json) do
-      {:ok, ""} ->
-        # Empty response means success
-        :ok
-
-      {:ok, response_json} ->
-        # Parse response to check for errors
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => _}} ->
-            :ok
-
-          {:ok, %{"error" => error}} ->
-            {:error, error}
-
-          {:error, reason} ->
-            {:error, {:json_decode_failed, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+  def delete_elements(pid, table, name, family \\ :inet, elements) when is_list(elements) do
+    build_delete_elements(table, name, family, elements)
+    |> NFTablesEx.Executor.execute(pid: pid)
+    |> NFTablesEx.Decoder.decode()
   end
 
   @doc """
-  List all sets for a given protocol family.
+  Build a command map to add a set (without executing).
 
-  ## Parameters
-
-  - `pid` - NFTex process pid
-  - `opts` - Keyword list options:
-    - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
-    - `:timeout` - Operation timeout in ms (default: 5000)
-
-  ## Examples
-
-      {:ok, sets} = NFTablesEx.Set.list(pid)
-      {:ok, sets} = NFTablesEx.Set.list(pid, family: :inet6)
-
-      for s <- sets do
-        IO.puts("Set: \#{s.name} in table \#{s.table}")
-      end
-
-  """
-  @spec list(pid(), keyword()) :: {:ok, [map()]} | {:error, term()}
-  def list(pid, opts \\ []) do
-    NFTablesEx.Query.list_sets(pid, opts)
-  end
-
-  @doc """
-  List elements in a specific set.
-
-  ## Parameters
-
-  - `pid` - NFTex process pid
-  - `table` - Table name (string)
-  - `set_name` - Set name (string)
-  - `opts` - Keyword list options:
-    - `:family` - Protocol family (default: `:inet`)
-    - `:parse` - Parse responses into structs (default: `true`)
-    - `:timeout` - Operation timeout in ms (default: 5000)
-
-  ## Examples
-
-      {:ok, elements} = NFTablesEx.Set.list_elements(pid, "filter", "banned_ips")
-
-      for el <- elements do
-        IO.puts("Element: \#{inspect(el)}")
-      end
-
-  """
-  @spec list_elements(pid(), String.t(), String.t(), keyword()) :: {:ok, [map()]} | {:error, term()}
-  def list_elements(pid, table, set_name, opts \\ []) do
-    NFTablesEx.Query.list_set_elements(pid, table, set_name, opts)
-  end
-
-  @doc """
-  Check if a set exists.
-
-  ## Parameters
-
-  - `pid` - NFTex process pid
-  - `table` - Table name (string)
-  - `set_name` - Set name (string)
-  - `family` - Protocol family (default: `:inet`)
-
-  ## Examples
-
-      if NFTablesEx.Set.exists?(pid, "filter", "banned_ips", :inet) do
-        IO.puts("Set exists")
-      end
-
-  """
-  @spec exists?(pid(), String.t(), String.t(), family()) :: boolean()
-  def exists?(pid, table, set_name, family \\ :inet) do
-    case NFTablesEx.Query.list_sets(pid, family: family) do
-      {:ok, sets} ->
-        Enum.any?(sets, fn set ->
-          set.name == set_name and set.table == table
-        end)
-
-      {:error, _} ->
-        false
-    end
-  end
-
-  @doc """
-  Build a JSON command to add a set (without executing).
-
-  Returns the JSON string that would be sent to add a set.
+  Returns a map that would be sent to add a set.
   Useful for batching, remote execution, or inspection.
 
   ## Parameters
@@ -379,17 +170,17 @@ defmodule NFTablesEx.Set do
 
   ## Returns
 
-  JSON string containing the set add command
+  Map containing the set add command
 
   ## Examples
 
-      json = NFTablesEx.Set.build_add(%{
+      cmd = NFTablesEx.Set.build_add(%{
         name: "blocklist",
         table: "filter",
         family: :inet,
         key_type: :ipv4_addr
       })
-      #=> "{\\\"nftables\\\":[{\\\"add\\\":{\\\"set\\\":{...}}}]}"
+      #=> %{"nftables" => [%{"add" => %{"set" => ...}}]}
 
       # Use in batch
       batch =
@@ -397,14 +188,14 @@ defmodule NFTablesEx.Set do
         |> Batch.add(Set.build_add(%{...}))
         |> Batch.add(Set.build_add_elements("filter", "blocklist", :inet, ["1.2.3.4"]))
   """
-  @spec build_add(set_spec()) :: binary()
+  @spec build_add(set_spec()) :: map()
   def build_add(%{name: name, table: table, family: family, key_type: key_type}) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "add" => %{
             "set" => %{
-              "family" => to_string(family),
+              "family" => family,
               "table" => table,
               "name" => name,
               "type" => key_type_to_string(key_type)
@@ -413,14 +204,12 @@ defmodule NFTablesEx.Set do
         }
       ]
     }
-
-    cmd |> JSON.encode!()
   end
 
   @doc """
-  Build a JSON command to delete a set (without executing).
+  Build a command map to delete a set (without executing).
 
-  Returns the JSON string that would be sent to delete a set.
+  Returns a map that would be sent to delete a set.
 
   ## Parameters
 
@@ -430,21 +219,21 @@ defmodule NFTablesEx.Set do
 
   ## Returns
 
-  JSON string containing the set delete command
+  Map containing the set delete command
 
   ## Examples
 
-      json = NFTablesEx.Set.build_delete("filter", "blocklist", :inet)
-      NFTablesEx.Executor.execute(json)
+      cmd = NFTablesEx.Set.build_delete("filter", "blocklist", :inet)
+      NFTablesEx.Executor.execute(cmd)
   """
-  @spec build_delete(String.t(), String.t(), family()) :: binary()
+  @spec build_delete(String.t(), String.t(), family()) :: map()
   def build_delete(table, name, family) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "delete" => %{
             "set" => %{
-              "family" => to_string(family),
+              "family" => family,
               "table" => table,
               "name" => name
             }
@@ -452,14 +241,12 @@ defmodule NFTablesEx.Set do
         }
       ]
     }
-
-    cmd |> JSON.encode!()
   end
 
   @doc """
-  Build a JSON command to add elements to a set (without executing).
+  Build a command map to add elements to a set (without executing).
 
-  Returns the JSON string that would be sent to add elements to a set.
+  Returns a map that would be sent to add elements to a set.
 
   ## Parameters
 
@@ -470,25 +257,25 @@ defmodule NFTablesEx.Set do
 
   ## Returns
 
-  JSON string containing the add elements command
+  Map containing the add elements command
 
   ## Examples
 
-      json = NFTablesEx.Set.build_add_elements("filter", "blocklist", :inet, [
+      cmd = NFTablesEx.Set.build_add_elements("filter", "blocklist", :inet, [
         "192.168.1.100",
         "10.0.0.50"
       ])
 
-      NFTablesEx.Executor.execute(json)
+      NFTablesEx.Executor.execute(cmd)
   """
-  @spec build_add_elements(String.t(), String.t(), family(), [String.t()]) :: binary()
+  @spec build_add_elements(String.t(), String.t(), family(), [String.t()]) :: map()
   def build_add_elements(table, name, family, elements) when is_list(elements) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "add" => %{
             "element" => %{
-              "family" => to_string(family),
+              "family" => family,
               "table" => table,
               "name" => name,
               "elem" => elements
@@ -497,14 +284,12 @@ defmodule NFTablesEx.Set do
         }
       ]
     }
-
-    cmd |> JSON.encode!()
   end
 
   @doc """
-  Build a JSON command to delete elements from a set (without executing).
+  Build a command map to delete elements from a set (without executing).
 
-  Returns the JSON string that would be sent to delete elements from a set.
+  Returns a map that would be sent to delete elements from a set.
 
   ## Parameters
 
@@ -515,24 +300,24 @@ defmodule NFTablesEx.Set do
 
   ## Returns
 
-  JSON string containing the delete elements command
+  Map containing the delete elements command
 
   ## Examples
 
-      json = NFTablesEx.Set.build_delete_elements("filter", "blocklist", :inet, [
+      cmd = NFTablesEx.Set.build_delete_elements("filter", "blocklist", :inet, [
         "192.168.1.100"
       ])
 
-      NFTablesEx.Executor.execute(json)
+      NFTablesEx.Executor.execute(cmd)
   """
-  @spec build_delete_elements(String.t(), String.t(), family(), [String.t()]) :: binary()
+  @spec build_delete_elements(String.t(), String.t(), family(), [String.t()]) :: map()
   def build_delete_elements(table, name, family, elements) when is_list(elements) do
-    cmd = %{
+    %{
       "nftables" => [
         %{
           "delete" => %{
             "element" => %{
-              "family" => to_string(family),
+              "family" => family,
               "table" => table,
               "name" => name,
               "elem" => elements
@@ -541,8 +326,6 @@ defmodule NFTablesEx.Set do
         }
       ]
     }
-
-    cmd |> JSON.encode!()
   end
 
   # Private helpers
