@@ -11,21 +11,22 @@ defmodule NFTablesEx.Builder do
   - **Pure Building**: Builder is immutable, no side effects during construction
   - **Explicit Execution**: Commands execute only when `execute/2` is called with a pid
   - **Atom Keys**: All JSON uses atom keys (converted to strings during encoding)
-  - **Context Tracking**: Maintains current table/chain for convenience
+  - **Context Tracking**: Automatically tracks table/chain/collection context for chaining
+  - **Unified API**: Single set of functions (add/delete/flush/etc) for all object types
 
   ## Basic Usage
 
       # Create builder
       builder = Builder.new(family: :inet)
 
-      # Add table and chain
+      # Add table and chain - context is automatically tracked
       builder = builder
-      |> Builder.add_table("filter")
-      |> Builder.add_chain("input", type: :filter, hook: :input, priority: 0, policy: :drop)
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "input", type: :filter, hook: :input, priority: 0, policy: :drop)
 
-      # Add rules (using Match or raw expressions)
+      # Add rules - automatically uses table and chain from context
       builder = builder
-      |> Builder.add_rule([
+      |> Builder.add(rule: [
           %{match: %{left: %{ct: %{key: "state"}}, right: ["established", "related"], op: "in"}},
           %{accept: nil}
         ])
@@ -34,28 +35,47 @@ defmodule NFTablesEx.Builder do
       {:ok, pid} = NFTablesEx.start_link()
       Builder.execute(builder, pid)
 
-  ## Piping Pattern
+  ## Unified API Pattern
+
+  All object types use the same functions: `add/2`, `delete/2`, `insert/2`, `replace/2`, `flush/2`, `rename/2`.
+  The object type is automatically detected from the options:
 
       Builder.new(family: :inet)
-      |> Builder.add_table("filter")
-      |> Builder.add_chain("input", type: :filter, hook: :input, priority: 0, policy: :drop)
-      |> Builder.add_chain("forward", type: :filter, hook: :forward, priority: 0, policy: :drop)
-      |> Builder.add_chain("output", type: :filter, hook: :output, priority: 0, policy: :accept)
+      |> Builder.add(table: "filter")                          # Adds table
+      |> Builder.add(chain: "input", type: :filter,            # Adds chain
+                     hook: :input, priority: 0, policy: :drop)
+      |> Builder.add(set: "blocklist", type: :ipv4_addr)       # Adds set
+      |> Builder.add(rule: [%{accept: nil}])                   # Adds rule
       |> Builder.execute(pid)
+
+  ## Context Chaining
+
+  The builder automatically tracks context (table, chain, collection) so you don't need to repeat it:
+
+      builder
+      |> Builder.add(table: "filter", chain: "input")  # Sets context
+      |> Builder.add(rule: [%{accept: nil}])           # Uses filter/input automatically
+      |> Builder.add(rule: [%{drop: nil}])             # Still uses filter/input
   """
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type t :: %__MODULE__{
           family: family(),
-          commands: list(map()),
-          current_table: String.t() | nil,
-          current_chain: String.t() | nil
+          table: String.t() | nil,
+          chain: String.t() | nil,
+          collection: String.t() | nil,
+          type: atom() | {atom(), atom()} | nil,
+          spec: map(),
+          commands: list(map())
         }
 
   defstruct family: :inet,
-            commands: [],
-            current_table: nil,
-            current_chain: nil
+            table: nil,
+            chain: nil,
+            collection: nil,
+            type: nil,
+            spec: nil,
+            commands: []
 
   ## Core Functions
 
@@ -91,108 +111,406 @@ defmodule NFTablesEx.Builder do
     %{builder | family: family}
   end
 
-  @doc """
-  Set the current table context.
-
-  Subsequent operations will use this table unless overridden.
-
-  ## Examples
-
-      builder |> Builder.set_table("filter")
-  """
-  @spec set_table(t(), String.t()) :: t()
-  def set_table(%__MODULE__{} = builder, table) when is_binary(table) do
-    %{builder | current_table: table}
-  end
 
   @doc """
-  Set the current chain context.
+  Map object type to nftables JSON object key.
 
-  Subsequent rule operations will use this chain unless overridden.
-
-  ## Examples
-
-      builder |> Builder.set_chain("input")
+  Converts our internal object type names to the keys used in nftables JSON.
   """
-  @spec set_chain(t(), String.t()) :: t()
-  def set_chain(%__MODULE__{} = builder, chain) when is_binary(chain) do
-    %{builder | current_chain: chain}
-  end
-
-  ## Table Operations
-
-  @doc """
-  Add a table.
-
-  ## Examples
-
-      builder |> Builder.add_table("filter")
-      builder |> Builder.add_table("nat", family: :ip)
-  """
-  @spec add_table(t(), String.t(), keyword()) :: t()
-  def add_table(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    family = Keyword.get(opts, :family, builder.family)
-
-    command = %{
-      add: %{
-        table: %{
-          family: family,
-          name: name
-        }
-      }
+  @spec type_to_obj(atom()) :: atom()
+  def type_to_obj(type) do
+    %{
+      table: :table,
+      chain: :chain,
+      rule: :rule,
+      rules: :rule,      # Both map to :rule
+      set: :set,
+      map: :map,
+      element: :element,
+      counter: :counter,
+      quota: :quota,
+      limit: :limit
     }
+    |> Map.get(type, :unknown)
+  end
+    
 
+  ################################################################################
+  # Generic Command Functions
+  #
+  # These functions detect the object type from opts and dispatch to build_command.
+  ################################################################################
+
+  @doc """
+  Apply a command operation using options.
+
+  Automatically detects the object type using priority map and dispatches
+  to the unified build_command pipeline.
+
+  ## Examples
+
+      # Add a table
+      builder |> add(table: "filter")
+
+      # Add a chain with context
+      builder |> add(table: "filter", chain: "input", type: :filter)
+
+      # Add a rule using builder context
+      builder |> add(rule: [%{accept: nil}])
+
+      # Delete a rule
+      builder |> delete(table: "filter", chain: "input", rule: [...], handle: 123)
+  """
+  @spec apply_with_opts(t(), atom(), keyword()) :: t()
+  def apply_with_opts(builder, cmd_op, opts) when is_list(opts) do
+    # Step 1: Detect main object type from opts
+    {object_type, _value} = find_highest_priority(opts)
+
+    # Step 2: Validate command is valid for this object type
+    validate_command_object(cmd_op, object_type)
+
+    # Step 3: Build command using unified pipeline
+    build_command(builder, cmd_op, object_type, opts)
+  end
+
+  @doc """
+  Validate that a command operation is valid for an object type.
+
+  Raises ArgumentError if the combination is invalid.
+  """
+  @spec validate_command_object(atom(), atom()) :: :ok
+  def validate_command_object(cmd_op, object_type) do
+    valid = case cmd_op do
+      :add -> true
+      :delete -> true
+      :flush -> object_type in [:table, :chain, :set, :map]
+      :rename -> object_type in [:chain]
+      :insert -> object_type in [:rule, :rules]
+      :replace -> object_type in [:rule]
+      _ -> false
+    end
+
+    unless valid do
+      raise ArgumentError,
+        "Command :#{cmd_op} is not valid for object type :#{object_type}. " <>
+        valid_commands_message(object_type)
+    end
+
+    :ok
+  end
+
+  defp valid_commands_message(object_type) do
+    commands = case object_type do
+      :table -> "add, delete, flush"
+      :chain -> "add, delete, flush, rename"
+      :rule -> "add, delete, insert, replace"
+      :rules -> "add, insert"
+      :set -> "add, delete, flush"
+      :map -> "add, delete, flush"
+      :counter -> "add, delete"
+      :quota -> "add, delete"
+      :limit -> "add, delete"
+      :element -> "add, delete"
+      _ -> "unknown"
+    end
+    "Valid commands for :#{object_type}: #{commands}"
+  end
+
+  ## Generic Command Entry Points
+
+  @doc """
+  Add an object (table, chain, rule, set, map, etc.).
+
+  The object type is automatically detected from the options.
+
+  ## Examples
+
+      # Add table
+      builder |> add(table: "filter")
+
+      # Add chain
+      builder |> add(chain: "input", type: :filter, hook: :input, priority: 0)
+
+      # Add rule
+      builder |> add(rule: [%{accept: nil}])
+
+      # Add set
+      builder |> add(set: "blocklist", type: :ipv4_addr)
+  """
+  @spec add(t(), keyword()) :: t()
+  def add(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :add, opts)
+
+  @doc """
+  Delete an object.
+
+  ## Examples
+
+      builder |> delete(table: "filter")
+      builder |> delete(chain: "input")
+      builder |> delete(rule: [...], handle: 123)
+  """
+  @spec delete(t(), keyword()) :: t()
+  def delete(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :delete, opts)
+
+  @doc """
+  Flush an object (remove contents but keep object).
+
+  Valid for: table, chain, set, map
+
+  ## Examples
+
+      builder |> flush(table: "filter")  # Flush all chains/rules in table
+      builder |> flush(chain: "input")   # Flush all rules in chain
+  """
+  @spec flush(t(), keyword()) :: t()
+  def flush(%__MODULE__{} = builder, [:all | opts]), do: flush_ruleset(builder, opts)
+  def flush(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :flush, opts)
+
+  @doc """
+  Rename a chain.
+
+  ## Examples
+
+      builder |> rename(chain: "input", newname: "INPUT")
+  """
+  @spec rename(t(), keyword()) :: t()
+  def rename(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :rename, opts)
+
+  @doc """
+  Insert a rule at a specific position.
+
+  ## Examples
+
+      builder |> insert(rule: [...], index: 0)
+  """
+  @spec insert(t(), keyword()) :: t()
+  def insert(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :insert, opts)
+
+  @doc """
+  Replace a rule at a specific handle.
+
+  ## Examples
+
+      builder |> replace(rule: [...], handle: 123)
+  """
+  @spec replace(t(), keyword()) :: t()
+  def replace(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :replace, opts)
+
+  ################################################################################
+  # Object Detection via Priority Map
+  #
+  # The priority map determines which object is the MAIN target of an operation:
+  # - Higher priority number = the object being operated on
+  # - Lower priority numbers = context specifiers (which table/chain the object belongs to)
+  # - Same priority = ERROR (ambiguous, cannot determine main object)
+  ################################################################################
+
+  @object_priority_map %{
+    table: 0,    # Context: which table
+    chain: 1,    # Context: which chain (within a table)
+    rule: 2,     # Main object: operate on a rule
+    rules: 2,    # Main object: operate on multiple rules (same priority as rule)
+    set: 3,      # Main object: operate on a set
+    map: 3,      # Main object: operate on a map
+    counter: 3,  # Main object: operate on a counter
+    quota: 3,    # Main object: operate on a quota
+    limit: 3,    # Main object: operate on a limit
+    element: 4   # Main object: operate on element(s) in a set/map
+  }
+
+  @doc """
+  Find the object with highest priority from opts.
+
+  Returns the object type and its value. Higher priority number indicates
+  the main object being operated on. Lower priorities are context specifiers.
+
+  ## Examples
+
+      iex> find_highest_priority([table: "filter", chain: "input"])
+      {:chain, "input"}  # chain (priority 1) > table (priority 0)
+
+      iex> find_highest_priority([table: "filter", set: "blocklist"])
+      {:set, "blocklist"}  # set (priority 3) > table (priority 0)
+
+      iex> find_highest_priority([map: "m", set: "s"])
+      ** (ArgumentError) Ambiguous object: both :map and :set have priority 3
+  """
+  @spec find_highest_priority(keyword()) :: {atom(), any()}
+  def find_highest_priority(opts) do
+    find_highest_priority(opts, @object_priority_map)
+  end
+
+  @spec find_highest_priority(keyword(), map()) :: {atom(), any()}
+  def find_highest_priority(opts, obj_priority_map) do
+    {max_priority, objects_at_max} =
+      Enum.reduce(opts, {-1, []}, fn {key, val}, {max_p, objs} ->
+        priority = Map.get(obj_priority_map, key, -1)
+        cond do
+          priority < 0 -> {max_p, objs}  # Not an object key, skip
+          priority > max_p -> {priority, [{key, val}]}  # New max
+          priority == max_p -> {max_p, [{key, val} | objs]}  # Same priority
+          true -> {max_p, objs}  # Lower priority, skip
+        end
+      end)
+
+    case objects_at_max do
+      [] ->
+        raise ArgumentError, "No valid object found in options"
+      [{key, val}] ->
+        {key, val}  # Unique highest priority
+      multiple ->
+        keys = Enum.map(multiple, &elem(&1, 0))
+        group = find_priority_group(max_priority, obj_priority_map)
+        raise ArgumentError,
+          "Ambiguous object: only use one object of #{inspect(group)} (found: #{inspect(keys)})"
+    end
+  end
+
+  @doc """
+  Find all objects at a given priority level.
+  Used for error messages when multiple objects have the same priority.
+  """
+  @spec find_priority_group(integer(), map()) :: list(atom())
+  def find_priority_group(priority, obj_priority_map) do
+    Enum.reduce(obj_priority_map, [], fn
+      {id, p}, acc when p == priority -> [id | acc]
+      _, acc -> acc
+    end)
+  end
+
+  @doc """
+  Get the object priority map.
+  """
+  def object_priority_map, do: @object_priority_map
+
+  @doc """
+  Extract context objects from opts.
+
+  Returns a map of context objects that have lower priority than the main object.
+  These will be used to update the builder state for chaining.
+
+  ## Examples
+
+      iex> extract_context([table: "filter", chain: "input"], :chain)
+      %{table: "filter"}  # table has lower priority than chain
+
+      iex> extract_context([table: "filter", chain: "input", rule: [...]], :rule)
+      %{table: "filter", chain: "input"}  # both have lower priority than rule
+  """
+  @spec extract_context(keyword(), atom()) :: map()
+  def extract_context(opts, main_object_type) do
+    main_priority = Map.get(@object_priority_map, main_object_type, -1)
+
+    Enum.reduce(opts, %{}, fn {key, val}, acc ->
+      priority = Map.get(@object_priority_map, key, -1)
+
+      # Only include objects with valid priority AND lower than main
+      if priority >= 0 and priority < main_priority do
+        Map.put(acc, key, val)
+      else
+        acc
+      end
+    end)
+  end
+
+  @doc """
+  Update builder context from extracted context objects.
+
+  Updates builder.table and builder.chain fields based on context.
+  """
+  @spec update_builder_context(t(), map()) :: t()
+  def update_builder_context(builder, context) do
     builder
-    |> add_command(command)
-    |> set_table(name)
+    |> maybe_update_table(Map.get(context, :table))
+    |> maybe_update_chain(Map.get(context, :chain))
   end
 
+  defp maybe_update_table(builder, nil), do: builder
+  defp maybe_update_table(builder, table) when is_binary(table), do: %{builder | table: table}
+
+  defp maybe_update_chain(builder, nil), do: builder
+  defp maybe_update_chain(builder, chain) when is_binary(chain), do: %{builder | chain: chain}
+
+  ################################################################################
+  # Generic Command Constructor
+  #
+  # Unified pipeline for building commands from options.
+  # Ties together: priority detection → context extraction → spec building →
+  # optional field updates → command wrapping → builder updates
+  ################################################################################
+
   @doc """
-  Delete a table.
+  Build a complete command from options using the unified pipeline.
+
+  This is the main entry point that orchestrates the entire command building process:
+  1. Extract context objects (lower priority than main object)
+  2. Update builder with context for chaining
+  3. Build base spec using main object + context
+  4. Update spec with optional fields
+  5. Wrap in command structure
+  6. Update builder with main object for next operation
+  7. Add command to builder
 
   ## Examples
 
-      builder |> Builder.delete_table("old_table")
-      builder |> Builder.delete_table("old_table", family: :ip)
+      # Build a chain command
+      build_command(builder, :add, :chain, table: "filter", chain: "input", type: :filter)
+      #=> Updated builder with chain command added
+
+      # Build a rule command (uses builder context)
+      build_command(builder, :add, :rule, expr: [...])
+      #=> Uses builder.table and builder.chain from context
   """
-  @spec delete_table(t(), String.t(), keyword()) :: t()
-  def delete_table(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    family = Keyword.get(opts, :family, builder.family)
+  @spec build_command(t(), atom(), atom(), keyword()) :: t()
+  def build_command(builder, cmd_op, object_type, opts) do
+    # Step 1: Extract context objects (lower priority than main object)
+    context = extract_context(opts, object_type)
 
-    command = %{
-      delete: %{
-        table: %{
-          family: family,
-          name: name
-        }
-      }
-    }
+    # Step 2: Update builder with context for chaining
+    builder = update_builder_context(builder, context)
 
-    add_command(builder, command)
+    # Step 3: Build base spec using main object + context
+    builder_with_spec = spec(builder, object_type, opts)
+
+    # Step 4: Update spec with optional fields based on (object_type, cmd_op)
+    updated_spec = update_spec(object_type, cmd_op, builder_with_spec.spec, opts)
+
+    # Step 5: Get the object key for wrapping (:table, :chain, :rule, etc.)
+    object_key = type_to_obj(object_type)
+
+    # Step 6: Wrap in command map
+    command = %{cmd_op => %{object_key => updated_spec}}
+
+    # Step 7: Update builder with main object for chaining
+    builder_updated = update_main_object_context(builder_with_spec, object_type, opts)
+
+    # Step 8: Add command to builder
+    add_command(builder_updated, command)
   end
 
-  @doc """
-  Flush a table (remove all chains and rules, keep table).
 
-  ## Examples
-
-      builder |> Builder.flush_table("filter")
-  """
-  @spec flush_table(t(), String.t(), keyword()) :: t()
-  def flush_table(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    family = Keyword.get(opts, :family, builder.family)
-
-    command = %{
-      flush: %{
-        table: %{
-          family: family,
-          name: name
-        }
-      }
-    }
-
-    add_command(builder, command)
+  def validate_builder_opt(builder, opts, key) when key in [:family, :table, :chain] do
+    val = Keyword.get(opts, key, Map.get(builder, key))
+    is_nil(val) && raise ArgumentError, "#{key} must be specified as an option or set via set_#{key}/2"
+    val
   end
+
+  def validate_required_opt(opts, key) do
+    val = Keyword.get(opts, key)
+    is_nil(val) && raise ArgumentError, "#{key} must be specified as an option"
+    val
+  end
+  
+  def validate_opts(builder, opts, expect_list) do
+    Enum.reduce(expect_list, %{}, fn key, acc ->
+      val = cond do
+        key in [:family, :table, :chain] -> validate_builder_opt(builder, opts, key)
+        true -> validate_required_opt(opts, key)
+      end
+      Map.put(acc, key, val)
+    end)
+  end
+  
 
   @doc """
   Flush the entire ruleset (remove all tables, chains, and rules).
@@ -213,212 +531,342 @@ defmodule NFTablesEx.Builder do
   def flush_ruleset(%__MODULE__{} = builder, opts \\ []) do
     family = Keyword.get(opts, :family)
 
-    command =
-      if family do
-        %{flush: %{ruleset: %{family: family}}}
-      else
-        %{flush: %{ruleset: %{}}}
-      end
+    command = %{flush: %{ruleset: (if family, do: %{family: family}, else: %{}) }}
 
     add_command(builder, command)
   end
 
-  ## Chain Operations
 
   @doc """
-  Add a regular chain (not a base chain).
+  Build base specification for an object.
+
+  Uses priority-based approach: lower-priority objects provide context.
+  Builder state is used as fallback when opts don't specify context.
 
   ## Examples
 
-      builder |> Builder.add_chain("custom_chain")
-  """
-  @spec add_chain(t(), String.t(), keyword()) :: t()
-  def add_chain(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
+      # Table (priority 0) - only needs family
+      spec(builder, :table, table: "filter")
+      #=> %{builder | spec: %{family: :inet, name: "filter"}}
 
-    unless table do
-      raise ArgumentError, "table must be specified or set via set_table/2"
+      # Chain (priority 1) - needs table context
+      spec(builder, :chain, table: "filter", chain: "input")
+      #=> %{builder | spec: %{family: :inet, table: "filter", name: "input"}}
+
+      # Rule (priority 2) - needs table and chain context
+      spec(builder, :rule, expr: [...])  # Uses builder.table and builder.chain
+      #=> %{builder | spec: %{family: :inet, table: "filter", chain: "input", expr: [...]}}
+  """
+  @spec spec(t(), atom(), keyword()) :: t()
+  def spec(builder, :table, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table])
+    spec_map = %{family: req_opts.family, name: req_opts.table}
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :chain, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :chain])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: req_opts.chain
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :rule, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :chain, :rule])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      chain: req_opts.chain,
+      expr: req_opts.rule
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :rules, opts) do
+    # Same as :rule but handles multiple rules
+    req_opts = validate_opts(builder, opts, [:family, :table, :chain, :rules])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      chain: req_opts.chain,
+      expr: req_opts.rules
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :set, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :set, :type])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: req_opts.set,
+      type: req_opts.type
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :map, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :map, :type])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: req_opts.map
+    }
+    # Note: type handling for maps is special (tuple) - handled in update_opts
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :counter, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :counter])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: req_opts.counter
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :quota, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :quota])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: req_opts.quota
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :limit, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :limit, :rate, :unit])
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: req_opts.limit,
+      rate: req_opts.rate,
+      per: to_string(req_opts.unit)
+    }
+    %{builder | spec: spec_map}
+  end
+
+  def spec(builder, :element, opts) do
+    req_opts = validate_opts(builder, opts, [:family, :table, :element])
+
+    # Element needs to know which collection (set or map) it belongs to
+    collection_name = Keyword.get(opts, :set) || Keyword.get(opts, :map) || builder.collection
+
+    unless collection_name do
+      raise ArgumentError, "element requires :set or :map to be specified"
     end
 
-    # Check if base chain options are provided
+    spec_map = %{
+      family: req_opts.family,
+      table: req_opts.table,
+      name: collection_name,
+      elem: req_opts.element
+    }
+    %{builder | spec: spec_map}
+  end
+
+  ################################################################################
+  # Unified Spec Updates
+  #
+  # Single function to update specs based on (object_type, cmd_op) combination.
+  # Replaces all individual *_update_opts functions.
+  ################################################################################
+
+  @doc """
+  Update spec with optional fields based on object type and command operation.
+
+  Consolidates all *_update_opts functions into a single dispatch function.
+
+  ## Examples
+
+      # Chain with base chain options
+      update_spec(:chain, :add, spec, type: :filter, hook: :input, priority: 0)
+
+      # Rule with insert options
+      update_spec(:rule, :insert, spec, index: 0, comment: "Allow SSH")
+
+      # Set with flags
+      update_spec(:set, :add, spec, flags: [:interval], timeout: 3600)
+  """
+  @spec update_spec(atom(), atom(), map(), keyword()) :: map()
+
+  ## Chain Updates
+  def update_spec(:chain, :add, spec, opts) do
     base_chain_opts = [:type, :hook, :priority]
-    is_base_chain = Enum.any?(base_chain_opts, &Keyword.has_key?(opts, &1))
-
-    chain_spec =
-      if is_base_chain do
-        # Base chain with hook, type, priority, policy
-        %{
-          family: family,
-          table: table,
-          name: name,
-          type: Keyword.get(opts, :type, :filter),
-          hook: Keyword.get(opts, :hook),
-          prio: Keyword.get(opts, :priority, 0)
-        }
-        |> maybe_add(:policy, Keyword.get(opts, :policy))
-        |> maybe_add(:dev, Keyword.get(opts, :dev))
-      else
-        # Regular chain
-        %{
-          family: family,
-          table: table,
-          name: name
-        }
-      end
-
-    command = %{
-      add: %{
-        chain: chain_spec
-      }
-    }
-
-    builder
-    |> add_command(command)
-    |> set_chain(name)
+    if Enum.any?(base_chain_opts, &Keyword.has_key?(opts, &1)) do
+      spec
+      |> maybe_add(:type, Keyword.get(opts, :type, :filter))
+      |> maybe_add(:hook, Keyword.get(opts, :hook))
+      |> maybe_add(:prio, Keyword.get(opts, :priority, 0))
+      |> maybe_add(:policy, Keyword.get(opts, :policy))
+      |> maybe_add(:dev, Keyword.get(opts, :dev))
+    else
+      spec
+    end
   end
 
-  @doc """
-  Delete a chain.
-
-  ## Examples
-
-      builder |> Builder.delete_chain("old_chain")
-  """
-  @spec delete_chain(t(), String.t(), keyword()) :: t()
-  def delete_chain(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified or set via set_table/2"
+  def update_spec(:chain, :rename, spec, opts) do
+    newname = Keyword.get(opts, :newname)
+    unless newname do
+      raise ArgumentError, ":newname must be specified for rename operation"
     end
-
-    command = %{
-      delete: %{
-        chain: %{
-          family: family,
-          table: table,
-          name: name
-        }
-      }
-    }
-
-    add_command(builder, command)
+    Map.put(spec, :newname, newname)
   end
 
-  @doc """
-  Flush a chain (remove all rules, keep chain).
-
-  ## Examples
-
-      builder |> Builder.flush_chain("input")
-  """
-  @spec flush_chain(t(), String.t(), keyword()) :: t()
-  def flush_chain(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified or set via set_table/2"
-    end
-
-    command = %{
-      flush: %{
-        chain: %{
-          family: family,
-          table: table,
-          name: name
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Rename a chain.
-
-  ## Examples
-
-      builder |> Builder.rename_chain("old_name", "new_name")
-  """
-  @spec rename_chain(t(), String.t(), String.t(), keyword()) :: t()
-  def rename_chain(%__MODULE__{} = builder, old_name, new_name, opts \\ [])
-      when is_binary(old_name) and is_binary(new_name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified or set via set_table/2"
-    end
-
-    command = %{
-      rename: %{
-        chain: %{
-          family: family,
-          table: table,
-          name: old_name,
-          newname: new_name
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  ## Rule Operations
-
-  @doc """
-  Add a rule (append to chain).
-
-  ## Parameters
-
-  - `expr` - Expression list (from Match or manual construction)
-  - `opts` - Options:
-    - `:table` - Table name (default: current_table)
-    - `:chain` - Chain name (default: current_chain)
-    - `:family` - Address family (default: builder family)
-    - `:comment` - Rule comment (optional)
-    - `:index` - Insert at index (optional, for insert mode)
-
-  ## Examples
-
-      # Using expression list
-      builder |> Builder.add_rule([
-        %{match: %{left: %{payload: %{protocol: "tcp", field: "dport"}}, right: 22, op: "=="}},
-        %{accept: nil}
-      ])
-
-      # With comment
-      builder |> Builder.add_rule(expr_list, comment: "Allow SSH")
-  """
-  @spec add_rule(t(), list(map()), keyword()) :: t()
-  def add_rule(%__MODULE__{} = builder, expr, opts \\ []) when is_list(expr) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    chain = Keyword.get(opts, :chain, builder.current_chain)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table && chain do
-      raise ArgumentError, "table and chain must be specified or set via set_table/2 and set_chain/2"
-    end
-
-    rule_spec = %{
-      family: family,
-      table: table,
-      chain: chain,
-      expr: expr
-    }
+  ## Rule Updates
+  def update_spec(:rule, :add, spec, opts) do
+    spec
     |> maybe_add(:comment, Keyword.get(opts, :comment))
-
-    command = %{
-      add: %{
-        rule: rule_spec
-      }
-    }
-
-    add_command(builder, command)
   end
+
+  def update_spec(:rule, :insert, spec, opts) do
+    spec
+    |> maybe_add(:index, Keyword.get(opts, :index))
+    |> maybe_add(:handle, Keyword.get(opts, :handle))
+    |> maybe_add(:comment, Keyword.get(opts, :comment))
+  end
+
+  def update_spec(:rule, :replace, spec, opts) do
+    handle = Keyword.get(opts, :handle)
+    unless handle do
+      raise ArgumentError, ":handle must be specified for replace operation"
+    end
+    spec
+    |> Map.put(:handle, handle)
+    |> maybe_add(:comment, Keyword.get(opts, :comment))
+  end
+
+  def update_spec(:rule, :delete, spec, opts) do
+    handle = Keyword.get(opts, :handle)
+    unless handle do
+      raise ArgumentError, ":handle must be specified for delete operation"
+    end
+    Map.put(spec, :handle, handle)
+  end
+
+  ## Set Updates
+  def update_spec(:set, :add, spec, opts) do
+    spec
+    |> maybe_add(:flags, Keyword.get(opts, :flags))
+    |> maybe_add(:timeout, Keyword.get(opts, :timeout))
+    |> maybe_add(:"gc-interval", Keyword.get(opts, :gc_interval))
+    |> maybe_add(:size, Keyword.get(opts, :size))
+  end
+
+  ## Map Updates
+  def update_spec(:map, :add, spec, opts) do
+    type_val = Keyword.get(opts, :type)
+
+    unless is_tuple(type_val) and tuple_size(type_val) == 2 do
+      raise ArgumentError, "map :type must be a tuple of 2 elements: {key_type, value_type}"
+    end
+
+    {key_type, value_type} = type_val
+    spec
+    |> Map.put(:type, key_type)
+    |> Map.put(:map, to_string(value_type))
+  end
+
+  ## Counter Updates
+  def update_spec(:counter, :add, spec, opts) do
+    spec
+    |> maybe_add(:packets, Keyword.get(opts, :packets, 0))
+    |> maybe_add(:bytes, Keyword.get(opts, :bytes, 0))
+  end
+
+  ## Quota Updates
+  def update_spec(:quota, :add, spec, opts) do
+    spec
+    |> maybe_add(:bytes, Keyword.get(opts, :bytes, 0))
+    |> maybe_add(:used, Keyword.get(opts, :used, 0))
+    |> maybe_add(:over, Keyword.get(opts, :over, false))
+  end
+
+  ## Limit Updates
+  def update_spec(:limit, :add, spec, opts) do
+    spec
+    |> maybe_add(:burst, Keyword.get(opts, :burst, 0))
+  end
+
+  ## Element Updates
+  def update_spec(:element, :add, spec, _opts) do
+    # Elements don't have additional optional fields for add
+    spec
+  end
+
+  ## Table Updates
+  def update_spec(:table, _cmd_op, spec, _opts) do
+    # Tables don't have additional optional fields
+    spec
+  end
+
+  ## Default - no updates
+  def update_spec(_object_type, _cmd_op, spec, _opts), do: spec
+
+  @doc """
+  Update builder with main object context for chaining.
+
+  When the main object is :table or :chain, update the builder state
+  so subsequent operations can use this context.
+
+  ## Examples
+
+      # After adding a table, builder.table is updated
+      update_main_object_context(builder, :table, table: "filter")
+      #=> %{builder | table: "filter"}
+
+      # After adding a chain, builder.chain is updated
+      update_main_object_context(builder, :chain, chain: "input")
+      #=> %{builder | chain: "input"}
+
+      # Other objects don't update builder context
+      update_main_object_context(builder, :rule, rule: [...])
+      #=> builder  # unchanged
+  """
+  @spec update_main_object_context(t(), atom(), keyword()) :: t()
+  def update_main_object_context(builder, :table, opts) do
+    case Keyword.get(opts, :table) do
+      nil -> builder
+      table -> %{builder | table: table}
+    end
+  end
+
+  def update_main_object_context(builder, :chain, opts) do
+    case Keyword.get(opts, :chain) do
+      nil -> builder
+      chain -> %{builder | chain: chain}
+    end
+  end
+
+  def update_main_object_context(builder, :set, opts) do
+    # Track set name and type for element operations
+    case {Keyword.get(opts, :set), Keyword.get(opts, :type)} do
+      {nil, _} -> builder
+      {set_name, type} -> %{builder | collection: set_name, type: type}
+    end
+  end
+
+  def update_main_object_context(builder, :map, opts) do
+    # Track map name and type for element operations
+    case {Keyword.get(opts, :map), Keyword.get(opts, :type)} do
+      {nil, _} -> builder
+      {map_name, type} -> %{builder | collection: map_name, type: type}
+    end
+  end
+
+  def update_main_object_context(builder, _object_type, _opts), do: builder
+
+  ################################################################################
+  # Rule Operations
+  ################################################################################
+  # Note: Individual rule operations have been replaced by the unified API.
+  # Use: builder |> add(rule: expr_list, ...)
+  # See the top-level add/2, insert/2, replace/2, delete/2 functions.
 
   @doc """
   Add multiple rules at once.
@@ -433,645 +881,44 @@ defmodule NFTablesEx.Builder do
   """
   @spec add_rules(t(), list(list(map())), keyword()) :: t()
   def add_rules(%__MODULE__{} = builder, rules, opts \\ []) when is_list(rules) do
-    Enum.reduce(rules, builder, fn rule, acc ->
-      add_rule(acc, rule, opts)
+    Enum.reduce(rules, builder, fn rule_expr, acc ->
+      add(acc, Keyword.merge([rule: rule_expr], opts))
     end)
   end
 
-  @doc """
-  Insert a rule at a specific position.
-
-  ## Options
-
-  - `:index` - Insert at this position (0-based)
-  - `:handle` - Insert before/after this rule handle
-  - `:position` - `:before` or `:after` (used with :handle)
-
-  ## Examples
-
-      # Insert at beginning
-      builder |> Builder.insert_rule(expr, index: 0)
-
-      # Insert before rule with handle 42
-      builder |> Builder.insert_rule(expr, handle: 42, position: :before)
-  """
-  @spec insert_rule(t(), list(map()), keyword()) :: t()
-  def insert_rule(%__MODULE__{} = builder, expr, opts) when is_list(expr) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    chain = Keyword.get(opts, :chain, builder.current_chain)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table && chain do
-      raise ArgumentError, "table and chain must be specified"
-    end
-
-    rule_spec = %{
-      family: family,
-      table: table,
-      chain: chain,
-      expr: expr
-    }
-    |> maybe_add(:index, Keyword.get(opts, :index))
-    |> maybe_add(:handle, Keyword.get(opts, :handle))
-    |> maybe_add(:comment, Keyword.get(opts, :comment))
-
-    command = %{
-      insert: %{
-        rule: rule_spec
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Replace a rule by handle.
-
-  ## Examples
-
-      builder |> Builder.replace_rule(new_expr, handle: 42)
-  """
-  @spec replace_rule(t(), list(map()), keyword()) :: t()
-  def replace_rule(%__MODULE__{} = builder, expr, opts) when is_list(expr) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    chain = Keyword.get(opts, :chain, builder.current_chain)
-    family = Keyword.get(opts, :family, builder.family)
-    handle = Keyword.fetch!(opts, :handle)
-
-    unless table && chain do
-      raise ArgumentError, "table and chain must be specified"
-    end
-
-    rule_spec = %{
-      family: family,
-      table: table,
-      chain: chain,
-      handle: handle,
-      expr: expr
-    }
-    |> maybe_add(:comment, Keyword.get(opts, :comment))
-
-    command = %{
-      replace: %{
-        rule: rule_spec
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Delete a rule by handle.
-
-  ## Examples
-
-      builder |> Builder.delete_rule(handle: 42)
-  """
-  @spec delete_rule(t(), keyword()) :: t()
-  def delete_rule(%__MODULE__{} = builder, opts) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    chain = Keyword.get(opts, :chain, builder.current_chain)
-    family = Keyword.get(opts, :family, builder.family)
-    handle = Keyword.fetch!(opts, :handle)
-
-    unless table && chain do
-      raise ArgumentError, "table and chain must be specified"
-    end
-
-    command = %{
-      delete: %{
-        rule: %{
-          family: family,
-          table: table,
-          chain: chain,
-          handle: handle
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
 
   ## Set Operations
+  # Note: Individual set operations have been replaced by the unified API.
+  # Use: builder |> add(set: "name", type: :ipv4_addr, ...)
+  # See the top-level add/2, delete/2, flush/2 functions.
 
-  @doc """
-  Add a named set.
 
-  ## Options
+  ## Maps
+  # Note: Individual map operations have been replaced by the unified API.
+  # Use: builder |> add(map: "name", type: {:key_type, :value_type}, ...)
+  # See the top-level add/2, delete/2, flush/2 functions.
 
-  - `:type` - Set element type (`:ipv4_addr`, `:ipv6_addr`, `:ether_addr`, `:inet_proto`, `:inet_service`, `:mark`)
-  - `:flags` - Set flags (list, e.g., `[:constant]`, `[:interval]`, `[:timeout]`)
-  - `:timeout` - Default timeout for elements (seconds)
-  - `:gc_interval` - Garbage collection interval (seconds)
-  - `:size` - Maximum set size
+  ## Elements
+  # Note: Individual element operations have been replaced by the unified API.
+  # Use: builder |> add(element: [...], set: "setname")
+  #      builder |> add(element: [...], map: "mapname")
+  # See the top-level add/2, delete/2 functions.
 
-  ## Examples
-
-      builder |> Builder.add_set("blocklist", type: :ipv4_addr)
-      builder |> Builder.add_set("ports", type: :inet_service, flags: [:interval])
-  """
-  @spec add_set(t(), String.t(), keyword()) :: t()
-  def add_set(%__MODULE__{} = builder, name, opts) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-    type = Keyword.fetch!(opts, :type)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    set_spec = %{
-      family: family,
-      table: table,
-      name: name,
-      type: type
-    }
-    |> maybe_add(:flags, Keyword.get(opts, :flags))
-    |> maybe_add(:timeout, Keyword.get(opts, :timeout))
-    |> maybe_add(:"gc-interval", Keyword.get(opts, :gc_interval))
-    |> maybe_add(:size, Keyword.get(opts, :size))
-
-    command = %{
-      add: %{
-        set: set_spec
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Delete a set.
-
-  ## Examples
-
-      builder |> Builder.delete_set("old_set")
-  """
-  @spec delete_set(t(), String.t(), keyword()) :: t()
-  def delete_set(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    command = %{
-      delete: %{
-        set: %{
-          family: family,
-          table: table,
-          name: name
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Flush a set (remove all elements, keep set structure).
-
-  ## Examples
-
-      builder |> Builder.flush_set("blocklist")
-  """
-  @spec flush_set(t(), String.t(), keyword()) :: t()
-  def flush_set(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    command = %{
-      flush: %{
-        set: %{
-          family: family,
-          table: table,
-          name: name
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Add elements to a set.
-
-  ## Examples
-
-      builder |> Builder.add_elements("blocklist", ["192.168.1.100", "10.0.0.50"])
-      builder |> Builder.add_elements("ports", [22, 80, 443])
-  """
-  @spec add_elements(t(), String.t(), list(term()), keyword()) :: t()
-  def add_elements(%__MODULE__{} = builder, set_name, elements, opts \\ [])
-      when is_binary(set_name) and is_list(elements) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    command = %{
-      add: %{
-        element: %{
-          family: family,
-          table: table,
-          name: set_name,
-          elem: elements
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Delete elements from a set.
-
-  ## Examples
-
-      builder |> Builder.delete_elements("blocklist", ["192.168.1.100"])
-  """
-  @spec delete_elements(t(), String.t(), list(term()), keyword()) :: t()
-  def delete_elements(%__MODULE__{} = builder, set_name, elements, opts \\ [])
-      when is_binary(set_name) and is_list(elements) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    command = %{
-      delete: %{
-        element: %{
-          family: family,
-          table: table,
-          name: set_name,
-          elem: elements
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  ## Maps (Named Dictionaries)
-
-  @doc """
-  Add a map (key->value dictionary) to the current table.
-
-  Maps allow mapping keys to values, useful for dynamic routing, NAT, etc.
-
-  ## Parameters
-  - `name` - Map name
-  - `opts` - Options:
-    - `:type` - Key and value types as tuple, e.g., `{:ipv4_addr, :verdict}`
-    - `:table` - Table name (defaults to current_table)
-    - `:family` - Address family (defaults to builder family)
-
-  ## Examples
-
-      builder
-      |> Builder.set_table("filter")
-      |> Builder.add_map("port_map", type: {:inet_service, :verdict})
-  """
-  @spec add_map(t(), String.t(), keyword()) :: t()
-  def add_map(%__MODULE__{} = builder, name, opts) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    {key_type, value_type} = Keyword.fetch!(opts, :type)
-
-    map_obj = %{
-      family: family,
-      table: table,
-      name: name,
-      type: key_type,
-      map: to_string(value_type)
-    }
-
-    add_command(builder, %{add: %{map: map_obj}})
-  end
-
-  @doc """
-  Delete a map from the current table.
-
-  ## Examples
-
-      builder |> Builder.delete_map("port_map")
-  """
-  @spec delete_map(t(), String.t(), keyword()) :: t()
-  def delete_map(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    map_obj = %{
-      family: family,
-      table: table,
-      name: name
-    }
-
-    add_command(builder, %{delete: %{map: map_obj}})
-  end
-
-  @doc """
-  Add elements to a map.
-
-  ## Parameters
-  - `map_name` - Name of the map
-  - `elements` - List of key-value pairs as 2-tuples
-
-  ## Examples
-
-      builder |> Builder.add_map_elements("port_map", [
-        {80, "accept"},
-        {443, "accept"},
-        {8080, "drop"}
-      ])
-  """
-  @spec add_map_elements(t(), String.t(), list({term(), term()}), keyword()) :: t()
-  def add_map_elements(%__MODULE__{} = builder, map_name, elements, opts \\ [])
-      when is_binary(map_name) and is_list(elements) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    # Format elements as nftables expects: [key, value]
-    formatted_elements =
-      Enum.map(elements, fn {key, value} ->
-        [key, value]
-      end)
-
-    command = %{
-      add: %{
-        element: %{
-          family: family,
-          table: table,
-          name: map_name,
-          elem: formatted_elements
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
-
-  @doc """
-  Delete elements from a map.
-
-  ## Examples
-
-      builder |> Builder.delete_map_elements("port_map", [80, 443])
-  """
-  @spec delete_map_elements(t(), String.t(), list(term()), keyword()) :: t()
-  def delete_map_elements(%__MODULE__{} = builder, map_name, keys, opts \\ [])
-      when is_binary(map_name) and is_list(keys) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    command = %{
-      delete: %{
-        element: %{
-          family: family,
-          table: table,
-          name: map_name,
-          elem: keys
-        }
-      }
-    }
-
-    add_command(builder, command)
-  end
 
   ## Named Counters
-
-  @doc """
-  Add a named counter to the current table.
-
-  Named counters can be referenced by multiple rules and queried separately.
-
-  ## Parameters
-  - `name` - Counter name
-  - `opts` - Options:
-    - `:packets` - Initial packet count (default: 0)
-    - `:bytes` - Initial byte count (default: 0)
-    - `:table` - Table name (defaults to current_table)
-    - `:family` - Address family (defaults to builder family)
-
-  ## Examples
-
-      builder
-      |> Builder.set_table("filter")
-      |> Builder.add_counter("http_counter")
-  """
-  @spec add_counter(t(), String.t(), keyword()) :: t()
-  def add_counter(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-    packets = Keyword.get(opts, :packets, 0)
-    bytes = Keyword.get(opts, :bytes, 0)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    counter_obj = %{
-      family: family,
-      table: table,
-      name: name,
-      packets: packets,
-      bytes: bytes
-    }
-
-    add_command(builder, %{add: %{counter: counter_obj}})
-  end
-
-  @doc """
-  Delete a named counter from the current table.
-
-  ## Examples
-
-      builder |> Builder.delete_counter("http_counter")
-  """
-  @spec delete_counter(t(), String.t(), keyword()) :: t()
-  def delete_counter(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    counter_obj = %{
-      family: family,
-      table: table,
-      name: name
-    }
-
-    add_command(builder, %{delete: %{counter: counter_obj}})
-  end
+  # Note: Individual counter operations have been replaced by the unified API.
+  # Use: builder |> add(counter: "name", packets: 0, bytes: 0)
+  # See the top-level add/2, delete/2 functions.
 
   ## Quotas
+  # Note: Individual quota operations have been replaced by the unified API.
+  # Use: builder |> add(quota: "name", bytes: 1000, ...)
+  # See the top-level add/2, delete/2 functions.
 
-  @doc """
-  Add a quota to the current table.
-
-  Quotas limit the amount of traffic (in bytes) that can pass through.
-
-  ## Parameters
-  - `name` - Quota name
-  - `bytes` - Quota limit in bytes
-  - `opts` - Options:
-    - `:table` - Table name (defaults to current_table)
-    - `:family` - Address family (defaults to builder family)
-    - `:used` - Initial used bytes (default: 0)
-    - `:over` - Whether quota is over (default: false)
-
-  ## Examples
-
-      builder
-      |> Builder.set_table("filter")
-      |> Builder.add_quota("monthly_limit", 1_000_000_000)  # 1 GB
-  """
-  @spec add_quota(t(), String.t(), non_neg_integer(), keyword()) :: t()
-  def add_quota(%__MODULE__{} = builder, name, bytes, opts \\ [])
-      when is_binary(name) and is_integer(bytes) and bytes >= 0 do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-    used = Keyword.get(opts, :used, 0)
-    over = Keyword.get(opts, :over, false)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    quota_obj = %{
-      family: family,
-      table: table,
-      name: name,
-      bytes: bytes,
-      used: used,
-      over: over
-    }
-
-    add_command(builder, %{add: %{quota: quota_obj}})
-  end
-
-  @doc """
-  Delete a quota from the current table.
-
-  ## Examples
-
-      builder |> Builder.delete_quota("monthly_limit")
-  """
-  @spec delete_quota(t(), String.t(), keyword()) :: t()
-  def delete_quota(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    quota_obj = %{
-      family: family,
-      table: table,
-      name: name
-    }
-
-    add_command(builder, %{delete: %{quota: quota_obj}})
-  end
-
-  ## Named Limits
-
-  @doc """
-  Add a named limit to the current table.
-
-  Named limits can be referenced by multiple rules for rate limiting.
-
-  ## Parameters
-  - `name` - Limit name
-  - `rate` - Rate value
-  - `unit` - Time unit (`:second`, `:minute`, `:hour`, `:day`)
-  - `opts` - Options:
-    - `:burst` - Burst value (default: 0)
-    - `:table` - Table name (defaults to current_table)
-    - `:family` - Address family (defaults to builder family)
-
-  ## Examples
-
-      builder
-      |> Builder.set_table("filter")
-      |> Builder.add_limit("ssh_limit", 10, :minute, burst: 5)
-  """
-  @spec add_limit(t(), String.t(), non_neg_integer(), atom(), keyword()) :: t()
-  def add_limit(%__MODULE__{} = builder, name, rate, unit, opts \\ [])
-      when is_binary(name) and is_integer(rate) and rate >= 0 and is_atom(unit) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-    burst = Keyword.get(opts, :burst, 0)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    limit_obj = %{
-      family: family,
-      table: table,
-      name: name,
-      rate: rate,
-      per: to_string(unit),
-      burst: burst
-    }
-
-    add_command(builder, %{add: %{limit: limit_obj}})
-  end
-
-  @doc """
-  Delete a named limit from the current table.
-
-  ## Examples
-
-      builder |> Builder.delete_limit("ssh_limit")
-  """
-  @spec delete_limit(t(), String.t(), keyword()) :: t()
-  def delete_limit(%__MODULE__{} = builder, name, opts \\ []) when is_binary(name) do
-    table = Keyword.get(opts, :table, builder.current_table)
-    family = Keyword.get(opts, :family, builder.family)
-
-    unless table do
-      raise ArgumentError, "table must be specified"
-    end
-
-    limit_obj = %{
-      family: family,
-      table: table,
-      name: name
-    }
-
-    add_command(builder, %{delete: %{limit: limit_obj}})
-  end
+  ## Limits
+  # Note: Individual limit operations have been replaced by the unified API.
+  # Use: builder |> add(limit: "name", rate: 10, unit: :minute, burst: 5)
+  # See the top-level add/2, delete/2 functions.
 
   ## Round-Trip Import (Phase 8)
 
@@ -1094,7 +941,7 @@ defmodule NFTablesEx.Builder do
   @spec import_table(t(), map()) :: t()
   def import_table(%__MODULE__{} = builder, %{name: name, family: family}) do
     %__MODULE__{builder | family: family}
-    |> add_table(name)
+    |> add(table: name)
   end
 
   @doc """
@@ -1117,9 +964,10 @@ defmodule NFTablesEx.Builder do
   def import_chain(%__MODULE__{} = builder, chain_map) do
     opts = build_chain_opts(chain_map)
 
-    builder
-    |> set_table(chain_map.table)
-    |> add_chain(chain_map.name, opts)
+    opts
+    |> Keyword.put(:table, chain_map.table)
+    |> Keyword.put(:chain, chain_map.name)
+    |> then(&add(builder, &1))
   end
 
   defp build_chain_opts(chain_map) do
@@ -1155,10 +1003,7 @@ defmodule NFTablesEx.Builder do
   """
   @spec import_rule(t(), map()) :: t()
   def import_rule(%__MODULE__{} = builder, %{table: table, chain: chain, expr: expr}) do
-    builder
-    |> set_table(table)
-    |> set_chain(chain)
-    |> add_rule(expr)
+    add(builder, table: table, chain: chain, rule: expr)
   end
 
   @doc """
@@ -1181,9 +1026,10 @@ defmodule NFTablesEx.Builder do
   def import_set(%__MODULE__{} = builder, set_map) do
     opts = build_set_opts(set_map)
 
-    builder
-    |> set_table(set_map.table)
-    |> add_set(set_map.name, opts)
+    opts
+    |> Keyword.put(:table, set_map.table)
+    |> Keyword.put(:set, set_map.name)
+    |> then(&add(builder, &1))
   end
 
   defp build_set_opts(set_map) do
@@ -1218,13 +1064,13 @@ defmodule NFTablesEx.Builder do
 
       # Modify and reapply
       builder
-      |> Builder.set_table("filter")
-      |> Builder.set_chain("INPUT")
-      |> Builder.add_rule(
-        Rule.new()
-        |> Rule.source("10.0.0.0/8")
-        |> Rule.drop()
-        |> Rule.to_expr()
+      |> Builder.add(
+        table: "filter",
+        chain: "INPUT",
+        rule: [
+          %{match: %{left: %{payload: %{protocol: "ip", field: "saddr"}}, right: "10.0.0.0/8", op: "=="}},
+          %{drop: nil}
+        ]
       )
       |> Builder.execute(pid)
 

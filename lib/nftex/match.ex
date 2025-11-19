@@ -26,8 +26,8 @@ defmodule NFTablesEx.Match do
 
       # Use with Builder/Executor
       Builder.new()
-      |> Builder.add_rule(ssh_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> Builder.add_rule(established_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> Builder.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> Builder.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
       |> Executor.execute(pid)
 
   ## Import for Concise Syntax
@@ -363,13 +363,13 @@ defmodule NFTablesEx.Match do
   @doc """
   Extract the expression list from a rule.
 
-  Returns the list of JSON expressions that can be used with Builder.add_rule/2.
+  Returns the list of JSON expressions that can be used with Builder.add/2.
 
   ## Examples
 
       rule = rule() |> tcp() |> dport(22) |> accept()
       expr_list = to_expr(rule)
-      # Use expr_list with Builder or Executor
+      # Use expr_list with Builder: Builder.add(builder, rule: expr_list)
   """
   @spec to_expr(t()) :: list(map())
   def to_expr(%__MODULE__{expr_list: expr_list}), do: expr_list

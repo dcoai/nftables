@@ -176,9 +176,9 @@ getcap priv/port_nftables
 alias NFTablesEx.{Builder, Rule}
 
 Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
@@ -217,9 +217,9 @@ alias NFTablesEx.{Builder, Rule}
 
 # Build a sophisticated firewall rule with the new fluent API
 :ok = Builder.new(family: :inet)
-  |> Builder.set_table("filter")
-  |> Builder.set_chain("INPUT")
-  |> Builder.add_rule(
+  |> Builder.add(table: "filter")
+  |> Builder.add(chain: "INPUT")
+  |> Builder.add(rule: 
     Rule.new()
     |> Rule.source("10.0.0.0/8")
     |> Rule.protocol(:tcp)
@@ -235,14 +235,14 @@ alias NFTablesEx.{Builder, Rule}
 
 # Or build multiple rules in a batch
 :ok = Builder.new(family: :inet)
-  |> Builder.add_table("filter")
-  |> Builder.add_chain("INPUT")
-  |> Builder.set_table("filter")
-  |> Builder.set_chain("INPUT")
-  |> Builder.add_rule(
+  |> Builder.add(table: "filter")
+  |> Builder.add(chain: "INPUT")
+  |> Builder.add(table: "filter")
+  |> Builder.add(chain: "INPUT")
+  |> Builder.add(rule: 
     Rule.new() |> Rule.source("10.0.0.0/8") |> Rule.drop() |> Rule.to_expr()
   )
-  |> Builder.add_rule(
+  |> Builder.add(rule: 
     Rule.new() |> Rule.state([:established, :related]) |> Rule.accept() |> Rule.to_expr()
   )
   |> Builder.execute(pid)
@@ -281,10 +281,10 @@ alias NFTablesEx.Builder
 
 # Build commands without executing
 builder = Builder.new(family: :inet)
-|> Builder.add_table("filter")
-|> Builder.add_chain("INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
 
 # Execute when ready
 :ok = Builder.execute(builder, pid)
@@ -314,9 +314,9 @@ expr = Rule.new()
 
 # Use with Builder
 Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(expr)
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: expr)
 |> Builder.execute(pid)
 ```
 
@@ -347,9 +347,9 @@ Maps allow you to create dynamic mappings from keys to values (e.g., port → ve
 ```elixir
 # Create a map that maps ports to verdicts
 Builder.new()
-|> Builder.add_table("filter")
-|> Builder.add_map("port_verdict", type: {:inet_service, :verdict})
-|> Builder.add_map_elements("port_verdict", [
+|> Builder.add(table: "filter")
+|> Builder.add(map: "port_verdict", type: {:inet_service, :verdict})
+|> Builder.add(element:  [
   {80, "accept"},
   {443, "accept"},
   {8080, "drop"}
@@ -358,9 +358,9 @@ Builder.new()
 
 # Use the map in a rule
 Builder.new()
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.protocol(:tcp)
   |> Rule.dport_map("port_verdict")  # Map lookup
@@ -376,15 +376,15 @@ Named counters can be shared across multiple rules and queried independently:
 ```elixir
 # Create a named counter
 Builder.new()
-|> Builder.add_table("filter")
-|> Builder.add_counter("http_traffic")
+|> Builder.add(table: "filter")
+|> Builder.add(counter: "http_traffic")
 |> Builder.execute(pid)
 
 # Reference it in rules
 Builder.new()
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.protocol(:tcp)
   |> Rule.dport(80)
@@ -402,15 +402,15 @@ Quotas limit the total amount of traffic (in bytes) that can pass through:
 ```elixir
 # Create a 1 GB quota
 Builder.new()
-|> Builder.add_table("filter")
-|> Builder.add_quota("monthly_limit", 1_000_000_000)
+|> Builder.add(table: "filter")
+|> Builder.add(quota: "monthly_limit", 1_000_000_000)
 |> Builder.execute(pid)
 
 # Use in a rule - traffic stops when quota exceeded
 Builder.new()
-|> Builder.set_table("filter")
-|> Builder.set_chain("OUTPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "OUTPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.quota_ref("monthly_limit")
   |> Rule.accept()
@@ -426,15 +426,15 @@ Named limits provide reusable rate limiting across multiple rules:
 ```elixir
 # Create a rate limit object
 Builder.new()
-|> Builder.add_table("filter")
-|> Builder.add_limit("ssh_limit", 10, :minute, burst: 5)
+|> Builder.add(table: "filter")
+|> Builder.add(limit: "ssh_limit", 10, :minute, burst: 5)
 |> Builder.execute(pid)
 
 # Use in multiple rules
 Builder.new()
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.protocol(:tcp)
   |> Rule.dport(22)
@@ -463,9 +463,9 @@ NFTablesEx now supports importing existing firewall configurations back into Bui
 
 # Modify and reapply
 builder
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
@@ -542,16 +542,16 @@ end
 
 # Build update that preserves existing rules
 builder = Builder.new()
-|> Builder.add_table("filter")
-|> Builder.add_chain("INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
 
 # Import existing rules
 builder = Enum.reduce(rules, builder, &Builder.import_rule(&2, &1))
 
 # Add new rule
 builder
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.source("10.0.0.0/8")
   |> Rule.accept()
@@ -581,9 +581,9 @@ Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
 **New API:**
 ```elixir
 Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
@@ -602,9 +602,9 @@ Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
 **New API:**
 ```elixir
 Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.source("10.0.0.1")
   |> Rule.accept()
@@ -623,9 +623,9 @@ Rule.rate_limit(pid, "filter", "INPUT", 10, :minute, burst: 5)
 **New API:**
 ```elixir
 Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   Rule.new()
   |> Rule.limit(10, :minute, burst: 5)
   |> Rule.drop()  # or accept() depending on your use case
@@ -650,9 +650,9 @@ Rule.delete(pid, "filter", "INPUT", :inet, handle)
 rule = Enum.find(rules, fn r -> r.handle == target_handle end)
 
 Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.delete_rule(rule.handle)
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.delete(rule: rule.handle)
 |> Builder.execute(pid)
 ```
 
@@ -748,9 +748,9 @@ alias NFTablesEx.{Builder, Rule}
 
 # Build complex rules using the fluent API
 :ok = Builder.new(family: :inet)
-  |> Builder.set_table("filter")
-  |> Builder.set_chain("INPUT")
-  |> Builder.add_rule(
+  |> Builder.add(table: "filter")
+  |> Builder.add(chain: "INPUT")
+  |> Builder.add(rule: 
     Rule.new()
     |> Rule.source("192.168.1.100")
     |> Rule.protocol(:tcp)
@@ -785,7 +785,7 @@ expr = rule()
 
 # Execute via Builder/Executor pattern
 Builder.new()
-|> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+|> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Executor.execute(pid)
 
 # Or use convenience aliases for more concise code
@@ -799,7 +799,7 @@ Builder.new()
   |> to_expr()
   |> then(fn expr ->
     Builder.new()
-    |> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+    |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
     |> Executor.execute(pid)
   end)
 ```
@@ -921,7 +921,7 @@ expr = rule()
   |> to_expr()
 
 Builder.new()
-|> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+|> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Executor.execute(pid)
 
 # Or using Policy helpers for common patterns
@@ -937,7 +937,7 @@ expr = rule()
   |> to_expr()
 
 Builder.new()
-|> Builder.add_rule(expr, table: "filter", chain: "INPUT", family: :inet)
+|> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Executor.execute(pid)
 
 # Track connection bytes
@@ -948,7 +948,7 @@ expr = rule()
   |> to_expr()
 
 Builder.new()
-|> Builder.add_rule(expr, table: "filter", chain: "FORWARD", family: :inet)
+|> Builder.add(rule: expr, table: "filter", chain: "FORWARD", family: :inet)
 |> Executor.execute(pid)
 ```
 
@@ -1087,9 +1087,9 @@ alias NFTablesEx.Builder
 
 # Build complex rule as Builder command (not yet executed)
 builder = Builder.new(family: :inet)
-|> Builder.set_table("filter")
-|> Builder.set_chain("INPUT")
-|> Builder.add_rule(
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: 
   rule()
   |> source_ip("192.168.1.100")
   |> dest_port(22)

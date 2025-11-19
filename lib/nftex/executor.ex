@@ -64,7 +64,7 @@ defmodule NFTablesEx.Executor do
 
       # Execute with Builder
       Builder.new()
-      |> Builder.add_table("filter")
+      |> Builder.add(table: "filter")
       |> Executor.execute(pid)
 
       # Execute with Elixir map

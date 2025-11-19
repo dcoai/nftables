@@ -27,9 +27,9 @@ defmodule NFTablesEx.Rule do
 
       # Use with Builder
       Builder.new()
-      |> Builder.add_table("filter")
-      |> Builder.add_chain("input")
-      |> Builder.add_rule(expr_list)
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "input")
+      |> Builder.add(rule: expr_list)
       |> Builder.execute(pid)
 
   ## Common Patterns
@@ -98,13 +98,13 @@ defmodule NFTablesEx.Rule do
   @doc """
   Extract the expression list from a rule.
 
-  Returns the list of JSON expressions that can be used with Builder.add_rule/2.
+  Returns the list of JSON expressions that can be used with Builder.add/2.
 
   ## Examples
 
       rule = Rule.new() |> Rule.protocol(:tcp) |> Rule.accept()
       expr_list = Rule.to_expr(rule)
-      Builder.add_rule(builder, expr_list)
+      Builder.add(builder, rule: expr_list)
   """
   @spec to_expr(t()) :: list(map())
   def to_expr(%__MODULE__{expr_list: expr_list}), do: expr_list

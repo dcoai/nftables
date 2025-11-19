@@ -89,7 +89,7 @@ defmodule NFTablesEx.NAT do
     |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 
@@ -153,7 +153,7 @@ defmodule NFTablesEx.NAT do
       |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 
@@ -236,7 +236,7 @@ defmodule NFTablesEx.NAT do
       |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 
@@ -282,7 +282,7 @@ defmodule NFTablesEx.NAT do
       |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 
@@ -318,7 +318,7 @@ defmodule NFTablesEx.NAT do
       |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 
@@ -340,7 +340,7 @@ defmodule NFTablesEx.NAT do
     |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 
@@ -352,7 +352,7 @@ defmodule NFTablesEx.NAT do
     |> to_expr()
 
     Builder.new()
-    |> Builder.add_rule(expr_list, table: table, chain: chain, family: family)
+    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
     |> execute_rule(pid)
   end
 end
