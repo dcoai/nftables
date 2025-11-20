@@ -35,7 +35,7 @@ defmodule NFTablesEx.Decoder do
   Empty lists are filtered out automatically.
 
   ### Mixed Responses
-  Batch operations with both writes and reads:
+  Operations with both writes and reads:
 
       {:ok, %{
         operations: [:success, :success],
@@ -52,24 +52,16 @@ defmodule NFTablesEx.Decoder do
   ## Examples
 
       # Write operation
-      Table.build_add(%{name: "filter", family: :inet})
-      |> Executor.execute(pid: pid)
-      |> Decoder.decode()
-      #=> :ok
+      Builder.new()
+      |> Builder.add(table: "filter", family: :inet)
+      |> Builder.execute(pid)
+      #=> :ok (decoded by Executor internally)
 
       # Read operation
       Query.list_tables(family: :inet)
       |> Executor.execute(pid: pid)
       |> Decoder.decode()
       #=> {:ok, %{tables: [...]}}
-
-      # Mixed batch
-      Batch.new()
-      |> Batch.add(Table.build_add(%{...}))
-      |> Batch.add(Query.list_tables())
-      |> Executor.execute(pid: pid)
-      |> Decoder.decode()
-      #=> {:ok, %{operations: [:success], data: %{tables: [...]}}}
   """
 
   @type decoded_data :: %{

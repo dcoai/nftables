@@ -27,29 +27,28 @@ High-performance Elixir bindings for Linux nftables via the official libnftables
 ```
 ┌─────────────────────────────────────┐
 │  Elixir Application                 │
-│  (NFTex.Table, Chain, Rule, Set)    │
+│  (Builder, Match, Query, Policy)    │
 └────────────┬────────────────────────┘
              │
-             ├─ Tables/Chains/Sets
-             │  └─> JSONBuilder (JSON format)
+             ├─ Builder → Executor
+             │  └─> JSON format
              │      └─> Port.call(json_string)
              │
-             └─ Rules
-                └─> "add rule inet table chain expr"
-                    └─> Port.call(nft_command)
+             └─ Match (Pure expressions)
+                └─> Builder.add(rule: expr)
+                    └─> Executor.execute()
                         │
                         ▼
         ┌───────────────────────────────────┐
         │  Zig Port (port.zig)              │
         │  libnftables.nft_run_cmd_from_buf │
-        │  (accepts JSON OR nft syntax!)    │
+        │  (accepts JSON format)            │
         └───────────┬───────────────────────┘
                     │
                     ▼
         ┌───────────────────────────┐
         │  libnftables (C library)  │
         │  - Parses JSON format     │
-        │  - Parses nft syntax      │
         │  - Converts to netlink    │
         │  - Sends to kernel        │
         └───────────────────────────┘
@@ -76,7 +75,9 @@ json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
 {:ok, json_response} = NFTex.Port.call(pid, json_cmd)
 
 # Or use high-level APIs that handle JSON internally
-:ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
+Builder.new()
+|> Builder.add(table: "filter", family: :inet)
+|> Builder.execute(pid)
 ```
 
 **Benefits:**
@@ -192,22 +193,23 @@ Builder.new(family: :inet)
 ### Manage IP Blocklists with Sets
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTablesEx.start_link()
+alias NFTablesEx.Builder
 
 # Add IPs to an existing blocklist set
-malicious_ips = [
-  "192.168.1.100",
-  "10.0.0.99",
-  "172.16.5.50"
-]
+malicious_ips = ["192.168.1.100", "10.0.0.99", "172.16.5.50"]
 
-:ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, malicious_ips)
+Builder.new()
+|> Builder.add(element: malicious_ips, set: "blocklist", table: "filter", family: :inet)
+|> Builder.execute(pid)
 
 # Remove a false positive
-:ok = NFTex.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.100"])
+Builder.new()
+|> Builder.delete(element: ["192.168.1.100"], set: "blocklist", table: "filter", family: :inet)
+|> Builder.execute(pid)
 
 # List all blocked IPs
-{:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
+{:ok, %{set_elements: elements}} = NFTablesEx.Query.list_set_elements(pid, "filter", "blocklist", family: :inet)
 ```
 
 ### Build Complex Rules (New API)
@@ -686,57 +688,39 @@ The Query module now handles all listing operations:
 
 ## Core Modules
 
-### NFTex.Table - Table Management
+### NFTex.Builder - Unified Configuration Builder
+
+The Builder module is the primary interface for creating nftables configurations:
 
 ```elixir
-# Create a table
-:ok = NFTex.Table.add(pid, %{name: "filter", family: :inet})
+alias NFTablesEx.Builder
 
-# Delete a table
-:ok = NFTex.Table.delete(pid, "filter", :inet)
-
-# List tables
-{:ok, tables} = NFTex.Query.list_tables(pid, family: :inet)
-```
-
-### NFTex.Chain - Chain Management
-
-```elixir
-# Create a base chain with hook
-:ok = NFTex.Chain.add(pid, %{
+# Create table, chain, and set atomically
+Builder.new(family: :inet)
+|> Builder.add(table: "filter")
+|> Builder.add(
+  chain: "INPUT",
   table: "filter",
-  name: "INPUT",
-  family: :inet,
   type: :filter,
   hook: :input,
   priority: 0,
   policy: :drop
-})
-
-# List chains
-{:ok, chains} = NFTex.Query.list_chains(pid, family: :inet)
-```
-
-### NFTex.Set - Set Management
-
-```elixir
-# Create a set
-:ok = NFTex.Set.add(pid, %{
-  name: "blocklist",
+)
+|> Builder.add(
+  set: "blocklist",
   table: "filter",
-  family: :inet,
-  key_type: :ipv4_addr,
-  elements: []
-})
+  type: :ipv4_addr
+)
+|> Builder.add(
+  element: ["192.168.1.100", "10.0.0.50"],
+  set: "blocklist",
+  table: "filter"
+)
+|> Builder.execute(pid)
 
-# Add elements
-:ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, [
-  "192.168.1.100",
-  "10.0.0.50"
-])
-
-# List elements
-{:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
+# Query operations
+{:ok, tables} = NFTablesEx.Query.list_tables(pid, family: :inet)
+{:ok, chains} = NFTablesEx.Query.list_chains(pid, family: :inet)
 ```
 
 ### NFTex.Rule - Rule Expression Building
@@ -1016,66 +1000,78 @@ NFTex supports distributed firewall architectures where a central command & cont
 
 ### Command Building Without Execution
 
-All high-level modules now provide `build_*` functions that generate commands without executing them:
+Builder allows you to construct nftables configurations without executing them immediately:
 
 ```elixir
-# Build commands without executing
-table_cmd = NFTex.Table.build_add(%{name: "filter", family: :inet})
-chain_cmd = NFTex.Chain.build_add(%{
+alias NFTablesEx.{Builder, Match}
+import Match
+
+# Build configuration without executing
+builder = Builder.new(family: :inet)
+|> Builder.add(table: "filter")
+|> Builder.add(
+  chain: "INPUT",
   table: "filter",
-  name: "INPUT",
-  family: :inet,
   type: :filter,
   hook: :input,
   priority: 0,
   policy: :drop
-})
-rule_cmd = NFTex.Rule.build_block_ip("filter", "INPUT", "192.168.1.100")
+)
+|> Builder.add(
+  rule: rule() |> source_ip("192.168.1.100") |> drop() |> to_expr(),
+  table: "filter",
+  chain: "INPUT"
+)
 
-# Each command is a JSON or nft syntax string ready to execute
+# Convert to JSON for inspection or remote execution
+json_cmd = Builder.to_json(builder)
+
+# Execute when ready
+Builder.execute(builder, pid)
 ```
 
-### Batch Operations
+### Atomic Multi-Command Operations
 
-Combine multiple commands into atomic batches:
+Builder natively supports atomic batch operations - multiple commands are executed in a single transaction:
 
 ```elixir
-alias NFTex.Batch
+alias NFTablesEx.Builder
 
-# Build a batch of operations
-batch = Batch.new()
-|> Batch.add(NFTex.Table.build_add(%{name: "filter", family: :inet}))
-|> Batch.add(NFTex.Chain.build_add(%{
+# Build multiple operations atomically
+builder = Builder.new()
+|> Builder.add(table: "filter", family: :inet)
+|> Builder.add(
   table: "filter",
-  name: "INPUT",
+  chain: "INPUT",
   family: :inet,
   type: :filter,
   hook: :input,
   priority: 0,
   policy: :drop
-}))
-|> Batch.add(NFTex.Rule.build_block_ip("filter", "INPUT", "1.2.3.4"))
-|> Batch.add(NFTex.Rule.build_block_ip("filter", "INPUT", "5.6.7.8"))
+)
+|> Builder.add(set: "blocklist", table: "filter", type: :ipv4_addr)
+|> Builder.add(element: ["1.2.3.4", "5.6.7.8"], set: "blocklist", table: "filter")
 
-# Execute locally
-{:ok, response} = Batch.execute(batch, pid: pid)
+# Execute locally (all operations succeed or all fail - atomic)
+Builder.execute(builder, pid)
 
 # Or convert to JSON for remote execution
-json = Batch.to_json(batch)
+json = Builder.to_json(builder)
 MyTransport.send_to_node("firewall-1", json)
 ```
 
 ### Execution Abstraction
 
-The `NFTex.Executor` module provides clean command execution:
+The `NFTex.Executor` module provides clean command execution (typically used via Builder):
 
 ```elixir
-# Local execution
-json_cmd = NFTex.Table.build_add(%{name: "filter", family: :inet})
-{:ok, response} = NFTex.Executor.execute(json_cmd, pid: pid)
+# Builder handles execution internally
+builder = Builder.new()
+|> Builder.add(table: "filter", family: :inet)
+|> Builder.execute(pid)  # Calls Executor internally
 
-# Or use execute! for exceptions instead of tuples
-response = NFTex.Executor.execute!(json_cmd, pid: pid)
+# Or convert to JSON for inspection/remote execution
+json = Builder.to_json(builder)
 ```
 
 ### Match for Remote Execution
@@ -1113,105 +1109,99 @@ MyTransport.send_to_node("firewall-3", json_cmd)
 NFTablesEx.Executor.execute(Jason.decode!(json_cmd), pid: pid)
 ```
 
-### Build Functions Reference
+### Builder Operations Reference
 
-#### Table Operations
-
-```elixir
-# Build table commands
-table_create = NFTex.Table.build_add(%{name: "filter", family: :inet})
-table_delete = NFTex.Table.build_delete("filter", :inet)
-```
-
-#### Chain Operations
+Builder provides a unified interface for all nftables operations:
 
 ```elixir
-# Build chain commands
-chain_create = NFTex.Chain.build_add(%{
+alias NFTablesEx.{Builder, Match}
+import Match
+
+# Table operations
+Builder.new() |> Builder.add(table: "filter", family: :inet)
+Builder.new() |> Builder.delete(table: "filter", family: :inet)
+
+# Chain operations
+Builder.new()
+|> Builder.add(
+  chain: "INPUT",
   table: "filter",
-  name: "INPUT",
   family: :inet,
   type: :filter,
   hook: :input,
   priority: 0,
   policy: :drop
-})
-chain_delete = NFTex.Chain.build_delete("filter", "INPUT", :inet)
-```
+)
+|> Builder.delete(chain: "INPUT", table: "filter", family: :inet)
 
-#### Set Operations
+# Set operations
+Builder.new()
+|> Builder.add(set: "blocklist", table: "filter", family: :inet, type: :ipv4_addr)
+|> Builder.add(element: ["192.168.1.100", "10.0.0.50"], set: "blocklist", table: "filter")
+|> Builder.delete(element: ["192.168.1.100"], set: "blocklist", table: "filter")
+|> Builder.delete(set: "blocklist", table: "filter", family: :inet)
 
-```elixir
-# Build set commands
-set_create = NFTex.Set.build_add(%{
-  name: "blocklist",
-  table: "filter",
-  family: :inet,
-  key_type: :ipv4_addr
-})
-set_add = NFTex.Set.build_add_elements("filter", "blocklist", :inet, [
-  "192.168.1.100",
-  "10.0.0.50"
-])
-set_delete_elem = NFTex.Set.build_delete_elements("filter", "blocklist", :inet, [
-  "192.168.1.100"
-])
-set_delete = NFTex.Set.build_delete("filter", "blocklist", :inet)
-```
+# Rule operations with Match expressions
+block_ip_expr = rule() |> source_ip("192.168.1.100") |> drop() |> to_expr()
+accept_ip_expr = rule() |> source_ip("10.0.0.1") |> accept() |> to_expr()
+rate_limit_expr = rule() |> tcp() |> dport(22) |> limit(10, :second) |> accept() |> to_expr()
 
-#### Rule Operations
-
-```elixir
-# Build rule commands
-block_ip = NFTex.Rule.build_block_ip("filter", "INPUT", "192.168.1.100")
-accept_ip = NFTex.Rule.build_accept_ip("filter", "INPUT", "10.0.0.1")
-block_ipv6 = NFTex.Rule.build_block_ipv6("filter", "INPUT", "2001:db8::1")
-rate_limit = NFTex.Rule.build_rate_limit("filter", "INPUT", 10, :second)
+Builder.new()
+|> Builder.add(rule: block_ip_expr, table: "filter", chain: "INPUT", family: :inet)
+|> Builder.execute(pid)
 ```
 
 ### Complete Distributed Firewall Example
 
 ```elixir
 defmodule MyApp.DistributedFirewall do
-  alias NFTex.{Batch, Table, Chain, Rule, Set, Executor}
+  alias NFTablesEx.{Builder, Executor, Match}
+  import Match
 
   # On C&C node - build firewall configuration
   def build_firewall_config() do
-    Batch.new()
+    # Build expressions
+    loopback_expr = rule() |> source_ip("127.0.0.1") |> accept() |> to_expr()
+    ssh_rate_limit_expr = rule()
+      |> tcp() |> dport(22) |> state([:new])
+      |> limit(10, :minute) |> accept()
+      |> to_expr()
+
+    # Build complete configuration
+    Builder.new(family: :inet)
     # Create table
-    |> Batch.add(Table.build_add(%{name: "filter", family: :inet}))
+    |> Builder.add(table: "filter")
     # Create INPUT chain
-    |> Batch.add(Chain.build_add(%{
+    |> Builder.add(
+      chain: "INPUT",
       table: "filter",
-      name: "INPUT",
-      family: :inet,
       type: :filter,
       hook: :input,
       priority: 0,
       policy: :drop
-    }))
+    )
     # Create blocklist set
-    |> Batch.add(Set.build_add(%{
-      name: "blocklist",
+    |> Builder.add(
+      set: "blocklist",
       table: "filter",
-      family: :inet,
-      key_type: :ipv4_addr
-    }))
+      type: :ipv4_addr
+    )
     # Add malicious IPs to blocklist
-    |> Batch.add(Set.build_add_elements("filter", "blocklist", :inet, [
-      "1.2.3.4",
-      "5.6.7.8"
-    ]))
+    |> Builder.add(
+      element: ["1.2.3.4", "5.6.7.8"],
+      set: "blocklist",
+      table: "filter"
+    )
     # Allow loopback
-    |> Batch.add(Rule.build_accept_ip("filter", "INPUT", "127.0.0.1"))
+    |> Builder.add(rule: loopback_expr, table: "filter", chain: "INPUT")
     # Rate limit SSH
-    |> Batch.add(Rule.build_rate_limit("filter", "INPUT", 10, :minute))
+    |> Builder.add(rule: ssh_rate_limit_expr, table: "filter", chain: "INPUT")
   end
 
   # On C&C node - deploy to multiple firewalls
   def deploy_to_firewalls(firewall_nodes) do
-    config_batch = build_firewall_config()
-    json_cmd = Batch.to_json(config_batch)
+    config_builder = build_firewall_config()
+    json_cmd = Builder.to_json(config_builder)
 
     # Send to all firewall nodes
     Enum.map(firewall_nodes, fn node ->
@@ -1224,7 +1214,7 @@ defmodule MyApp.DistributedFirewall do
 
   # On firewall nodes - minimal shim
   def execute_received_command(json_cmd) do
-    {:ok, pid} = NFTex.start_link()
+    {:ok, pid} = NFTablesEx.start_link()
     Executor.execute(json_cmd, pid: pid)
   end
 end

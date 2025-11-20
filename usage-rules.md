@@ -525,7 +525,7 @@ rule() |> tcp() |> dport(22) |> accept()
 NFTablesEx.Match.rule() |> NFTablesEx.Match.tcp() |> NFTablesEx.Match.dport(22) |> NFTablesEx.Match.accept()
 ```
 
-### 7. Use Batch Operations for Multiple Commands
+### 7. Use Atomic Multi-Command Operations with Builder
 
 **DO:**
 ```elixir
@@ -795,7 +795,7 @@ IO.inspect(rules, label: "Current Rules")
 - Use Query module for inspection
 - Test with isolated tables
 - Import Match for clean syntax
-- Batch operations with Builder
+- Use atomic multi-command operations with Builder
 
 ### ❌ DON'T
 

@@ -89,8 +89,7 @@ defmodule NFTablesEx.MixProject do
         ],
         "Execution": [
           NFTablesEx.Executor,
-          NFTablesEx.Decoder,
-          NFTablesEx.Batch
+          NFTablesEx.Decoder
         ],
         "Internal API": [
           NFTablesEx.Validation,
