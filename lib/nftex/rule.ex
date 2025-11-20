@@ -53,7 +53,7 @@ defmodule NFTablesEx.Rule do
       |> Rule.accept()
   """
 
-  alias NFTablesEx.JsonExpr
+  alias NFTablesEx.Expr
 
   @type t :: %__MODULE__{
           family: atom(),
@@ -126,7 +126,7 @@ defmodule NFTablesEx.Rule do
   end
 
   def protocol(rule, proto) when is_binary(proto) do
-    expr = JsonExpr.meta_match("l4proto", proto)
+    expr = Expr.meta_match("l4proto", proto)
     add_expr(rule, expr)
   end
 
@@ -146,10 +146,10 @@ defmodule NFTablesEx.Rule do
       case String.split(ip, "/") do
         [addr, prefix_len] ->
           # CIDR notation
-          JsonExpr.payload_match_prefix("ip", "saddr", addr, String.to_integer(prefix_len))
+          Expr.payload_match_prefix("ip", "saddr", addr, String.to_integer(prefix_len))
         _ ->
           # Single IP
-          JsonExpr.payload_match("ip", "saddr", ip)
+          Expr.payload_match("ip", "saddr", ip)
       end
 
     add_expr(rule, expr)
@@ -169,10 +169,10 @@ defmodule NFTablesEx.Rule do
       case String.split(ip, "/") do
         [addr, prefix_len] ->
           # CIDR notation
-          JsonExpr.payload_match_prefix("ip", "daddr", addr, String.to_integer(prefix_len))
+          Expr.payload_match_prefix("ip", "daddr", addr, String.to_integer(prefix_len))
         _ ->
           # Single IP
-          JsonExpr.payload_match("ip", "daddr", ip)
+          Expr.payload_match("ip", "daddr", ip)
       end
 
     add_expr(rule, expr)
@@ -187,7 +187,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec sport(t(), integer()) :: t()
   def sport(rule, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    expr = JsonExpr.payload_match("tcp", "sport", port)
+    expr = Expr.payload_match("tcp", "sport", port)
     add_expr(rule, expr)
   end
 
@@ -201,7 +201,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec dport(t(), integer()) :: t()
   def dport(rule, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    expr = JsonExpr.payload_match("tcp", "dport", port)
+    expr = Expr.payload_match("tcp", "dport", port)
     add_expr(rule, expr)
   end
 
@@ -231,7 +231,7 @@ defmodule NFTablesEx.Rule do
   @spec port_range(t(), integer(), integer()) :: t()
   def port_range(rule, min_port, max_port)
       when is_integer(min_port) and is_integer(max_port) do
-    expr = JsonExpr.payload_match_range("tcp", "dport", min_port, max_port)
+    expr = Expr.payload_match_range("tcp", "dport", min_port, max_port)
     add_expr(rule, expr)
   end
 
@@ -245,7 +245,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec iif(t(), String.t()) :: t()
   def iif(rule, interface) when is_binary(interface) do
-    expr = JsonExpr.meta_match("iifname", interface)
+    expr = Expr.meta_match("iifname", interface)
     add_expr(rule, expr)
   end
 
@@ -258,7 +258,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec oif(t(), String.t()) :: t()
   def oif(rule, interface) when is_binary(interface) do
-    expr = JsonExpr.meta_match("oifname", interface)
+    expr = Expr.meta_match("oifname", interface)
     add_expr(rule, expr)
   end
 
@@ -280,7 +280,7 @@ defmodule NFTablesEx.Rule do
   @spec state(t(), list(atom()) | atom()) :: t()
   def state(rule, states) when is_list(states) do
     state_strings = Enum.map(states, &Atom.to_string/1)
-    expr = JsonExpr.ct_match("state", state_strings)
+    expr = Expr.ct_match("state", state_strings)
     add_expr(rule, expr)
   end
 
@@ -299,7 +299,7 @@ defmodule NFTablesEx.Rule do
   @spec status(t(), list(atom())) :: t()
   def status(rule, statuses) when is_list(statuses) do
     status_strings = Enum.map(statuses, &Atom.to_string/1)
-    expr = JsonExpr.ct_match("status", status_strings)
+    expr = Expr.ct_match("status", status_strings)
     add_expr(rule, expr)
   end
 
@@ -312,7 +312,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec connmark(t(), non_neg_integer()) :: t()
   def connmark(rule, mark) when is_integer(mark) and mark >= 0 do
-    expr = JsonExpr.ct_match("mark", mark)
+    expr = Expr.ct_match("mark", mark)
     add_expr(rule, expr)
   end
 
@@ -327,7 +327,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec mark(t(), non_neg_integer()) :: t()
   def mark(rule, mark_val) when is_integer(mark_val) and mark_val >= 0 do
-    expr = JsonExpr.meta_match("mark", mark_val)
+    expr = Expr.meta_match("mark", mark_val)
     add_expr(rule, expr)
   end
 
@@ -340,7 +340,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec dscp(t(), non_neg_integer()) :: t()
   def dscp(rule, dscp_val) when is_integer(dscp_val) and dscp_val >= 0 and dscp_val <= 63 do
-    expr = JsonExpr.payload_match("ip", "dscp", dscp_val)
+    expr = Expr.payload_match("ip", "dscp", dscp_val)
     add_expr(rule, expr)
   end
 
@@ -363,12 +363,12 @@ defmodule NFTablesEx.Rule do
         other -> Atom.to_string(other)
       end
 
-    expr = JsonExpr.payload_match("icmp", "type", type_val)
+    expr = Expr.payload_match("icmp", "type", type_val)
     add_expr(rule, expr)
   end
 
   def icmp_type(rule, type) when is_integer(type) do
-    expr = JsonExpr.payload_match("icmp", "type", type)
+    expr = Expr.payload_match("icmp", "type", type)
     add_expr(rule, expr)
   end
 
@@ -393,7 +393,7 @@ defmodule NFTablesEx.Rule do
         :dport -> {"tcp", "dport"}
       end
 
-    expr = JsonExpr.set_match(protocol, field, set_ref)
+    expr = Expr.set_match(protocol, field, set_ref)
     add_expr(rule, expr)
   end
 
@@ -408,7 +408,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec counter(t()) :: t()
   def counter(rule) do
-    expr = JsonExpr.counter()
+    expr = Expr.counter()
     add_expr(rule, expr)
   end
 
@@ -431,7 +431,7 @@ defmodule NFTablesEx.Rule do
         []
       end
 
-    expr = JsonExpr.log(prefix, json_opts)
+    expr = Expr.log(prefix, json_opts)
     add_expr(rule, expr)
   end
 
@@ -455,7 +455,7 @@ defmodule NFTablesEx.Rule do
         []
       end
 
-    expr = JsonExpr.limit(rate, unit_str, json_opts)
+    expr = Expr.limit(rate, unit_str, json_opts)
     add_expr(rule, expr)
   end
 
@@ -468,7 +468,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec set_mark(t(), non_neg_integer()) :: t()
   def set_mark(rule, mark_val) when is_integer(mark_val) and mark_val >= 0 do
-    expr = JsonExpr.meta_set("mark", mark_val)
+    expr = Expr.meta_set("mark", mark_val)
     add_expr(rule, expr)
   end
 
@@ -481,7 +481,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec set_connmark(t(), non_neg_integer()) :: t()
   def set_connmark(rule, mark_val) when is_integer(mark_val) and mark_val >= 0 do
-    expr = JsonExpr.ct_set("mark", mark_val)
+    expr = Expr.ct_set("mark", mark_val)
     add_expr(rule, expr)
   end
 
@@ -496,7 +496,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec accept(t()) :: t()
   def accept(rule) do
-    expr = JsonExpr.verdict("accept")
+    expr = Expr.verdict("accept")
     add_expr(rule, expr)
   end
 
@@ -509,7 +509,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec drop(t()) :: t()
   def drop(rule) do
-    expr = JsonExpr.verdict("drop")
+    expr = Expr.verdict("drop")
     add_expr(rule, expr)
   end
 
@@ -523,7 +523,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec reject(t(), String.t() | nil) :: t()
   def reject(rule, type \\ nil) do
-    expr = JsonExpr.reject(type)
+    expr = Expr.reject(type)
     add_expr(rule, expr)
   end
 
@@ -536,7 +536,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec jump(t(), String.t()) :: t()
   def jump(rule, chain_name) when is_binary(chain_name) do
-    expr = JsonExpr.jump(chain_name)
+    expr = Expr.jump(chain_name)
     add_expr(rule, expr)
   end
 
@@ -549,7 +549,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec return(t()) :: t()
   def return(rule) do
-    expr = JsonExpr.verdict("return")
+    expr = Expr.verdict("return")
     add_expr(rule, expr)
   end
 
@@ -565,7 +565,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec snat(t(), String.t(), keyword()) :: t()
   def snat(rule, addr, opts \\ []) when is_binary(addr) do
-    expr = JsonExpr.snat(addr, opts)
+    expr = Expr.snat(addr, opts)
     add_expr(rule, expr)
   end
 
@@ -579,7 +579,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec dnat(t(), String.t(), keyword()) :: t()
   def dnat(rule, addr, opts \\ []) when is_binary(addr) do
-    expr = JsonExpr.dnat(addr, opts)
+    expr = Expr.dnat(addr, opts)
     add_expr(rule, expr)
   end
 
@@ -593,7 +593,7 @@ defmodule NFTablesEx.Rule do
   """
   @spec masquerade(t(), keyword()) :: t()
   def masquerade(rule, opts \\ []) do
-    expr = JsonExpr.masquerade(opts)
+    expr = Expr.masquerade(opts)
     add_expr(rule, expr)
   end
 

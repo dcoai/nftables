@@ -1,7 +1,7 @@
 defmodule NFTablesEx.PolicyTest do
   use ExUnit.Case, async: false
 
-  alias NFTablesEx.{Policy, Table, Chain, Query, TestHelpers}
+  alias NFTablesEx.{Policy, Builder, Query, TestHelpers}
   import NFTablesEx.QueryHelpers
 
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
@@ -14,15 +14,18 @@ defmodule NFTablesEx.PolicyTest do
     test_table = "nftex_test_policy"
 
     # Clean up and create test table and chain WITHOUT hook (safe)
-    Table.delete(pid, test_table, :inet)
-    :ok = Table.add(pid, %{name: test_table, family: :inet})
+    Builder.new()
+    |> Builder.delete(table: test_table, family: :inet)
+    |> Builder.execute(pid)
 
-    # Create regular chain WITHOUT hook (safe - won't filter traffic)
-    :ok = Chain.add(pid, %{
+    Builder.new()
+    |> Builder.add(table: test_table, family: :inet)
+    |> Builder.add(
       table: test_table,
-      name: "INPUT",
+      chain: "INPUT",
       family: :inet
-    })
+    )
+    |> Builder.execute(pid)
 
     on_exit(fn ->
       if Process.alive?(pid) do
@@ -38,21 +41,29 @@ defmodule NFTablesEx.PolicyTest do
     test "creates loopback acceptance rule with defaults", %{pid: pid, test_table: _test_table} do
       # Create isolated test infrastructure for this test
       filter_test = "nftex_test_filter_default"
-      Table.delete(pid, filter_test, :inet)
-      :ok = Table.add(pid, %{name: filter_test, family: :inet})
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
 
-      :ok = Chain.add(pid, %{
+      Builder.new()
+      |> Builder.add(table: filter_test, family: :inet)
+      |> Builder.add(
         table: filter_test,
-        name: "INPUT",
+        chain: "INPUT",
         family: :inet
-      })
+      )
+      |> Builder.execute(pid)
+
 
       result = Policy.accept_loopback(pid, table: filter_test, chain: "INPUT")
 
       assert result == :ok
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "creates loopback acceptance rule with custom table/chain", %{pid: pid, test_table: test_table} do
@@ -205,7 +216,10 @@ defmodule NFTablesEx.PolicyTest do
     test "sets up complete firewall with defaults", %{pid: pid} do
       # Use isolated test table instead of production "filter"
       filter_test = "nftex_test_filter_setup"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid, table: filter_test, test_mode: true)
 
@@ -218,12 +232,18 @@ defmodule NFTablesEx.PolicyTest do
       assert chain_exists?(pid, filter_test, "INPUT", :inet)
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "sets up firewall with custom table name", %{pid: pid} do
       custom_test = "nftex_test_custom_firewall"
-      Table.delete(pid, custom_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: custom_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid, table: custom_test, test_mode: true)
 
@@ -231,24 +251,36 @@ defmodule NFTablesEx.PolicyTest do
       assert table_exists?(pid, custom_test, :inet)
 
       # Cleanup
-      Table.delete(pid, custom_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: custom_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "sets up firewall with SSH service", %{pid: pid} do
       filter_test = "nftex_test_filter_ssh"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid, table: filter_test, allow_services: [:ssh], test_mode: true)
 
       assert result == :ok
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "sets up firewall with multiple services", %{pid: pid} do
       filter_test = "nftex_test_filter_multi"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid,
         table: filter_test,
@@ -259,12 +291,18 @@ defmodule NFTablesEx.PolicyTest do
       assert result == :ok
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "sets up firewall with SSH rate limiting", %{pid: pid} do
       filter_test = "nftex_test_filter_rate"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid,
         table: filter_test,
@@ -276,19 +314,28 @@ defmodule NFTablesEx.PolicyTest do
       assert result == :ok
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "sets up firewall with custom family", %{pid: pid} do
       filter_test = "nftex_test_filter_family"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid, table: filter_test, family: :inet, test_mode: true)
 
       assert result == :ok
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
   end
 
@@ -296,7 +343,10 @@ defmodule NFTablesEx.PolicyTest do
     test "builds secure server baseline", %{pid: pid, test_table: _test_table} do
       # Use isolated test table
       filter_test = "nftex_test_filter_baseline"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       # Create complete firewall
       assert :ok = Policy.setup_basic_firewall(pid,
@@ -311,12 +361,18 @@ defmodule NFTablesEx.PolicyTest do
       assert :ok = Policy.allow_https(pid, table: filter_test, chain: "INPUT")
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
 
     test "builds firewall with all supported services", %{pid: pid} do
       filter_test = "nftex_test_filter_all"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
 
       result = Policy.setup_basic_firewall(pid,
         table: filter_test,
@@ -327,7 +383,10 @@ defmodule NFTablesEx.PolicyTest do
       assert result == :ok
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
   end
 
@@ -353,7 +412,10 @@ defmodule NFTablesEx.PolicyTest do
     test "setup_basic_firewall fails on table creation error", %{pid: pid} do
       # Create table first so setup fails
       filter_test = "nftex_test_filter_error"
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
       :ok = Table.add(pid, %{name: filter_test, family: :inet})
 
       # This should fail because table already exists
@@ -364,7 +426,10 @@ defmodule NFTablesEx.PolicyTest do
       assert result == :ok or match?({:error, _}, result)
 
       # Cleanup
-      Table.delete(pid, filter_test, :inet)
+      Builder.new()
+      |> Builder.delete(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
+
     end
   end
 

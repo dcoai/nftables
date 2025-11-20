@@ -53,7 +53,7 @@ Complete reference guide for the NFTex library.
 | nftables Rule Syntax | NFTex Match |
 |---------------------|-------------------|
 | `ip saddr 192.168.1.1` | `Match.source_ip("192.168.1.1")` |
-| `tcp dport 22` | `Match.dest_port(22)` |
+| `tcp dport 22` | `Match.tcp() \|> Match.dport(22)` |
 | `ct state established,related` | `Match.ct_state([:established, :related])` |
 | `iifname "eth0"` | `Match.iif("eth0")` |
 | `limit rate 10/minute` | `Match.rate_limit(10, :minute)` |
@@ -392,21 +392,27 @@ Match destination IP address.
 Match.dest_ip(builder, "8.8.8.8")
 ```
 
-#### `match_source_port/2`
+#### `sport/2`
 
-Match source port.
+Match source port. Requires protocol context (tcp() or udp()).
 
 ```elixir
-Match.source_port(builder, 1024)
+Match.tcp() |> Match.sport(1024)
+Match.udp() |> Match.sport(5353)
 ```
 
-#### `match_dest_port/2`
+#### `dport/2`
 
-Match destination port.
+Match destination port. Requires protocol context (tcp() or udp()).
+Supports both single ports and ranges.
 
 ```elixir
-Match.dest_port(builder, 22)
-Match.dest_port(builder, 80)
+# Single port
+Match.tcp() |> Match.dport(22)
+Match.udp() |> Match.dport(53)
+
+# Port range
+Match.tcp() |> Match.dport(8000..9000)
 ```
 
 #### `match_protocol/2`
@@ -514,7 +520,8 @@ Match.reject(builder, :tcp_reset)
 ```elixir
 # Rate-limited SSH
 Match.new(pid, "filter", "INPUT")
-|> Match.dest_port(22)
+|> Match.tcp()
+|> Match.dport(22)
 |> Match.rate_limit(10, :minute, burst: 20)
 |> Match.log("SSH: ")
 |> Match.counter()

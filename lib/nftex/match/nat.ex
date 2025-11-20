@@ -5,7 +5,7 @@ defmodule NFTablesEx.Match.NAT do
   Provides functions for SNAT, DNAT, masquerading, and port redirection.
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   @doc """
   Apply source NAT (SNAT) to an IP address.
@@ -21,7 +21,7 @@ defmodule NFTablesEx.Match.NAT do
   @spec snat_to(Match.t(), String.t(), keyword()) :: Match.t()
   def snat_to(builder, ip, opts \\ []) when is_binary(ip) do
     port = Keyword.get(opts, :port)
-    expr = JsonExpr.snat(ip, port: port)
+    expr = Expr.snat(ip, port: port)
     Match.add_expr(builder, expr)
   end
 
@@ -39,7 +39,7 @@ defmodule NFTablesEx.Match.NAT do
   @spec dnat_to(Match.t(), String.t(), keyword()) :: Match.t()
   def dnat_to(builder, ip, opts \\ []) when is_binary(ip) do
     port = Keyword.get(opts, :port)
-    expr = JsonExpr.dnat(ip, port: port)
+    expr = Expr.dnat(ip, port: port)
     Match.add_expr(builder, expr)
   end
 
@@ -77,7 +77,7 @@ defmodule NFTablesEx.Match.NAT do
   ## Example
 
       # Redirect HTTP to local proxy
-      builder |> dest_port(80) |> redirect_to(3128)
+      builder |> tcp() |> dport(80) |> redirect_to(3128)
   """
   @spec redirect_to(Match.t(), non_neg_integer()) :: Match.t()
   def redirect_to(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do

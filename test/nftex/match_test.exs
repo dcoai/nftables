@@ -34,31 +34,50 @@ defmodule NFTablesEx.MatchTest do
       assert length(builder.expr_list) == 1
     end
 
-    test "source_port/2 adds expression to builder" do
-      builder = rule() |> source_port(1234)
+    test "sport/2 adds expression to builder" do
+      builder = rule() |> tcp() |> sport(1234)
 
-      assert length(builder.expr_list) == 1
+      assert length(builder.expr_list) == 2  # tcp() + sport()
     end
 
-    test "dest_port/2 adds expression to builder" do
-      builder = rule() |> dest_port(80)
+    test "dport/2 adds expression to builder" do
+      builder = rule() |> tcp() |> dport(80)
 
-      assert length(builder.expr_list) == 1
+      assert length(builder.expr_list) == 2  # tcp() + dport()
     end
 
-    test "dest_port/2 validates port range" do
+    test "dport/2 validates port range" do
       # Valid ports
-      assert %NFTablesEx.Match{} = rule() |> dest_port(0)
-      assert %NFTablesEx.Match{} = rule() |> dest_port(65535)
+      assert %NFTablesEx.Match{} = rule() |> tcp() |> dport(0)
+      assert %NFTablesEx.Match{} = rule() |> tcp() |> dport(65535)
 
-      # Invalid ports should raise (guard clause)
-      assert_raise FunctionClauseError, fn ->
-        rule() |> dest_port(-1)
+      # Invalid ports should raise ArgumentError
+      assert_raise ArgumentError, fn ->
+        rule() |> tcp() |> dport(-1)
       end
 
-      assert_raise FunctionClauseError, fn ->
-        rule() |> dest_port(65536)
+      assert_raise ArgumentError, fn ->
+        rule() |> tcp() |> dport(65536)
       end
+    end
+
+    test "dport/2 requires protocol context" do
+      # Should raise if called without tcp() or udp()
+      assert_raise ArgumentError, ~r/requires protocol context/, fn ->
+        rule() |> dport(80)
+      end
+    end
+
+    test "dport/2 works with ranges" do
+      builder = rule() |> tcp() |> dport(8000..9000)
+
+      assert length(builder.expr_list) == 2  # tcp() + dport()
+    end
+
+    test "sport/2 works with ranges" do
+      builder = rule() |> tcp() |> sport(1024..65535)
+
+      assert length(builder.expr_list) == 2  # tcp() + sport()
     end
 
     test "ct_state/2 with single state" do
@@ -163,22 +182,22 @@ defmodule NFTablesEx.MatchTest do
       assert length(builder.expr_list) == 1
     end
 
-    test "sport/2 is alias for source_port/2" do
-      builder = rule() |> sport(1024)
+    test "sport/2 matches source port" do
+      builder = rule() |> tcp() |> sport(1024)
 
-      assert length(builder.expr_list) == 1
+      assert length(builder.expr_list) == 2  # tcp() + sport()
     end
 
-    test "dport/2 is alias for dest_port/2" do
-      builder = rule() |> dport(443)
+    test "dport/2 matches destination port" do
+      builder = rule() |> tcp() |> dport(443)
 
-      assert length(builder.expr_list) == 1
+      assert length(builder.expr_list) == 2  # tcp() + dport()
     end
 
-    test "port/2 matches destination port" do
-      builder = rule() |> port(22)
+    test "port/2 is alias for dport/2" do
+      builder = rule() |> tcp() |> port(22)
 
-      assert length(builder.expr_list) == 1
+      assert length(builder.expr_list) == 2  # tcp() + port()
     end
 
     test "state/2 is alias for ct_state/2" do
@@ -219,30 +238,33 @@ defmodule NFTablesEx.MatchTest do
       builder =
         rule()
         |> source("192.168.1.100")
+        |> tcp()
         |> dport(22)
 
-      assert length(builder.expr_list) == 2
+      assert length(builder.expr_list) == 3  # source() + tcp() + dport()
     end
 
     test "chains match, action, and verdict" do
       builder =
         rule()
+        |> tcp()
         |> dport(80)
         |> counter()
         |> accept()
 
-      assert length(builder.expr_list) == 3
+      assert length(builder.expr_list) == 4  # tcp() + dport() + counter() + accept()
     end
 
     test "preserves expression order" do
       builder =
         rule()
         |> source("192.168.1.100")
+        |> tcp()
         |> dport(22)
         |> log("SSH: ")
         |> drop()
 
-      assert length(builder.expr_list) == 4
+      assert length(builder.expr_list) == 5  # source() + tcp() + dport() + log() + drop()
       # Expressions should be in the order they were added
     end
   end
@@ -265,6 +287,7 @@ defmodule NFTablesEx.MatchTest do
     test "adds comment to rule" do
       builder =
         rule()
+        |> tcp()
         |> dport(22)
         |> comment("Allow SSH")
         |> accept()
@@ -277,12 +300,13 @@ defmodule NFTablesEx.MatchTest do
     test "builds SSH rate limiting rule" do
       builder =
         rule()
+        |> tcp()
         |> dport(22)
         |> limit(10, :minute, burst: 5)
         |> log("SSH: ")
         |> accept()
 
-      assert length(builder.expr_list) == 4
+      assert length(builder.expr_list) == 5  # tcp() + dport() + limit() + log() + accept()
     end
 
     test "builds IP blocking rule with logging" do
@@ -318,12 +342,13 @@ defmodule NFTablesEx.MatchTest do
     test "builds web server rule with rate limiting" do
       builder =
         rule()
+        |> tcp()
         |> dport(80)
         |> limit(100, :second, burst: 200)
         |> counter()
         |> accept()
 
-      assert length(builder.expr_list) == 4
+      assert length(builder.expr_list) == 5  # tcp() + dport() + limit() + counter() + accept()
     end
   end
 end

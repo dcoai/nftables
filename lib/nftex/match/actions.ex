@@ -6,14 +6,14 @@ defmodule NFTablesEx.Match.Actions do
   CT operations, and packet header modifications (DSCP, TTL, hop limit).
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   # Basic actions
 
   @doc "Add counter expression"
   @spec counter(Match.t()) :: Match.t()
   def counter(builder) do
-    expr = JsonExpr.counter()
+    expr = Expr.counter()
     Match.add_expr(builder, expr)
   end
 
@@ -63,7 +63,7 @@ defmodule NFTablesEx.Match.Actions do
       []
     end
 
-    expr = JsonExpr.log(prefix, json_opts)
+    expr = Expr.log(prefix, json_opts)
     Match.add_expr(builder, expr)
   end
 
@@ -92,7 +92,7 @@ defmodule NFTablesEx.Match.Actions do
       []
     end
 
-    expr = JsonExpr.limit(rate, unit_str, json_opts)
+    expr = Expr.limit(rate, unit_str, json_opts)
     Match.add_expr(builder, expr)
   end
 
@@ -109,7 +109,7 @@ defmodule NFTablesEx.Match.Actions do
   """
   @spec set_mark(Match.t(), non_neg_integer()) :: Match.t()
   def set_mark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = JsonExpr.meta_set("mark", mark)
+    expr = Expr.meta_set("mark", mark)
     Match.add_expr(builder, expr)
   end
 
@@ -124,7 +124,7 @@ defmodule NFTablesEx.Match.Actions do
   """
   @spec set_connmark(Match.t(), non_neg_integer()) :: Match.t()
   def set_connmark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = JsonExpr.ct_set("mark", mark)
+    expr = Expr.ct_set("mark", mark)
     Match.add_expr(builder, expr)
   end
 
@@ -214,7 +214,8 @@ defmodule NFTablesEx.Match.Actions do
 
       # Set numeric label bit
       builder
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
       |> set_ct_label(5)
       |> accept()
 
@@ -226,7 +227,7 @@ defmodule NFTablesEx.Match.Actions do
   """
   @spec set_ct_label(Match.t(), String.t() | non_neg_integer()) :: Match.t()
   def set_ct_label(builder, label) when is_binary(label) or is_integer(label) do
-    expr = JsonExpr.ct_set("label", label)
+    expr = Expr.ct_set("label", label)
     Match.add_expr(builder, expr)
   end
 
@@ -240,14 +241,16 @@ defmodule NFTablesEx.Match.Actions do
 
       # Assign FTP helper
       builder
-      |> dest_port(21)
+      |> tcp()
+      |> dport(21)
       |> ct_state([:new])
       |> set_ct_helper("ftp")
       |> accept()
 
       # Assign SIP helper
       builder
-      |> udp_dport(5060)
+      |> udp()
+      |> dport(5060)
       |> set_ct_helper("sip")
       |> accept()
 
@@ -260,7 +263,7 @@ defmodule NFTablesEx.Match.Actions do
   """
   @spec set_ct_helper(Match.t(), String.t()) :: Match.t()
   def set_ct_helper(builder, helper) when is_binary(helper) do
-    expr = JsonExpr.ct_set("helper", helper)
+    expr = Expr.ct_set("helper", helper)
     Match.add_expr(builder, expr)
   end
 
@@ -293,7 +296,7 @@ defmodule NFTablesEx.Match.Actions do
   """
   @spec set_ct_zone(Match.t(), non_neg_integer()) :: Match.t()
   def set_ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
-    expr = JsonExpr.ct_set("zone", zone)
+    expr = Expr.ct_set("zone", zone)
     Match.add_expr(builder, expr)
   end
 
@@ -317,19 +320,22 @@ defmodule NFTablesEx.Match.Actions do
 
       # Remark HTTP traffic as bulk
       builder
-      |> dest_port(80)
+      |> tcp()
+      |> dport(80)
       |> set_dscp(10)
       |> accept()
 
       # Mark VoIP as expedited forwarding
       builder
-      |> udp_dport(5060)
+      |> udp()
+      |> dport(5060)
       |> set_dscp(46)
       |> accept()
 
       # Use atom
       builder
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
       |> set_dscp(:af31)
       |> accept()
   """

@@ -52,12 +52,14 @@ defmodule NFTablesEx.Match do
   defstruct [
     :family,
     :comment,
+    :protocol,        # Current protocol context (nil, :tcp, :udp, etc.)
     expr_list: []      # JSON expression maps
   ]
 
   @type t :: %__MODULE__{
           family: atom(),
           comment: String.t() | nil,
+          protocol: atom() | nil,
           expr_list: list(map())
         }
 
@@ -103,14 +105,10 @@ defmodule NFTablesEx.Match do
 
   ## Port Matching (delegated to Port)
 
-  defdelegate source_port(builder, port), to: Port
-  defdelegate dest_port(builder, port), to: Port
-  defdelegate udp_sport(builder, port), to: Port
-  defdelegate udp_dport(builder, port), to: Port
-  defdelegate port_range(builder, min_port, max_port), to: Port
-  defdelegate source_port_range(builder, min_port, max_port), to: Port
-  defdelegate udp_port_range(builder, min_port, max_port), to: Port
-  defdelegate udp_source_port_range(builder, min_port, max_port), to: Port
+  defdelegate dport(builder, port), to: Port
+  defdelegate sport(builder, port), to: Port
+  defdelegate dst_port(builder, port), to: Port
+  defdelegate src_port(builder, port), to: Port
 
   ## TCP/Protocol Matching (delegated to TCP)
 
@@ -240,35 +238,20 @@ defmodule NFTablesEx.Match do
   defdelegate dest(builder, ip), to: IP, as: :dest_ip
 
   @doc """
-  Alias for `source_port/2`. Match source port.
-
-  ## Examples
-
-      rule() |> sport(1024)
-  """
-  @spec sport(t(), integer()) :: t()
-  defdelegate sport(builder, port), to: Port, as: :source_port
-
-  @doc """
-  Alias for `dest_port/2`. Match destination port.
-
-  ## Examples
-
-      rule() |> dport(80)
-      rule() |> dport(443)
-  """
-  @spec dport(t(), integer()) :: t()
-  defdelegate dport(builder, port), to: Port, as: :dest_port
-
-  @doc """
   Convenience function for matching destination port (same as `dport/2`).
 
+  Supports both single ports and port ranges.
+
   ## Examples
 
-      rule() |> port(22)
-      rule() |> port(80)
+      # Single port
+      rule() |> tcp() |> port(22)
+      rule() |> udp() |> port(53)
+
+      # Port range
+      rule() |> tcp() |> port(8000..9000)
   """
-  @spec port(t(), integer()) :: t()
+  @spec port(t(), integer() | Range.t()) :: t()
   def port(builder, port), do: dport(builder, port)
 
   @doc """
@@ -394,5 +377,16 @@ defmodule NFTablesEx.Match do
   def add_expr(builder, expr) when is_map(expr) do
     # Add JSON expression map to expr_list
     %{builder | expr_list: builder.expr_list ++ [expr]}
+  end
+
+  @doc """
+  Set the protocol context for subsequent port matching.
+
+  This is used internally by tcp(), udp(), etc. to track which protocol
+  the rule is matching, allowing sport/dport to work protocol-agnostically.
+  """
+  @spec set_protocol(t(), atom()) :: t()
+  def set_protocol(builder, protocol) when is_atom(protocol) do
+    %{builder | protocol: protocol}
   end
 end

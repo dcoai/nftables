@@ -254,10 +254,10 @@ The Match API provides **shorter function names** for common operations:
 **Example:**
 ```elixir
 # Using full names
-rule() |> source_ip("192.168.1.100") |> dest_port(22) |> rate_limit(10, :minute) |> accept()
+rule() |> source_ip("192.168.1.100") |> tcp() |> dport(22) |> rate_limit(10, :minute) |> accept()
 
 # Using aliases (shorter, clearer)
-rule() |> source("192.168.1.100") |> dport(22) |> limit(10, :minute) |> accept()
+rule() |> source("192.168.1.100") |> tcp() |> dport(22) |> limit(10, :minute) |> accept()
 ```
 
 ---
@@ -457,7 +457,7 @@ rule() |> tcp() |> dport(22) |> state([:new]) |> limit(10, :minute) |> accept()
 
 **DON'T:**
 ```elixir
-rule() |> protocol(:tcp) |> dest_port(22) |> ct_state([:new]) |> rate_limit(10, :minute) |> accept()
+rule() |> protocol(:tcp) |> dport(22) |> ct_state([:new]) |> rate_limit(10, :minute) |> accept()
 ```
 
 ### 3. Use Protocol Helpers

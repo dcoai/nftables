@@ -5,7 +5,7 @@ defmodule NFTablesEx.Match.IP do
   Provides functions to match source and destination IP addresses (IPv4 and IPv6).
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   @doc """
   Match source IP address.
@@ -32,7 +32,7 @@ defmodule NFTablesEx.Match.IP do
     end
 
     # Build JSON expression for IP source address match
-    expr = JsonExpr.payload_match(protocol, "saddr", ip_str)
+    expr = Expr.payload_match(protocol, "saddr", ip_str)
     Match.add_expr(builder, expr)
   end
 
@@ -61,7 +61,7 @@ defmodule NFTablesEx.Match.IP do
     end
 
     # Build JSON expression for IP destination address match
-    expr = JsonExpr.payload_match(protocol, "daddr", ip_str)
+    expr = Expr.payload_match(protocol, "daddr", ip_str)
     Match.add_expr(builder, expr)
   end
 

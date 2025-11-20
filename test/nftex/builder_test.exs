@@ -8,8 +8,8 @@ defmodule NFTablesEx.BuilderTest do
       builder = Builder.new()
       assert builder.family == :inet
       assert builder.commands == []
-      assert builder.current_table == nil
-      assert builder.current_chain == nil
+      assert builder.table == nil
+      assert builder.chain == nil
     end
 
     test "creates builder with custom family" do
@@ -32,28 +32,26 @@ defmodule NFTablesEx.BuilderTest do
     end
   end
 
-  describe "set_table/2" do
-    test "sets current table context" do
+  describe "context tracking" do
+    test "sets table context when adding table" do
       builder = Builder.new()
-      |> Builder.set_table("filter")
+      |> Builder.add(table: "filter")
 
-      assert builder.current_table == "filter"
+      assert builder.table == "filter"
+    end
+
+    test "sets chain context when adding chain" do
+      builder = Builder.new()
+      |> Builder.add(table: "filter", chain: "INPUT")
+
+      assert builder.chain == "INPUT"
     end
   end
 
-  describe "set_chain/2" do
-    test "sets current chain context" do
-      builder = Builder.new()
-      |> Builder.set_chain("INPUT")
-
-      assert builder.current_chain == "INPUT"
-    end
-  end
-
-  describe "add_table/2" do
+  describe "add(table:)" do
     test "adds table command with default family" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
+      |> Builder.add(table: "filter")
 
       assert length(builder.commands) == 1
       [cmd] = builder.commands
@@ -70,7 +68,7 @@ defmodule NFTablesEx.BuilderTest do
 
     test "adds table with custom family" do
       builder = Builder.new(family: :ip6)
-      |> Builder.add_table("filter")
+      |> Builder.add(table: "filter")
 
       [cmd] = builder.commands
       assert cmd.add.table.family == :ip6
@@ -78,11 +76,11 @@ defmodule NFTablesEx.BuilderTest do
     end
   end
 
-  describe "add_chain/3" do
+  describe "add(chain:)" do
     test "adds regular chain without hook" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
-      |> Builder.add_chain("custom")
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "custom")
 
       assert length(builder.commands) == 2
       [_table_cmd, chain_cmd] = builder.commands
@@ -100,15 +98,15 @@ defmodule NFTablesEx.BuilderTest do
 
     test "adds base chain with hook" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.add_chain("INPUT",
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT",
         type: :filter,
         hook: :input,
         priority: 0,
         policy: :drop
       )
 
-      [chain_cmd] = builder.commands
+      [_table_cmd, chain_cmd] = builder.commands
 
       assert chain_cmd.add.chain.type == :filter
       assert chain_cmd.add.chain.hook == :input
@@ -116,17 +114,17 @@ defmodule NFTablesEx.BuilderTest do
       assert chain_cmd.add.chain.policy == :drop
     end
 
-    test "uses current_table context if set" do
+    test "uses table context if set" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.add_chain("INPUT")
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT")
 
-      [chain_cmd] = builder.commands
+      [_table_cmd, chain_cmd] = builder.commands
       assert chain_cmd.add.chain.table == "filter"
     end
   end
 
-  describe "add_rule/2" do
+  describe "add(rule:)" do
     test "adds rule with expression list" do
       expr_list = [
         %{match: %{left: %{payload: %{protocol: "ip", field: "saddr"}}, right: "192.168.1.1", op: "=="}},
@@ -134,12 +132,11 @@ defmodule NFTablesEx.BuilderTest do
       ]
 
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.set_chain("INPUT")
-      |> Builder.add_rule(expr_list)
+      |> Builder.add(table: "filter", chain: "INPUT")
+      |> Builder.add(rule: expr_list)
 
-      assert length(builder.commands) == 1
-      [rule_cmd] = builder.commands
+      assert length(builder.commands) == 2
+      [_context_cmd, rule_cmd] = builder.commands
 
       assert rule_cmd.add.rule.family == :inet
       assert rule_cmd.add.rule.table == "filter"
@@ -147,25 +144,23 @@ defmodule NFTablesEx.BuilderTest do
       assert rule_cmd.add.rule.expr == expr_list
     end
 
-    test "requires current_table to be set" do
+    test "requires table to be set" do
       expr_list = [%{accept: nil}]
 
-      builder = Builder.new()
-      |> Builder.set_chain("INPUT")
-
-      assert_raise ArgumentError, ~r/table and chain must be specified/, fn ->
-        Builder.add_rule(builder, expr_list)
+      assert_raise ArgumentError, ~r/table must be specified/, fn ->
+        Builder.new()
+        |> Builder.add(chain: "INPUT")
       end
     end
 
-    test "requires current_chain to be set" do
+    test "requires chain to be set" do
       expr_list = [%{accept: nil}]
 
       builder = Builder.new()
-      |> Builder.set_table("filter")
+      |> Builder.add(table: "filter")
 
-      assert_raise ArgumentError, ~r/table and chain must be specified/, fn ->
-        Builder.add_rule(builder, expr_list)
+      assert_raise ArgumentError, ~r/chain must be specified/, fn ->
+        Builder.add(builder, rule: expr_list)
       end
     end
   end
@@ -176,18 +171,17 @@ defmodule NFTablesEx.BuilderTest do
       rule2 = [%{match: %{left: %{payload: %{protocol: "tcp", field: "dport"}}, right: 80, op: "=="}}, %{accept: nil}]
 
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.set_chain("INPUT")
+      |> Builder.add(table: "filter", chain: "INPUT")
       |> Builder.add_rules([rule1, rule2])
 
-      assert length(builder.commands) == 2
+      assert length(builder.commands) == 3
     end
   end
 
-  describe "delete_table/2" do
+  describe "delete(table:)" do
     test "adds delete table command" do
       builder = Builder.new(family: :inet)
-      |> Builder.delete_table("filter")
+      |> Builder.delete(table: "filter")
 
       [cmd] = builder.commands
 
@@ -202,13 +196,13 @@ defmodule NFTablesEx.BuilderTest do
     end
   end
 
-  describe "delete_chain/2" do
-    test "deletes chain with current_table context" do
+  describe "delete(chain:)" do
+    test "deletes chain with table context" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.delete_chain("INPUT")
+      |> Builder.add(table: "filter")
+      |> Builder.delete(chain: "INPUT")
 
-      [cmd] = builder.commands
+      [_table_cmd, cmd] = builder.commands
 
       assert cmd.delete.chain.family == :inet
       assert cmd.delete.chain.table == "filter"
@@ -216,14 +210,13 @@ defmodule NFTablesEx.BuilderTest do
     end
   end
 
-  describe "delete_rule/2" do
+  describe "delete(rule:)" do
     test "deletes rule by handle" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.set_chain("INPUT")
-      |> Builder.delete_rule(handle: 42)
+      |> Builder.add(table: "filter", chain: "INPUT")
+      |> Builder.delete(rule: [handle: 42])
 
-      [cmd] = builder.commands
+      [_context_cmd, cmd] = builder.commands
 
       assert cmd.delete.rule.family == :inet
       assert cmd.delete.rule.table == "filter"
@@ -232,10 +225,10 @@ defmodule NFTablesEx.BuilderTest do
     end
   end
 
-  describe "flush_table/2" do
+  describe "flush(table:)" do
     test "flushes table" do
       builder = Builder.new(family: :inet)
-      |> Builder.flush_table("filter")
+      |> Builder.flush(table: "filter")
 
       [cmd] = builder.commands
 
@@ -244,13 +237,13 @@ defmodule NFTablesEx.BuilderTest do
     end
   end
 
-  describe "flush_chain/2" do
+  describe "flush(chain:)" do
     test "flushes chain" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.flush_chain("INPUT")
+      |> Builder.add(table: "filter")
+      |> Builder.flush(chain: "INPUT")
 
-      [cmd] = builder.commands
+      [_table_cmd, cmd] = builder.commands
 
       assert cmd.flush.chain.family == :inet
       assert cmd.flush.chain.table == "filter"
@@ -261,7 +254,7 @@ defmodule NFTablesEx.BuilderTest do
   describe "to_json/1" do
     test "converts builder to JSON string" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
+      |> Builder.add(table: "filter")
 
       json = Builder.to_json(builder)
 
@@ -279,8 +272,8 @@ defmodule NFTablesEx.BuilderTest do
 
     test "generates valid JSON for multiple commands" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
-      |> Builder.add_chain("INPUT")
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT")
 
       json = Builder.to_json(builder)
 
@@ -295,21 +288,19 @@ defmodule NFTablesEx.BuilderTest do
   describe "command batching" do
     test "accumulates multiple commands" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
-      |> Builder.add_chain("INPUT")
-      |> Builder.add_chain("FORWARD")
-      |> Builder.add_chain("OUTPUT")
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT")
+      |> Builder.add(chain: "FORWARD")
+      |> Builder.add(chain: "OUTPUT")
 
       assert length(builder.commands) == 4
     end
 
     test "maintains command order" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
-      |> Builder.set_table("filter")
-      |> Builder.add_chain("INPUT")
-      |> Builder.set_chain("INPUT")
-      |> Builder.add_rule([%{accept: nil}])
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT")
+      |> Builder.add(rule: [%{accept: nil}])
 
       [cmd1, cmd2, cmd3] = builder.commands
 
@@ -325,21 +316,19 @@ defmodule NFTablesEx.BuilderTest do
   describe "context management" do
     test "maintains separate table and chain contexts" do
       builder = Builder.new()
-      |> Builder.set_table("filter")
-      |> Builder.set_chain("INPUT")
+      |> Builder.add(table: "filter", chain: "INPUT")
 
-      assert builder.current_table == "filter"
-      assert builder.current_chain == "INPUT"
+      assert builder.table == "filter"
+      assert builder.chain == "INPUT"
     end
 
     test "context persists across multiple operations" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.set_chain("INPUT")
-      |> Builder.add_rule([%{accept: nil}])
-      |> Builder.add_rule([%{drop: nil}])
+      |> Builder.add(table: "filter", chain: "INPUT")
+      |> Builder.add(rule: [%{accept: nil}])
+      |> Builder.add(rule: [%{drop: nil}])
 
-      [rule1, rule2] = builder.commands
+      [_context_cmd, rule1, rule2] = builder.commands
 
       assert rule1.add.rule.table == "filter"
       assert rule1.add.rule.chain == "INPUT"
@@ -349,12 +338,12 @@ defmodule NFTablesEx.BuilderTest do
   end
 
   describe "set operations" do
-    test "add_set/3 creates set command" do
+    test "add(set:) creates set command" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.add_set("blocklist", type: :ipv4_addr)
+      |> Builder.add(table: "filter")
+      |> Builder.add(set: "blocklist", type: :ipv4_addr)
 
-      [cmd] = builder.commands
+      [_table_cmd, cmd] = builder.commands
 
       assert cmd.add.set.family == :inet
       assert cmd.add.set.table == "filter"
@@ -362,12 +351,12 @@ defmodule NFTablesEx.BuilderTest do
       assert cmd.add.set.type == :ipv4_addr
     end
 
-    test "add_elements/3 adds elements to set" do
+    test "add(element:) adds elements to set" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.add_elements("blocklist", ["192.168.1.1", "192.168.1.2"])
+      |> Builder.add(table: "filter", set: "blocklist", type: :ipv4_addr)
+      |> Builder.add(element: ["192.168.1.1", "192.168.1.2"])
 
-      [cmd] = builder.commands
+      [_set_cmd, cmd] = builder.commands
 
       assert cmd.add.element.family == :inet
       assert cmd.add.element.table == "filter"
@@ -375,12 +364,12 @@ defmodule NFTablesEx.BuilderTest do
       assert cmd.add.element.elem == ["192.168.1.1", "192.168.1.2"]
     end
 
-    test "delete_elements/3 deletes elements from set" do
+    test "delete(element:) deletes elements from set" do
       builder = Builder.new(family: :inet)
-      |> Builder.set_table("filter")
-      |> Builder.delete_elements("blocklist", ["192.168.1.1"])
+      |> Builder.add(table: "filter", set: "blocklist", type: :ipv4_addr)
+      |> Builder.delete(element: ["192.168.1.1"])
 
-      [cmd] = builder.commands
+      [_set_cmd, cmd] = builder.commands
 
       assert cmd.delete.element.family == :inet
       assert cmd.delete.element.table == "filter"
@@ -392,14 +381,12 @@ defmodule NFTablesEx.BuilderTest do
   describe "complex scenarios" do
     test "builds complete firewall configuration" do
       builder = Builder.new(family: :inet)
-      |> Builder.add_table("filter")
-      |> Builder.set_table("filter")
-      |> Builder.add_chain("INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
-      |> Builder.add_chain("FORWARD", type: :filter, hook: :forward, priority: 0, policy: :drop)
-      |> Builder.add_chain("OUTPUT", type: :filter, hook: :output, priority: 0, policy: :accept)
-      |> Builder.set_chain("INPUT")
-      |> Builder.add_rule([%{match: %{left: %{meta: %{key: "iifname"}}, right: "lo", op: "=="}}, %{accept: nil}])
-      |> Builder.add_rule([%{match: %{left: %{ct: %{key: "state"}}, right: ["established", "related"], op: "in"}}, %{accept: nil}])
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+      |> Builder.add(chain: "FORWARD", type: :filter, hook: :forward, priority: 0, policy: :drop)
+      |> Builder.add(chain: "OUTPUT", type: :filter, hook: :output, priority: 0, policy: :accept)
+      |> Builder.add(rule: [%{match: %{left: %{meta: %{key: "iifname"}}, right: "lo", op: "=="}}, %{accept: nil}])
+      |> Builder.add(rule: [%{match: %{left: %{ct: %{key: "state"}}, right: ["established", "related"], op: "in"}}, %{accept: nil}])
 
       assert length(builder.commands) == 6
       json = Builder.to_json(builder)

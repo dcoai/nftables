@@ -470,7 +470,7 @@ defmodule NFTablesEx.Builder do
     builder = update_builder_context(builder, context)
 
     # Step 3: Build base spec using main object + context
-    builder_with_spec = spec(builder, object_type, opts)
+    builder_with_spec = spec(builder, cmd_op, object_type, opts)
 
     # Step 4: Update spec with optional fields based on (object_type, cmd_op)
     updated_spec = update_spec(object_type, cmd_op, builder_with_spec.spec, opts)
@@ -554,17 +554,17 @@ defmodule NFTablesEx.Builder do
       #=> %{builder | spec: %{family: :inet, table: "filter", name: "input"}}
 
       # Rule (priority 2) - needs table and chain context
-      spec(builder, :rule, expr: [...])  # Uses builder.table and builder.chain
+      spec(builder, :add, :rule, expr: [...])  # Uses builder.table and builder.chain
       #=> %{builder | spec: %{family: :inet, table: "filter", chain: "input", expr: [...]}}
   """
-  @spec spec(t(), atom(), keyword()) :: t()
-  def spec(builder, :table, opts) do
+  @spec spec(t(), atom(), atom(), keyword()) :: t()
+  def spec(builder, _cmd_op, :table, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table])
     spec_map = %{family: req_opts.family, name: req_opts.table}
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :chain, opts) do
+  def spec(builder, _cmd_op, :chain, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :chain])
     spec_map = %{
       family: req_opts.family,
@@ -574,7 +574,7 @@ defmodule NFTablesEx.Builder do
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :rule, opts) do
+  def spec(builder, _cmd_op, :rule, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :chain, :rule])
     spec_map = %{
       family: req_opts.family,
@@ -585,7 +585,7 @@ defmodule NFTablesEx.Builder do
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :rules, opts) do
+  def spec(builder, _cmd_op, :rules, opts) do
     # Same as :rule but handles multiple rules
     req_opts = validate_opts(builder, opts, [:family, :table, :chain, :rules])
     spec_map = %{
@@ -597,29 +597,40 @@ defmodule NFTablesEx.Builder do
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :set, opts) do
-    req_opts = validate_opts(builder, opts, [:family, :table, :set, :type])
+  def spec(builder, cmd_op, :set, opts) do
+    # Don't require :type for delete/flush operations
+    required_fields = case cmd_op do
+      :add -> [:family, :table, :set, :type]
+      _ -> [:family, :table, :set]
+    end
+    req_opts = validate_opts(builder, opts, required_fields)
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
-      name: req_opts.set,
-      type: req_opts.type
+      name: req_opts.set
     }
+    # Add type only if present (for add operations)
+    spec_map = if Map.has_key?(req_opts, :type) do
+      Map.put(spec_map, :type, req_opts.type)
+    else
+      spec_map
+    end
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :map, opts) do
-    req_opts = validate_opts(builder, opts, [:family, :table, :map, :type])
+  def spec(builder, _cmd_op, :map, opts) do
+    # Don't require :type for delete/flush operations - only for add
+    req_opts = validate_opts(builder, opts, [:family, :table, :map])
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.map
     }
-    # Note: type handling for maps is special (tuple) - handled in update_opts
+    # Note: type handling for maps is special (tuple) - handled in update_spec for add
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :counter, opts) do
+  def spec(builder, _cmd_op, :counter, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :counter])
     spec_map = %{
       family: req_opts.family,
@@ -629,7 +640,7 @@ defmodule NFTablesEx.Builder do
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :quota, opts) do
+  def spec(builder, _cmd_op, :quota, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :quota])
     spec_map = %{
       family: req_opts.family,
@@ -639,19 +650,30 @@ defmodule NFTablesEx.Builder do
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :limit, opts) do
-    req_opts = validate_opts(builder, opts, [:family, :table, :limit, :rate, :unit])
+  def spec(builder, cmd_op, :limit, opts) do
+    # Don't require :rate and :unit for delete/flush operations
+    required_fields = case cmd_op do
+      :add -> [:family, :table, :limit, :rate, :unit]
+      _ -> [:family, :table, :limit]
+    end
+    req_opts = validate_opts(builder, opts, required_fields)
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
-      name: req_opts.limit,
-      rate: req_opts.rate,
-      per: to_string(req_opts.unit)
+      name: req_opts.limit
     }
+    # Add rate and per only if present (for add operations)
+    spec_map = if Map.has_key?(req_opts, :rate) and Map.has_key?(req_opts, :unit) do
+      spec_map
+      |> Map.put(:rate, req_opts.rate)
+      |> Map.put(:per, to_string(req_opts.unit))
+    else
+      spec_map
+    end
     %{builder | spec: spec_map}
   end
 
-  def spec(builder, :element, opts) do
+  def spec(builder, _cmd_op, :element, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :element])
 
     # Element needs to know which collection (set or map) it belongs to
@@ -661,14 +683,26 @@ defmodule NFTablesEx.Builder do
       raise ArgumentError, "element requires :set or :map to be specified"
     end
 
+    # Convert tuples to lists for JSON encoding (map elements are tuples)
+    elem_value = normalize_element_value(req_opts.element)
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: collection_name,
-      elem: req_opts.element
+      elem: elem_value
     }
     %{builder | spec: spec_map}
   end
+
+  # Helper to convert tuples to lists for JSON encoding
+  defp normalize_element_value(elements) when is_list(elements) do
+    Enum.map(elements, fn
+      {key, value} -> [key, value]  # Map element: tuple -> list
+      other -> other  # Set element: keep as-is
+    end)
+  end
+  defp normalize_element_value(other), do: other
 
   ################################################################################
   # Unified Spec Updates
@@ -742,11 +776,26 @@ defmodule NFTablesEx.Builder do
   end
 
   def update_spec(:rule, :delete, spec, opts) do
-    handle = Keyword.get(opts, :handle)
-    unless handle do
-      raise ArgumentError, ":handle must be specified for delete operation"
+    # Extract handle from various sources
+    handle = cond do
+      # If rule value is an integer, it's the handle directly
+      is_integer(spec.expr) -> spec.expr
+      # If rule value is a keyword list with :handle, extract it
+      is_list(spec.expr) and Keyword.keyword?(spec.expr) -> Keyword.get(spec.expr, :handle)
+      # If handle is in opts, use it
+      Keyword.has_key?(opts, :handle) -> Keyword.get(opts, :handle)
+      # Otherwise error
+      true -> nil
     end
-    Map.put(spec, :handle, handle)
+
+    unless handle do
+      raise ArgumentError, ":handle must be specified for delete operation (as rule value or separate option)"
+    end
+
+    # For delete, remove expr and add handle
+    spec
+    |> Map.delete(:expr)
+    |> Map.put(:handle, handle)
   end
 
   ## Set Updates

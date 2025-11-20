@@ -5,7 +5,7 @@ defmodule NFTablesEx.NATTest do
   @moduletag :integration
   @moduletag :nat
 
-  alias NFTablesEx.{Table, Chain, NAT, Query}
+  alias NFTablesEx.{Builder, NAT, Query}
   import NFTablesEx.QueryHelpers
 
   setup do
@@ -15,22 +15,20 @@ defmodule NFTablesEx.NATTest do
     # Clean up any existing test tables
     cleanup_tables(pid)
 
-    # Create NAT table and chains
-    :ok = Table.add(pid, %{name: "nftex_test_nat", family: :inet})
-
-    :ok =
-      Chain.add(pid, %{
-        table: "nftex_test_nat",
-        name: "prerouting",
-        family: :inet
-      })
-
-    :ok =
-      Chain.add(pid, %{
-        table: "nftex_test_nat",
-        name: "postrouting",
-        family: :inet
-      })
+    # Create NAT table and chains using Builder
+    Builder.new()
+    |> Builder.add(table: "nftex_test_nat", family: :inet)
+    |> Builder.add(
+      table: "nftex_test_nat",
+      chain: "prerouting",
+      family: :inet
+    )
+    |> Builder.add(
+      table: "nftex_test_nat",
+      chain: "postrouting",
+      family: :inet
+    )
+    |> Builder.execute(pid)
 
     on_exit(fn ->
       if Process.alive?(pid) do
@@ -141,7 +139,9 @@ defmodule NFTablesEx.NATTest do
 
   defp cleanup_tables(pid) do
     try do
-      Table.delete(pid, "nftex_test_nat", :inet)
+      Builder.new()
+      |> Builder.delete(table: "nftex_test_nat", family: :inet)
+      |> Builder.execute(pid)
     rescue
       _ -> :ok
     catch

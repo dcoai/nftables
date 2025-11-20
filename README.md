@@ -777,7 +777,8 @@ alias NFTablesEx.{Builder, Executor}
 # Build rule expressions with clean, chainable API
 expr = rule()
   |> source_ip("192.168.1.100")
-  |> dest_port(22)
+  |> tcp()
+  |> dport(22)
   |> rate_limit(5, :minute)
   |> counter()
   |> drop()
@@ -930,7 +931,7 @@ Builder.new()
 # Connection limits
 expr = rule()
   |> tcp()
-  |> dest_port(80)
+  |> dport(80)
   |> ct_state([:new])
   |> limit_connections(100)  # Max 100 concurrent connections
   |> drop()
@@ -1092,7 +1093,8 @@ builder = Builder.new(family: :inet)
 |> Builder.add(rule: 
   rule()
   |> source_ip("192.168.1.100")
-  |> dest_port(22)
+  |> tcp()
+  |> dport(22)
   |> rate_limit(10, :minute)
   |> log("SSH_ATTACK: ")
   |> drop()

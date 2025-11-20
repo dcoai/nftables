@@ -5,7 +5,7 @@ defmodule NFTablesEx.Match.TCP do
   Provides functions for TCP flags, packet length, TTL, hop limit, and protocol matching.
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   @doc """
   Match TCP flags.
@@ -61,7 +61,7 @@ defmodule NFTablesEx.Match.TCP do
   @spec length(Match.t(), atom(), non_neg_integer()) :: Match.t()
   def length(builder, op, length) when is_integer(length) and length >= 0 do
     op_str = atom_to_op(op)
-    expr = JsonExpr.meta_match("length", length, op_str)
+    expr = Expr.meta_match("length", length, op_str)
     Match.add_expr(builder, expr)
   end
 
@@ -79,7 +79,7 @@ defmodule NFTablesEx.Match.TCP do
   @spec ttl(Match.t(), atom(), non_neg_integer()) :: Match.t()
   def ttl(builder, op, ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
     op_str = atom_to_op(op)
-    expr = JsonExpr.payload_match("ip", "ttl", ttl, op_str)
+    expr = Expr.payload_match("ip", "ttl", ttl, op_str)
     Match.add_expr(builder, expr)
   end
 
@@ -105,16 +105,20 @@ defmodule NFTablesEx.Match.TCP do
   @spec hoplimit(Match.t(), atom(), non_neg_integer()) :: Match.t()
   def hoplimit(builder, op, hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
     op_str = atom_to_op(op)
-    expr = JsonExpr.payload_match("ip6", "hoplimit", hoplimit, op_str)
+    expr = Expr.payload_match("ip6", "hoplimit", hoplimit, op_str)
     Match.add_expr(builder, expr)
   end
 
   @doc "Match protocol"
   @spec protocol(Match.t(), atom() | String.t()) :: Match.t()
   def protocol(builder, protocol) do
+    protocol_atom = if is_binary(protocol), do: String.to_atom(protocol), else: protocol
     protocol_str = if is_atom(protocol), do: to_string(protocol), else: protocol
-    expr = JsonExpr.payload_match("ip", "protocol", protocol_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.payload_match("ip", "protocol", protocol_str)
+
+    builder
+    |> Match.add_expr(expr)
+    |> Match.set_protocol(protocol_atom)
   end
 
   # Helper to convert atom operators to string

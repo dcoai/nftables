@@ -3,12 +3,12 @@ defmodule NFTablesEx.BuilderAdvancedTest do
 
   alias NFTablesEx.Builder
 
-  describe "Maps - add_map/3" do
+  describe "Maps - add(map:)" do
     test "adds a map with key-value type" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_map("port_map", type: {:inet_service, :verdict})
+        |> Builder.add(table: "filter")
+        |> Builder.add(map: "port_map", type: {:inet_service, :verdict})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -34,8 +34,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "adds map with different types" do
       builder =
         Builder.new(family: :ip)
-        |> Builder.add_table("nat")
-        |> Builder.add_map("addr_map", type: {:ipv4_addr, :ipv4_addr})
+        |> Builder.add(table: "nat")
+        |> Builder.add(map: "addr_map", type: {:ipv4_addr, :ipv4_addr})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -46,27 +46,27 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
 
     test "raises when table not specified" do
-      assert_raise ArgumentError, "table must be specified", fn ->
+      assert_raise ArgumentError, ~r/table must be specified/, fn ->
         Builder.new()
-        |> Builder.add_map("test_map", type: {:ipv4_addr, :verdict})
+        |> Builder.add(map: "test_map", type: {:ipv4_addr, :verdict})
       end
     end
 
     test "raises when type not provided" do
-      assert_raise KeyError, fn ->
+      assert_raise ArgumentError, ~r/type must be/, fn ->
         Builder.new()
-        |> Builder.set_table("filter")
-        |> Builder.add_map("test_map", [])
+        |> Builder.add(table: "filter")
+        |> Builder.add(map: "test_map")
       end
     end
   end
 
-  describe "Maps - delete_map/3" do
+  describe "Maps - delete(map:)" do
     test "deletes a map" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.delete_map("port_map")
+        |> Builder.add(table: "filter")
+        |> Builder.delete(map: "port_map", type: {:inet_service, :verdict})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -88,12 +88,12 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
   end
 
-  describe "Maps - add_map_elements/4" do
+  describe "Maps - add(element:) for maps" do
     test "adds elements to a map" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_map_elements("port_map", [
+        |> Builder.add(table: "filter", map: "port_map", type: {:inet_service, :verdict})
+        |> Builder.add(element: [
           {80, "accept"},
           {443, "accept"},
           {8080, "drop"}
@@ -111,8 +111,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "handles single element" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_map_elements("test_map", [{22, "accept"}])
+        |> Builder.add(table: "filter", map: "test_map", type: {:inet_service, :verdict})
+        |> Builder.add(element: [{22, "accept"}])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -122,12 +122,12 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
   end
 
-  describe "Maps - delete_map_elements/4" do
+  describe "Maps - delete(element:) for maps" do
     test "deletes elements from a map" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.delete_map_elements("port_map", [80, 443])
+        |> Builder.add(table: "filter", map: "port_map", type: {:inet_service, :verdict})
+        |> Builder.delete(element: [80, 443])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -139,12 +139,12 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
   end
 
-  describe "Named Counters - add_counter/3" do
+  describe "Named Counters - add(counter:)" do
     test "adds a counter with default values" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_counter("http_counter")
+        |> Builder.add(table: "filter")
+        |> Builder.add(counter: "http_counter")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -170,8 +170,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "adds counter with initial values" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_counter("test_counter", packets: 100, bytes: 5000)
+        |> Builder.add(table: "filter")
+        |> Builder.add(counter: "test_counter", packets: 100, bytes: 5000)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -182,19 +182,19 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
 
     test "raises when table not specified" do
-      assert_raise ArgumentError, "table must be specified", fn ->
+      assert_raise ArgumentError, ~r/table must be specified/, fn ->
         Builder.new()
-        |> Builder.add_counter("test_counter")
+        |> Builder.add(counter: "test_counter")
       end
     end
   end
 
-  describe "Named Counters - delete_counter/3" do
+  describe "Named Counters - delete(counter:)" do
     test "deletes a counter" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.delete_counter("http_counter")
+        |> Builder.add(table: "filter")
+        |> Builder.delete(counter: "http_counter")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -216,12 +216,12 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
   end
 
-  describe "Quotas - add_quota/4" do
+  describe "Quotas - add(quota:)" do
     test "adds a quota with default values" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_quota("monthly_limit", 1_000_000_000)
+        |> Builder.add(table: "filter")
+        |> Builder.add(quota: "monthly_limit", bytes: 1_000_000_000)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -248,8 +248,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "adds quota with custom values" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_quota("test_quota", 500_000, used: 100_000, over: true)
+        |> Builder.add(table: "filter")
+        |> Builder.add(quota: "test_quota", bytes: 500_000, used: 100_000, over: true)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -261,9 +261,9 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
 
     test "raises when table not specified" do
-      assert_raise ArgumentError, "table must be specified", fn ->
+      assert_raise ArgumentError, ~r/table must be specified/, fn ->
         Builder.new()
-        |> Builder.add_quota("test_quota", 1000)
+        |> Builder.add(quota: "test_quota", bytes: 1000)
       end
     end
 
@@ -271,19 +271,19 @@ defmodule NFTablesEx.BuilderAdvancedTest do
       # This should work
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_quota("test", 0)
+        |> Builder.add(table: "filter")
+        |> Builder.add(quota: "test", bytes: 0)
 
       assert %Builder{} = builder
     end
   end
 
-  describe "Quotas - delete_quota/3" do
+  describe "Quotas - delete(quota:)" do
     test "deletes a quota" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.delete_quota("monthly_limit")
+        |> Builder.add(table: "filter")
+        |> Builder.delete(quota: "monthly_limit")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -305,12 +305,12 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
   end
 
-  describe "Named Limits - add_limit/5" do
+  describe "Named Limits - add(limit:)" do
     test "adds a limit with default burst" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_limit("ssh_limit", 10, :minute)
+        |> Builder.add(table: "filter")
+        |> Builder.add(limit: "ssh_limit", rate: 10, unit: :minute)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -337,8 +337,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "adds limit with burst value" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_limit("http_limit", 100, :second, burst: 50)
+        |> Builder.add(table: "filter")
+        |> Builder.add(limit: "http_limit", rate: 100, unit: :second, burst: 50)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -355,8 +355,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
       for unit <- units do
         builder =
           Builder.new()
-          |> Builder.add_table("filter")
-          |> Builder.add_limit("test_limit", 5, unit)
+          |> Builder.add(table: "filter")
+          |> Builder.add(limit: "test_limit", rate: 5, unit: unit)
 
         json = Builder.to_json(builder)
         decoded = Jason.decode!(json)
@@ -367,19 +367,19 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     end
 
     test "raises when table not specified" do
-      assert_raise ArgumentError, "table must be specified", fn ->
+      assert_raise ArgumentError, ~r/table must be specified/, fn ->
         Builder.new()
-        |> Builder.add_limit("test_limit", 10, :minute)
+        |> Builder.add(limit: "test_limit", rate: 10, unit: :minute)
       end
     end
   end
 
-  describe "Named Limits - delete_limit/3" do
+  describe "Named Limits - delete(limit:)" do
     test "deletes a limit" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.delete_limit("ssh_limit")
+        |> Builder.add(table: "filter")
+        |> Builder.delete(limit: "ssh_limit", rate: 10, unit: :minute)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -405,9 +405,9 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "combines map creation with element addition" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_map("port_verdict", type: {:inet_service, :verdict})
-        |> Builder.add_map_elements("port_verdict", [
+        |> Builder.add(table: "filter")
+        |> Builder.add(map: "port_verdict", type: {:inet_service, :verdict})
+        |> Builder.add(element: [
           {22, "accept"},
           {80, "accept"},
           {443, "accept"}
@@ -424,10 +424,10 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "creates multiple named objects in sequence" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_counter("web_counter")
-        |> Builder.add_quota("daily_quota", 10_000_000_000)
-        |> Builder.add_limit("rate_limit", 100, :second, burst: 50)
+        |> Builder.add(table: "filter")
+        |> Builder.add(counter: "web_counter")
+        |> Builder.add(quota: "daily_quota", bytes: 10_000_000_000)
+        |> Builder.add(limit: "rate_limit", rate: 100, unit: :second, burst: 50)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -441,11 +441,11 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "mixes advanced features with basic operations" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_chain("INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
-        |> Builder.add_counter("input_counter")
-        |> Builder.add_set("blocklist", type: :ipv4_addr)
-        |> Builder.add_limit("ssh_limit", 10, :minute, burst: 5)
+        |> Builder.add(table: "filter")
+        |> Builder.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+        |> Builder.add(counter: "input_counter")
+        |> Builder.add(set: "blocklist", type: :ipv4_addr)
+        |> Builder.add(limit: "ssh_limit", rate: 10, unit: :minute, burst: 5)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -465,8 +465,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "uses builder's family for map operations" do
       builder =
         Builder.new(family: :ip6)
-        |> Builder.add_table("filter")
-        |> Builder.add_map("ipv6_map", type: {:ipv6_addr, :verdict})
+        |> Builder.add(table: "filter")
+        |> Builder.add(map: "ipv6_map", type: {:ipv6_addr, :verdict})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -478,8 +478,8 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "allows family override for counter" do
       builder =
         Builder.new(family: :inet)
-        |> Builder.add_table("filter")
-        |> Builder.add_counter("test", family: :ip)
+        |> Builder.add(table: "filter")
+        |> Builder.add(counter: "test", family: :ip)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -490,11 +490,11 @@ defmodule NFTablesEx.BuilderAdvancedTest do
   end
 
   describe "Table specification" do
-    test "uses current_table when set" do
+    test "uses table context when set" do
       builder =
         Builder.new()
-        |> Builder.add_table("nat")
-        |> Builder.add_counter("nat_counter")
+        |> Builder.add(table: "nat")
+        |> Builder.add(counter: "nat_counter")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -506,10 +506,9 @@ defmodule NFTablesEx.BuilderAdvancedTest do
     test "allows table override" do
       builder =
         Builder.new()
-        |> Builder.add_table("filter")
-        |> Builder.add_table("nat")
-        |> Builder.set_table("filter")
-        |> Builder.add_counter("other_counter", table: "nat")
+        |> Builder.add(table: "filter")
+        |> Builder.add(table: "nat")
+        |> Builder.add(counter: "other_counter", table: "nat")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)

@@ -6,21 +6,21 @@ defmodule NFTablesEx.Match.Verdicts do
   advanced features (queue, synproxy, flow offload), and chain control flow (jump, goto, return).
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   # Terminal verdicts
 
   @doc "Accept packets"
   @spec accept(Match.t()) :: Match.t()
   def accept(builder) do
-    expr = JsonExpr.verdict("accept")
+    expr = Expr.verdict("accept")
     Match.add_expr(builder, expr)
   end
 
   @doc "Drop packets silently"
   @spec drop(Match.t()) :: Match.t()
   def drop(builder) do
-    expr = JsonExpr.verdict("drop")
+    expr = Expr.verdict("drop")
     Match.add_expr(builder, expr)
   end
 
@@ -35,10 +35,10 @@ defmodule NFTablesEx.Match.Verdicts do
   @spec reject(Match.t(), atom()) :: Match.t()
   def reject(builder, type \\ :icmp_port_unreachable) do
     expr = case type do
-      :tcp_reset -> JsonExpr.reject("tcp reset")
-      :icmp_port_unreachable -> JsonExpr.reject()
-      :icmpx_port_unreachable -> JsonExpr.reject("icmpx type port-unreachable")
-      other -> JsonExpr.reject(to_string(other))
+      :tcp_reset -> Expr.reject("tcp reset")
+      :icmp_port_unreachable -> Expr.reject()
+      :icmpx_port_unreachable -> Expr.reject("icmpx type port-unreachable")
+      other -> Expr.reject(to_string(other))
     end
 
     Match.add_expr(builder, expr)
@@ -57,7 +57,8 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Log and continue (don't stop processing)
       builder
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
       |> log("SSH: ")
       |> continue()
 
@@ -76,7 +77,7 @@ defmodule NFTablesEx.Match.Verdicts do
   """
   @spec continue(Match.t()) :: Match.t()
   def continue(builder) do
-    expr = JsonExpr.verdict("continue")
+    expr = Expr.verdict("continue")
     Match.add_expr(builder, expr)
   end
 
@@ -90,7 +91,8 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Disable tracking for high-volume traffic
       builder
-      |> dest_port(443)
+      |> tcp()
+      |> dport(443)
       |> notrack()
 
       # Skip tracking for local traffic
@@ -135,12 +137,14 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Queue to IDS on queue 0
       builder
-      |> dest_port(80)
+      |> tcp()
+      |> dport(80)
       |> queue_to_userspace(0)
 
       # Queue with bypass (don't drop on queue full)
       builder
-      |> dest_port(443)
+      |> tcp()
+      |> dport(443)
       |> queue_to_userspace(1, bypass: true)
 
       # Queue with fanout
@@ -193,19 +197,22 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Basic synproxy
       builder
-      |> dest_port(80)
+      |> tcp()
+      |> dport(80)
       |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
       |> synproxy()
 
       # With custom MSS
       builder
-      |> dest_port(443)
+      |> tcp()
+      |> dport(443)
       |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
       |> synproxy(mss: 1460)
 
       # Full options
       builder
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
       |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
       |> synproxy(mss: 1460, wscale: 7, sack_perm: true, timestamp: true)
 
@@ -315,7 +322,8 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Mirror to monitoring interface
       builder
-      |> dest_port(443)
+      |> tcp()
+      |> dport(443)
       |> duplicate_to("monitor0")
       |> accept()
 
@@ -399,7 +407,8 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Jump to custom logging chain
       builder
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
       |> jump("ssh_logging")
       |> accept()
 
@@ -416,7 +425,7 @@ defmodule NFTablesEx.Match.Verdicts do
   """
   @spec jump(Match.t(), String.t()) :: Match.t()
   def jump(builder, chain_name) when is_binary(chain_name) do
-    expr = JsonExpr.jump(chain_name)
+    expr = Expr.jump(chain_name)
     Match.add_expr(builder, expr)
   end
 
@@ -430,7 +439,8 @@ defmodule NFTablesEx.Match.Verdicts do
 
       # Permanent transfer to specialized chain
       builder
-      |> dest_port(443)
+      |> tcp()
+      |> dport(443)
       |> goto("https_chain")
 
   ## Difference from jump/1
@@ -440,7 +450,7 @@ defmodule NFTablesEx.Match.Verdicts do
   """
   @spec goto(Match.t(), String.t()) :: Match.t()
   def goto(builder, chain_name) when is_binary(chain_name) do
-    expr = JsonExpr.goto(chain_name)
+    expr = Expr.goto(chain_name)
     Match.add_expr(builder, expr)
   end
 
@@ -461,7 +471,7 @@ defmodule NFTablesEx.Match.Verdicts do
   """
   @spec return_from_chain(Match.t()) :: Match.t()
   def return_from_chain(builder) do
-    expr = JsonExpr.verdict("return")
+    expr = Expr.verdict("return")
     Match.add_expr(builder, expr)
   end
 end

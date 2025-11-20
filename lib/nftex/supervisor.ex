@@ -15,7 +15,11 @@ defmodule NFTablesEx.Supervisor do
 
   Then you can use the registered name:
 
-      NFTablesEx.Table.add(NFTex, %{name: "filter", family: :inet})
+      alias NFTablesEx.Builder
+
+      Builder.new()
+      |> Builder.add(table: "filter", family: :inet)
+      |> Builder.execute(NFTex)
   """
 
   use Supervisor

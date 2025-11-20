@@ -2,109 +2,153 @@ defmodule NFTablesEx.Match.Port do
   @moduledoc """
   Port matching functions for Match.
 
-  Provides functions to match TCP and UDP ports, including single ports and port ranges.
+  Provides protocol-agnostic port matching for TCP and UDP. The protocol context
+  is determined by earlier tcp() or udp() calls in the match chain.
+
+  Supports both single ports and port ranges using Elixir ranges.
+
+  ## Examples
+
+      # TCP port matching
+      rule() |> tcp() |> dport(80)
+      rule() |> tcp() |> sport(1024)
+
+      # UDP port matching
+      rule() |> udp() |> dport(53)
+      rule() |> udp() |> sport(5353)
+
+      # Port ranges
+      rule() |> tcp() |> dport(8000..9000)
+      rule() |> udp() |> sport(1024..65535)
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
-  @doc "Match TCP source port"
-  @spec source_port(Match.t(), non_neg_integer()) :: Match.t()
-  def source_port(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    expr = JsonExpr.payload_match("tcp", "sport", port)
+  @doc """
+  Match destination port.
+
+  Works with both TCP and UDP based on the protocol context set by tcp() or udp().
+  Supports single ports (integer) or port ranges (Range).
+
+  ## Examples
+
+      # Single port
+      rule() |> tcp() |> dport(80)
+      rule() |> udp() |> dport(53)
+
+      # Port range
+      rule() |> tcp() |> dport(8000..9000)
+      rule() |> tcp() |> dport(1024..65535)
+
+  ## Errors
+
+  Raises ArgumentError if called without tcp() or udp() first.
+  """
+  @spec dport(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  def dport(builder, port) when is_integer(port) do
+    protocol = get_protocol!(builder, "dport")
+    validate_port!(port)
+    expr = Expr.payload_match(protocol, "dport", port)
     Match.add_expr(builder, expr)
   end
 
-  @doc "Match TCP destination port"
-  @spec dest_port(Match.t(), non_neg_integer()) :: Match.t()
-  def dest_port(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    expr = JsonExpr.payload_match("tcp", "dport", port)
-    Match.add_expr(builder, expr)
-  end
+  def dport(builder, first..last//_ = _range) do
+    protocol = get_protocol!(builder, "dport")
+    validate_port!(first)
+    validate_port!(last)
 
-  @doc "Match UDP source port"
-  @spec udp_sport(Match.t(), non_neg_integer()) :: Match.t()
-  def udp_sport(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    expr = JsonExpr.payload_match("udp", "sport", port)
-    Match.add_expr(builder, expr)
-  end
+    if first > last do
+      raise ArgumentError, "Invalid port range: #{first}..#{last} (first must be <= last)"
+    end
 
-  @doc "Match UDP destination port"
-  @spec udp_dport(Match.t(), non_neg_integer()) :: Match.t()
-  def udp_dport(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
-    expr = JsonExpr.payload_match("udp", "dport", port)
+    expr = Expr.payload_match_range(protocol, "dport", first, last)
     Match.add_expr(builder, expr)
   end
 
   @doc """
-  Match TCP port range.
+  Match source port.
 
-  ## Example
+  Works with both TCP and UDP based on the protocol context set by tcp() or udp().
+  Supports single ports (integer) or port ranges (Range).
 
-      # Match high ports (1024-65535)
-      builder |> port_range(1024, 65535)
+  ## Examples
 
-      # Match specific range
-      builder |> port_range(8000, 9000)
+      # Single port
+      rule() |> tcp() |> sport(1024)
+      rule() |> udp() |> sport(5353)
+
+      # Port range
+      rule() |> tcp() |> sport(1024..65535)
+      rule() |> udp() |> sport(10000..20000)
+
+  ## Errors
+
+  Raises ArgumentError if called without tcp() or udp() first.
   """
-  @spec port_range(Match.t(), non_neg_integer(), non_neg_integer()) :: Match.t()
-  def port_range(builder, min_port, max_port)
-      when is_integer(min_port) and is_integer(max_port) and
-             min_port >= 0 and min_port <= 65535 and
-             max_port >= 0 and max_port <= 65535 and
-             min_port <= max_port do
-    expr = JsonExpr.payload_match_range("tcp", "dport", min_port, max_port)
+  @spec sport(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  def sport(builder, port) when is_integer(port) do
+    protocol = get_protocol!(builder, "sport")
+    validate_port!(port)
+    expr = Expr.payload_match(protocol, "sport", port)
+    Match.add_expr(builder, expr)
+  end
+
+  def sport(builder, first..last//_ = _range) do
+    protocol = get_protocol!(builder, "sport")
+    validate_port!(first)
+    validate_port!(last)
+
+    if first > last do
+      raise ArgumentError, "Invalid port range: #{first}..#{last} (first must be <= last)"
+    end
+
+    expr = Expr.payload_match_range(protocol, "sport", first, last)
     Match.add_expr(builder, expr)
   end
 
   @doc """
-  Match TCP source port range.
+  Alias for dport/2. Match destination port.
 
-  ## Example
+  ## Examples
 
-      builder |> source_port_range(1024, 65535)
+      rule() |> tcp() |> dst_port(443)
+      rule() |> udp() |> dst_port(53)
   """
-  @spec source_port_range(Match.t(), non_neg_integer(), non_neg_integer()) :: Match.t()
-  def source_port_range(builder, min_port, max_port)
-      when is_integer(min_port) and is_integer(max_port) and
-             min_port >= 0 and min_port <= 65535 and
-             max_port >= 0 and max_port <= 65535 and
-             min_port <= max_port do
-    expr = JsonExpr.payload_match("tcp", "sport", {:range, min_port, max_port})
-    Match.add_expr(builder, expr)
-  end
+  @spec dst_port(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  def dst_port(builder, port), do: dport(builder, port)
 
   @doc """
-  Match UDP port range.
+  Alias for sport/2. Match source port.
 
-  ## Example
+  ## Examples
 
-      # Match RTP media range
-      builder |> udp_port_range(10000, 20000)
+      rule() |> tcp() |> src_port(1024)
+      rule() |> tcp() |> src_port(1024..65535)
   """
-  @spec udp_port_range(Match.t(), non_neg_integer(), non_neg_integer()) :: Match.t()
-  def udp_port_range(builder, min_port, max_port)
-      when is_integer(min_port) and is_integer(max_port) and
-             min_port >= 0 and min_port <= 65535 and
-             max_port >= 0 and max_port <= 65535 and
-             min_port <= max_port do
-    expr = JsonExpr.payload_match_range("udp", "dport", min_port, max_port)
-    Match.add_expr(builder, expr)
+  @spec src_port(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  def src_port(builder, port), do: sport(builder, port)
+
+  # Private helpers
+
+  defp get_protocol!(builder, function_name) do
+    case builder.protocol do
+      nil ->
+        raise ArgumentError,
+              "#{function_name}/2 requires protocol context. Call tcp() or udp() before using #{function_name}/2.\n\n" <>
+              "Example: rule() |> tcp() |> #{function_name}(80)"
+
+      protocol when protocol in [:tcp, :udp] ->
+        to_string(protocol)
+
+      other ->
+        raise ArgumentError,
+              "#{function_name}/2 requires TCP or UDP protocol context, got: #{inspect(other)}\n\n" <>
+              "Use tcp() or udp() before calling #{function_name}/2."
+    end
   end
 
-  @doc """
-  Match UDP source port range.
-
-  ## Example
-
-      builder |> udp_source_port_range(1024, 65535)
-  """
-  @spec udp_source_port_range(Match.t(), non_neg_integer(), non_neg_integer()) :: Match.t()
-  def udp_source_port_range(builder, min_port, max_port)
-      when is_integer(min_port) and is_integer(max_port) and
-             min_port >= 0 and min_port <= 65535 and
-             max_port >= 0 and max_port <= 65535 and
-             min_port <= max_port do
-    expr = JsonExpr.payload_match("udp", "sport", {:range, min_port, max_port})
-    Match.add_expr(builder, expr)
+  defp validate_port!(port) when is_integer(port) and port >= 0 and port <= 65535, do: :ok
+  defp validate_port!(port) when is_integer(port) do
+    raise ArgumentError, "Port must be between 0 and 65535, got: #{port}"
   end
 end

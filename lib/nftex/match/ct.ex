@@ -6,7 +6,7 @@ defmodule NFTablesEx.Match.CT do
   direction, labels, zones, helpers, and other CT-related attributes.
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   @doc """
   Match connection tracking state.
@@ -26,7 +26,7 @@ defmodule NFTablesEx.Match.CT do
   @spec ct_state(Match.t(), list(atom())) :: Match.t()
   def ct_state(builder, states) when is_list(states) do
     state_list = Enum.map(states, &to_string/1)
-    expr = JsonExpr.ct_match("state", state_list)
+    expr = Expr.ct_match("state", state_list)
     Match.add_expr(builder, expr)
   end
 
@@ -53,7 +53,7 @@ defmodule NFTablesEx.Match.CT do
   @spec ct_status(Match.t(), list(atom())) :: Match.t()
   def ct_status(builder, statuses) when is_list(statuses) do
     status_list = Enum.map(statuses, &to_string/1)
-    expr = JsonExpr.ct_match("status", status_list)
+    expr = Expr.ct_match("status", status_list)
     Match.add_expr(builder, expr)
   end
 
@@ -70,7 +70,7 @@ defmodule NFTablesEx.Match.CT do
   """
   @spec ct_direction(Match.t(), atom()) :: Match.t()
   def ct_direction(builder, direction) when direction in [:original, :reply] do
-    expr = JsonExpr.ct_match("direction", to_string(direction))
+    expr = Expr.ct_match("direction", to_string(direction))
     Match.add_expr(builder, expr)
   end
 
@@ -85,7 +85,7 @@ defmodule NFTablesEx.Match.CT do
   """
   @spec connmark(Match.t(), non_neg_integer()) :: Match.t()
   def connmark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = JsonExpr.ct_match("mark", mark)
+    expr = Expr.ct_match("mark", mark)
     Match.add_expr(builder, expr)
   end
 
@@ -104,7 +104,7 @@ defmodule NFTablesEx.Match.CT do
   """
   @spec ct_label(Match.t(), String.t() | non_neg_integer()) :: Match.t()
   def ct_label(builder, label) when is_binary(label) or is_integer(label) do
-    expr = JsonExpr.ct_match("label", label)
+    expr = Expr.ct_match("label", label)
     Match.add_expr(builder, expr)
   end
 
@@ -123,7 +123,7 @@ defmodule NFTablesEx.Match.CT do
   """
   @spec ct_zone(Match.t(), non_neg_integer()) :: Match.t()
   def ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
-    expr = JsonExpr.ct_match("zone", zone)
+    expr = Expr.ct_match("zone", zone)
     Match.add_expr(builder, expr)
   end
 
@@ -142,7 +142,7 @@ defmodule NFTablesEx.Match.CT do
   """
   @spec ct_helper(Match.t(), String.t()) :: Match.t()
   def ct_helper(builder, helper) when is_binary(helper) do
-    expr = JsonExpr.ct_match("helper", helper)
+    expr = Expr.ct_match("helper", helper)
     Match.add_expr(builder, expr)
   end
 
@@ -160,7 +160,7 @@ defmodule NFTablesEx.Match.CT do
   @spec ct_bytes(Match.t(), atom(), non_neg_integer()) :: Match.t()
   def ct_bytes(builder, op, bytes) when is_integer(bytes) and bytes >= 0 do
     op_str = atom_to_op(op)
-    expr = JsonExpr.ct_match("bytes", bytes, op_str)
+    expr = Expr.ct_match("bytes", bytes, op_str)
     Match.add_expr(builder, expr)
   end
 
@@ -178,7 +178,7 @@ defmodule NFTablesEx.Match.CT do
   @spec ct_packets(Match.t(), atom(), non_neg_integer()) :: Match.t()
   def ct_packets(builder, op, packets) when is_integer(packets) and packets >= 0 do
     op_str = atom_to_op(op)
-    expr = JsonExpr.ct_match("packets", packets, op_str)
+    expr = Expr.ct_match("packets", packets, op_str)
     Match.add_expr(builder, expr)
   end
 
@@ -234,21 +234,23 @@ defmodule NFTablesEx.Match.CT do
 
       # Limit to 10 concurrent connections per IP
       builder
-      |> dest_port(80)
+      |> tcp()
+      |> dport(80)
       |> ct_state([:new])
       |> limit_connections(10)
       |> reject()
 
       # Limit SSH connections per IP
       builder
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
       |> ct_state([:new])
       |> limit_connections(3)
       |> drop()
   """
   @spec limit_connections(Match.t(), non_neg_integer()) :: Match.t()
   def limit_connections(builder, count) when is_integer(count) and count > 0 do
-    expr = JsonExpr.ct_match("count", count)
+    expr = Expr.ct_match("count", count)
     Match.add_expr(builder, expr)
   end
 

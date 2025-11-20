@@ -9,57 +9,64 @@ defmodule NFTablesEx do
 
       {:ok, pid} = NFTablesEx.start_link()
 
-      # Create a table
-      NFTablesEx.Table.add(pid, %{name: "filter", family: :inet})
+      # Create table, chain, and set using Builder
+      alias NFTablesEx.Builder
 
-      # Create a chain
-      NFTablesEx.Chain.add(pid, %{
+      Builder.new()
+      |> Builder.add(table: "filter", family: :inet)
+      |> Builder.add(
         table: "filter",
-        name: "input",
+        chain: "input",
         family: :inet,
         type: :filter,
         hook: :input,
         priority: 0,
         policy: :accept
-      })
-
-      # Create a set for IP blocklist
-      NFTablesEx.Set.add(pid, %{
-        name: "blocklist",
+      )
+      |> Builder.add(
+        set: "blocklist",
         table: "filter",
         family: :inet,
-        key_type: :ipv4_addr,
-        elements: []
-      })
-
-      # Add IPs to the blocklist (string format)
-      NFTablesEx.Set.add_elements(pid, "filter", "blocklist", :inet, [
-        "192.168.1.100",
-        "10.0.0.50"
-      ])
-
-      # Add a rule to drop blocklisted IPs
-      NFTablesEx.Rule.add(pid, %{
-        family: :inet,
+        type: :ipv4_addr
+      )
+      |> Builder.add(
+        element: ["192.168.1.100", "10.0.0.50"],
+        set: "blocklist",
         table: "filter",
-        chain: "input",
-        expr: "ip saddr @blocklist drop"
-      })
+        family: :inet
+      )
+      |> Builder.execute(pid)
+
+      # Or use high-level convenience APIs
+      import NFTablesEx.Match
+
+      expr_list = rule()
+      |> source_ip_set("@blocklist")
+      |> drop()
+      |> to_expr()
+
+      Builder.new()
+      |> Builder.add(rule: expr_list, table: "filter", chain: "input")
+      |> Builder.execute(pid)
 
   ## Module Organization
 
-  ### High-Level APIs
+  ### Core APIs
 
-  - `NFTablesEx.Table` - Table creation and management
-  - `NFTablesEx.Chain` - Chain creation and management
-  - `NFTablesEx.Set` - Set creation and element management
-  - `NFTablesEx.Rule` - Rule creation with expression support
+  - `NFTablesEx.Builder` - Unified API for building nftables configurations (tables, chains, sets, rules)
+  - `NFTablesEx.Match` - Fluent API for building rule expressions
   - `NFTablesEx.Query` - Query tables, chains, rules, and sets
+
+  ### Convenience APIs
+
+  - `NFTablesEx.Policy` - Pre-built security policies (accept_established, allow_ssh, etc.)
+  - `NFTablesEx.NAT` - NAT operations (port forwarding, masquerading, etc.)
 
   ### Low-Level APIs
 
   - `NFTablesEx.Port` - JSON-based port communication (from NFTablesEx.Port package)
-  - `NFTablesEx.Builder` - Fluent API for building nftables configurations
+  - `NFTablesEx.Executor` - Execute nftables commands
+  - `NFTablesEx.Decoder` - Decode nftables responses
 
   ## Architecture
 
@@ -84,11 +91,12 @@ defmodule NFTablesEx do
 
   - **Removed**: All `NFTablesEx.Kernel.*` modules (no longer needed with JSON approach)
   - **Removed**: Resource ID-based API (libnftables handles resources internally)
+  - **Removed**: `NFTablesEx.Table`, `NFTablesEx.Chain`, `NFTablesEx.Set` (replaced by unified `NFTablesEx.Builder` API)
   - **Changed**: High-level APIs simplified (no resource management)
   - **Added**: JSON-based port for simpler, more maintainable implementation
+  - **Added**: Unified `Builder` API for all nftables objects
 
-  The high-level API remains similar, but some details have changed. See the
-  module documentation for each API (Table, Chain, Set, Rule) for details.
+  See the `NFTablesEx.Builder` documentation for the new unified API.
   """
 
   alias NFTablesEx.Port
@@ -177,32 +185,35 @@ defmodule NFTablesEx do
 
       NFTablesEx.add(table: "filter")
       |> NFTablesEx.add(chain: "INPUT")
-      |> NFTablesEx.add(rules: [rule() |> tcp() |> accept()])
+      |> NFTablesEx.add(rule: [%{accept: nil}])
   """
   def add(%Builder{} = builder, opts) when is_list(opts) do
-    cond do
-      Keyword.has_key?(opts, :rules) -> add_rule_set(builder, opts)
-      Keyword.has_key?(opts, :rule) -> add_rule(builder, opts)
-      Keyword.has_key?(opts, :table) -> Builder.add_table(builder, Keyword.get(opts, :table), opts)
-      Keyword.has_key?(opts, :chain) -> Builder.add_chain(builder, Keyword.get(opts, :chain), opts)
-      Keyword.has_key?(opts, :set) -> add_set_opts(builder, opts)
-      Keyword.has_key?(opts, :map) -> add_map_opts(builder, opts)
-      Keyword.has_key?(opts, :counter) -> add_counter_opts(builder, opts)
+    # Handle :rules as batch operation
+    if Keyword.has_key?(opts, :rules) do
+      add_rule_set(builder, opts)
+    else
+      # Handle Match struct conversion for :rule
+      opts = if Keyword.has_key?(opts, :rule) do
+        rule_spec = Keyword.get(opts, :rule)
+        case rule_spec do
+          %NFTablesEx.Match{expr_list: expr_list} ->
+            Keyword.put(opts, :rule, expr_list)
+          _ ->
+            opts
+        end
+      else
+        opts
+      end
 
-      true ->
-        raise ArgumentError, """
-        Invalid options for add/2. Expected any of:
-        :table, :chain, :rule, :rules, :set, :map, :counter
-
-        Got: #{inspect(opts)}
-        """
+      # Delegate to unified Builder API
+      Builder.add(builder, opts)
     end
   end
 
   @doc """
   Contextual delete operation (arity-1) - starts new builder.
   """
-  def delete(opts) when is_list(opts), do
+  def delete(opts) when is_list(opts) do
     Builder.new()
     |> delete(opts)
   end
@@ -211,13 +222,7 @@ defmodule NFTablesEx do
   Contextual delete operation (arity-2) - continues existing builder.
   """
   def delete(%Builder{} = builder, opts) when is_list(opts) do
-    cond do
-      Keyword.has_key?(opts, :table) -> delete_table_opts(builder, opts)
-      Keyword.has_key?(opts, :chain) -> delete_chain_opts(builder, opts)
-      Keyword.has_key?(opts, :rule) -> delete_rule_opts(builder, opts)
-      Keyword.has_key?(opts, :set) -> delete_set_opts(builder, opts)
-      true -> raise ArgumentError, "Invalid options for delete/2"
-    end
+    Builder.delete(builder, opts)
   end
 
   @doc """
@@ -234,130 +239,30 @@ defmodule NFTablesEx do
   def flush(%Builder{} = builder, opts) do
     case opts do
       :ruleset -> Builder.flush_ruleset(builder)
-      opts when is_list(opts) ->
-        cond do
-          Keyword.has_key?(opts, :table) -> flush_table_opts(builder, opts)
-          Keyword.has_key?(opts, :chain) -> flush_chain_opts(builder, opts)
-          Keyword.has_key?(opts, :set) -> flush_set_opts(builder, opts)
-          true -> raise ArgumentError, "Invalid options for flush/2"
-        end
+      :all -> Builder.flush(builder, [:all])
+      opts when is_list(opts) -> Builder.flush(builder, opts)
     end
   end
 
-  # Helper functions for bulk rule addition
+  # Helper function for bulk rule addition
   defp add_rule_set(%Builder{} = builder, opts) do
     rules_list = Keyword.fetch!(opts, :rules)
-    table = Keyword.get(opts, :table, builder.current_table)
-    chain = Keyword.get(opts, :chain, builder.current_chain)
-    family = Keyword.get(opts, :family, builder.family)
+    base_opts = Keyword.drop(opts, [:rules])
 
     Enum.reduce(rules_list, builder, fn rule_spec, acc ->
-      case rule_spec do
-        %NFTablesEx.Match{expr_list: expr_list} ->
-          Builder.add_rule(acc, expr_list, table: table, chain: chain, family: family)
-
-        expr_list when is_list(expr_list) ->
-          Builder.add_rule(acc, expr_list, table: table, chain: chain, family: family)
+      rule_expr = case rule_spec do
+        %NFTablesEx.Match{expr_list: expr_list} -> expr_list
+        expr_list when is_list(expr_list) -> expr_list
       end
+
+      Builder.add(acc, Keyword.put(base_opts, :rule, rule_expr))
     end)
-  end
-
-  defp add_rule(%Builder{} = builder, opts) do
-    rule_spec = Keyword.fetch!(opts, :rule)
-    table = Keyword.get(opts, :table, builder.current_table)
-    chain = Keyword.get(opts, :chain, builder.current_chain)
-    family = Keyword.get(opts, :family, builder.family)
-
-    case rule_spec do
-      %NFTablesEx.Match{expr_list: expr_list} ->
-        Builder.add_rule(builder, expr_list, table: table, chain: chain, family: family)
-
-      expr_list when is_list(expr_list) ->
-        Builder.add_rule(builder, expr_list, table: table, chain: chain, family: family)
-    end
-  end
-
-  defp add_table(%Builder{} = builder, opts) do
-    table_name = Keyword.fetch!(opts, :table)
-    family = Keyword.get(opts, :family, builder.family)
-    Builder.add_table(builder, table_name, family: family)
-  end
-
-  defp add_chain_opts(%Builder{} = builder, opts) do
-    chain_name = Keyword.fetch!(opts, :chain)
-    chain_opts = Keyword.drop(opts, [:chain])
-    Builder.add_chain(builder, chain_name, chain_opts)
-  end
-
-  defp add_set_opts(%Builder{} = builder, opts) do
-    set_name = Keyword.fetch!(opts, :set)
-    set_opts = Keyword.drop(opts, [:set])
-    Builder.add_set(builder, set_name, set_opts)
-  end
-
-  defp add_map_opts(%Builder{} = builder, opts) do
-    map_name = Keyword.fetch!(opts, :map)
-    map_opts = Keyword.drop(opts, [:map])
-    Builder.add_map(builder, map_name, map_opts)
-  end
-
-  defp add_counter_opts(%Builder{} = builder, opts) do
-    counter_name = Keyword.fetch!(opts, :counter)
-    Builder.add_counter(builder, counter_name)
-  end
-
-  defp delete_table_opts(%Builder{} = builder, opts) do
-    table_name = Keyword.fetch!(opts, :table)
-    family = Keyword.get(opts, :family, builder.family)
-    Builder.delete_table(builder, table_name, family: family)
-  end
-
-  defp delete_chain_opts(%Builder{} = builder, opts) do
-    chain_name = Keyword.fetch!(opts, :chain)
-    delete_opts = Keyword.drop(opts, [:chain])
-    Builder.delete_chain(builder, chain_name, delete_opts)
-  end
-
-  defp delete_rule_opts(%Builder{} = builder, opts) do
-    handle = Keyword.fetch!(opts, :rule)
-    delete_opts = Keyword.drop(opts, [:rule])
-    Builder.delete_rule(builder, Keyword.merge([handle: handle], delete_opts))
-  end
-
-  defp delete_set_opts(%Builder{} = builder, opts) do
-    set_name = Keyword.fetch!(opts, :set)
-    delete_opts = Keyword.drop(opts, [:set])
-    Builder.delete_set(builder, set_name, delete_opts)
-  end
-
-  defp flush_table_opts(%Builder{} = builder, opts) do
-    table_name = Keyword.fetch!(opts, :table)
-    flush_opts = Keyword.drop(opts, [:table])
-    Builder.flush_table(builder, table_name, flush_opts)
-  end
-
-  defp flush_chain_opts(%Builder{} = builder, opts) do
-    chain_name = Keyword.fetch!(opts, :chain)
-    flush_opts = Keyword.drop(opts, [:chain])
-    Builder.flush_chain(builder, chain_name, flush_opts)
-  end
-
-  defp flush_set_opts(%Builder{} = builder, opts) do
-    set_name = Keyword.fetch!(opts, :set)
-    flush_opts = Keyword.drop(opts, [:set])
-    Builder.flush_set(builder, set_name, flush_opts)
-  end
-
-  defp has_keys?(opts, key_list) do
-    Enum.reduce(key_list, true, fn key, acc -> acc && keyword.has_key?(opts, key) end
   end
 
   # Delegate other Builder functions for advanced use
   defdelegate to_json(builder), to: Builder
   defdelegate to_map(builder), to: Builder
   defdelegate set_family(builder, family), to: Builder
-  defdelegate set_table(builder, table), to: Builder
-  defdelegate set_chain(builder, chain), to: Builder
 
   # ============================================================================
   # Policy & NAT Helpers (delegated)

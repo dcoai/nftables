@@ -22,30 +22,28 @@ defmodule NFTablesEx.NAT do
 
   NAT operations require a NAT table and appropriate chains:
 
-      # Create NAT table
-      :ok = NFTablesEx.Table.add(pid, %{name: "nat", family: :inet})
-
-      # Create PREROUTING chain (for DNAT)
-      :ok = NFTablesEx.Chain.add(pid, %{
+      # Create NAT table and chains using Builder
+      Builder.new()
+      |> Builder.add(table: "nat", family: :inet)
+      |> Builder.add(
         table: "nat",
-        name: "prerouting",
+        chain: "prerouting",
         family: :inet,
         type: :nat,
         hook: :prerouting,
         priority: -100,
         policy: :accept
-      })
-
-      # Create POSTROUTING chain (for SNAT/masquerade)
-      :ok = NFTablesEx.Chain.add(pid, %{
+      )
+      |> Builder.add(
         table: "nat",
-        name: "postrouting",
+        chain: "postrouting",
         family: :inet,
         type: :nat,
         hook: :postrouting,
         priority: 100,
         policy: :accept
-      })
+      )
+      |> Builder.execute(pid)
 
   """
 
@@ -142,13 +140,13 @@ defmodule NFTablesEx.NAT do
       builder
     end
 
-    builder = case protocol do
-      :tcp -> dest_port(builder, external_port)
-      :udp -> udp_dport(builder, external_port)
-    end
-
     expr_list =
       builder
+      |> (case protocol do
+        :tcp -> &tcp/1
+        :udp -> &udp/1
+      end).()
+      |> dport(external_port)
       |> dnat_to(internal_ip, port: internal_port)
       |> to_expr()
 
@@ -305,15 +303,13 @@ defmodule NFTablesEx.NAT do
     chain = Keyword.get(opts, :chain, "prerouting")
     family = Keyword.get(opts, :family, :inet)
 
-    builder = rule(family: family)
-
-    builder = case protocol do
-      :tcp -> dest_port(builder, from_port)
-      :udp -> udp_dport(builder, from_port)
-    end
-
     expr_list =
-      builder
+      rule(family: family)
+      |> (case protocol do
+        :tcp -> &tcp/1
+        :udp -> &udp/1
+      end).()
+      |> dport(from_port)
       |> redirect_to(to_port)
       |> to_expr()
 

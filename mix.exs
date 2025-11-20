@@ -77,24 +77,24 @@ defmodule NFTablesEx.MixProject do
         "LICENSE"
       ],
       groups_for_modules: [
-        "High-Level API": [
-          NFTablesEx.Policy,
+        "Core API": [
+          NFTablesEx.Builder,
           NFTablesEx.Match,
-          NFTablesEx.Chain,
-          NFTablesEx.Table,
-          NFTablesEx.Rule,
-          NFTablesEx.Set,
-          NFTablesEx.Query,
-          NFTablesEx.NAT
+          NFTablesEx.Query
+        ],
+        "Convenience API": [
+          NFTablesEx.Policy,
+          NFTablesEx.NAT,
+          NFTablesEx.Rule
         ],
         "Execution": [
           NFTablesEx.Executor,
+          NFTablesEx.Decoder,
           NFTablesEx.Batch
         ],
         "Internal API": [
-          NFTablesEx.Builder,
           NFTablesEx.Validation,
-          NFTablesEx.JsonExpr,
+          NFTablesEx.Expr,
           NFTablesEx.Formatter
         ]
       ]

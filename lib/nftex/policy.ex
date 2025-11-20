@@ -10,16 +10,18 @@ defmodule NFTablesEx.Policy do
       {:ok, pid} = NFTablesEx.start_link()
 
       # Create table and chain
-      :ok = NFTablesEx.Table.add(pid, %{name: "filter", family: :inet})
-      :ok = NFTablesEx.Chain.add(pid, %{
+      Builder.new()
+      |> Builder.add(table: "filter", family: :inet)
+      |> Builder.add(
         table: "filter",
-        name: "INPUT",
+        chain: "INPUT",
         family: :inet,
         type: :filter,
         hook: :input,
         priority: 0,
-        policy: :drop  # Default drop
-      })
+        policy: :drop
+      )
+      |> Builder.execute(pid)
 
       # Apply common policies
       :ok = NFTablesEx.Policy.accept_loopback(pid)
@@ -123,7 +125,8 @@ defmodule NFTablesEx.Policy do
 
     builder =
       rule(family: family)
-      |> dest_port(22)
+      |> tcp()
+      |> dport(22)
 
     builder = if rate_limit_val do
       limit(builder, rate_limit_val, :minute)
@@ -398,13 +401,21 @@ defmodule NFTablesEx.Policy do
       }
     end
 
-    with :ok <- NFTablesEx.Table.add(pid, %{name: table, family: family}),
-         :ok <- NFTablesEx.Chain.add(pid, chain_attrs),
-         :ok <- accept_loopback(pid, table: table, family: family),
-         :ok <- accept_established(pid, table: table, family: family),
-         :ok <- drop_invalid(pid, table: table, family: family),
-         :ok <- apply_services(pid, services, table: table, family: family, ssh_rate_limit: ssh_rate_limit) do
-      :ok
+    # Create table and chain using Builder
+    result = Builder.new()
+    |> Builder.add(table: table, family: family)
+    |> Builder.add(Map.to_list(chain_attrs))
+    |> execute_rule(pid)
+
+    case result do
+      :ok ->
+        with :ok <- accept_loopback(pid, table: table, family: family),
+             :ok <- accept_established(pid, table: table, family: family),
+             :ok <- drop_invalid(pid, table: table, family: family),
+             :ok <- apply_services(pid, services, table: table, family: family, ssh_rate_limit: ssh_rate_limit) do
+          :ok
+        end
+      error -> error
     end
   end
 
@@ -436,7 +447,8 @@ defmodule NFTablesEx.Policy do
 
     builder =
       rule(family: family)
-      |> dest_port(port)
+      |> tcp()
+      |> dport(port)
 
     builder = if rate_limit_val do
       limit(builder, rate_limit_val, :minute)

@@ -1,18 +1,17 @@
-defmodule NFTablesEx.JsonExpr do
+defmodule NFTablesEx.Expr do
   @moduledoc """
-  Helper functions for building nftables JSON expression structures.
+  Helper functions for building nftables expression structures.
 
-  This module provides a clean API for constructing the JSON expression
-  format used by nftables. These helpers make it easier to build complex
-  firewall rules without manually constructing nested maps.
+  This module provides a clean API for constructing the expression data structures
+  used by nftables. These helpers make it easier to build complex firewall rules
+  without manually constructing nested maps.
 
   **NOTE**: All functions return maps with **atom keys** (not string keys).
-  The built-in `JSON.encode/1` will automatically convert atom keys to
-  strings when generating JSON for nftables.
+  The JSON encoding happens later in the Builder/Executor pipeline.
 
-  ## JSON Expression Format
+  ## Expression Format
 
-  nftables uses JSON expressions that consist of:
+  nftables uses expressions that consist of:
   - **Matches**: Compare packet fields against values
   - **Statements**: Perform actions (counter, log, limit, mark, etc.)
   - **Verdicts**: Terminal decisions (accept, drop, reject, etc.)
@@ -20,7 +19,7 @@ defmodule NFTablesEx.JsonExpr do
   ## Examples
 
       # Simple IP match
-      JsonExpr.payload_match("ip", "saddr", "192.168.1.1")
+      Expr.payload_match("ip", "saddr", "192.168.1.1")
       #=> %{match: %{
       #     left: %{payload: %{protocol: "ip", field: "saddr"}},
       #     right: "192.168.1.1",
@@ -28,7 +27,7 @@ defmodule NFTablesEx.JsonExpr do
       #   }}
 
       # Connection tracking match
-      JsonExpr.ct_match("state", ["established", "related"])
+      Expr.ct_match("state", ["established", "related"])
       #=> %{match: %{
       #     left: %{ct: %{key: "state"}},
       #     right: ["established", "related"],
@@ -36,12 +35,12 @@ defmodule NFTablesEx.JsonExpr do
       #   }}
 
       # Verdict
-      JsonExpr.verdict("drop")
+      Expr.verdict("drop")
       #=> %{drop: nil}
 
   ## Reference
 
-  Official nftables JSON documentation:
+  Official nftables documentation:
   https://wiki.nftables.org/wiki-nftables/index.php/JSON_API
   """
 
@@ -516,7 +515,7 @@ defmodule NFTablesEx.JsonExpr do
 
   ## Helper Functions
 
-  # Normalize values for JSON expressions
+  # Normalize values for expression structures
   defp normalize_value(value) when is_binary(value), do: value
   defp normalize_value(value) when is_integer(value), do: value
   defp normalize_value(value) when is_list(value), do: value

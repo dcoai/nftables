@@ -7,7 +7,7 @@ defmodule NFTablesEx.Match.Advanced do
   IPsec SPI, ARP operations, and set matching.
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   # Packet metadata matching
 
@@ -22,7 +22,7 @@ defmodule NFTablesEx.Match.Advanced do
   """
   @spec mark(Match.t(), non_neg_integer()) :: Match.t()
   def mark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = JsonExpr.meta_match("mark", mark)
+    expr = Expr.meta_match("mark", mark)
     Match.add_expr(builder, expr)
   end
 
@@ -39,7 +39,7 @@ defmodule NFTablesEx.Match.Advanced do
   """
   @spec dscp(Match.t(), non_neg_integer()) :: Match.t()
   def dscp(builder, dscp) when is_integer(dscp) and dscp >= 0 and dscp <= 63 do
-    expr = JsonExpr.payload_match("ip", "dscp", dscp)
+    expr = Expr.payload_match("ip", "dscp", dscp)
     Match.add_expr(builder, expr)
   end
 
@@ -132,7 +132,7 @@ defmodule NFTablesEx.Match.Advanced do
       num when is_integer(num) -> num
       other -> to_string(other)
     end
-    expr = JsonExpr.payload_match("icmp", "type", type_val)
+    expr = Expr.payload_match("icmp", "type", type_val)
     Match.add_expr(builder, expr)
   end
 
@@ -151,7 +151,7 @@ defmodule NFTablesEx.Match.Advanced do
   """
   @spec icmp_code(Match.t(), non_neg_integer()) :: Match.t()
   def icmp_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
-    expr = JsonExpr.payload_match("icmp", "code", code)
+    expr = Expr.payload_match("icmp", "code", code)
     Match.add_expr(builder, expr)
   end
 
@@ -194,7 +194,7 @@ defmodule NFTablesEx.Match.Advanced do
       num when is_integer(num) -> num
       other -> to_string(other)
     end
-    expr = JsonExpr.payload_match("icmpv6", "type", type_val)
+    expr = Expr.payload_match("icmpv6", "type", type_val)
     Match.add_expr(builder, expr)
   end
 
@@ -212,7 +212,7 @@ defmodule NFTablesEx.Match.Advanced do
   """
   @spec icmpv6_code(Match.t(), non_neg_integer()) :: Match.t()
   def icmpv6_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
-    expr = JsonExpr.payload_match("icmpv6", "code", code)
+    expr = Expr.payload_match("icmpv6", "code", code)
     Match.add_expr(builder, expr)
   end
 
@@ -241,7 +241,7 @@ defmodule NFTablesEx.Match.Advanced do
   """
   @spec pkttype(Match.t(), atom()) :: Match.t()
   def pkttype(builder, pkttype) when pkttype in [:unicast, :broadcast, :multicast, :other] do
-    expr = JsonExpr.meta_match("pkttype", to_string(pkttype))
+    expr = Expr.meta_match("pkttype", to_string(pkttype))
     Match.add_expr(builder, expr)
   end
 
@@ -266,7 +266,7 @@ defmodule NFTablesEx.Match.Advanced do
       :le -> "<="
       :ge -> ">="
     end
-    expr = JsonExpr.meta_match("priority", priority, op_str)
+    expr = Expr.meta_match("priority", priority, op_str)
     Match.add_expr(builder, expr)
   end
 
@@ -287,7 +287,7 @@ defmodule NFTablesEx.Match.Advanced do
   """
   @spec cgroup(Match.t(), non_neg_integer()) :: Match.t()
   def cgroup(builder, cgroup_id) when is_integer(cgroup_id) and cgroup_id >= 0 do
-    expr = JsonExpr.meta_match("cgroup", cgroup_id)
+    expr = Expr.meta_match("cgroup", cgroup_id)
     Match.add_expr(builder, expr)
   end
 
@@ -308,12 +308,13 @@ defmodule NFTablesEx.Match.Advanced do
       # Allow only root to access specific service
       builder
       |> skuid(0)
-      |> dest_port(9000)
+      |> tcp()
+      |> dport(9000)
       |> accept()
   """
   @spec skuid(Match.t(), non_neg_integer()) :: Match.t()
   def skuid(builder, uid) when is_integer(uid) and uid >= 0 do
-    expr = JsonExpr.meta_match("skuid", uid)
+    expr = Expr.meta_match("skuid", uid)
     Match.add_expr(builder, expr)
   end
 
@@ -334,12 +335,13 @@ defmodule NFTablesEx.Match.Advanced do
       # Allow specific group to access admin port
       builder
       |> skgid(100)
-      |> dest_port(8443)
+      |> tcp()
+      |> dport(8443)
       |> accept()
   """
   @spec skgid(Match.t(), non_neg_integer()) :: Match.t()
   def skgid(builder, gid) when is_integer(gid) and gid >= 0 do
-    expr = JsonExpr.meta_match("skgid", gid)
+    expr = Expr.meta_match("skgid", gid)
     Match.add_expr(builder, expr)
   end
 
@@ -367,7 +369,7 @@ defmodule NFTablesEx.Match.Advanced do
     Match.add_expr(builder, expr)
   end
   def ah_spi(builder, spi) when is_integer(spi) and spi >= 0 do
-    expr = JsonExpr.payload_match("ah", "spi", spi)
+    expr = Expr.payload_match("ah", "spi", spi)
     Match.add_expr(builder, expr)
   end
 
@@ -393,7 +395,7 @@ defmodule NFTablesEx.Match.Advanced do
     Match.add_expr(builder, expr)
   end
   def esp_spi(builder, spi) when is_integer(spi) and spi >= 0 do
-    expr = JsonExpr.payload_match("esp", "spi", spi)
+    expr = Expr.payload_match("esp", "spi", spi)
     Match.add_expr(builder, expr)
   end
 
@@ -424,7 +426,7 @@ defmodule NFTablesEx.Match.Advanced do
       num when is_integer(num) -> num
       _ -> raise ArgumentError, "Invalid ARP operation: #{inspect(operation)}"
     end
-    expr = JsonExpr.payload_match("arp", "operation", op_val)
+    expr = Expr.payload_match("arp", "operation", op_val)
     Match.add_expr(builder, expr)
   end
 
@@ -433,17 +435,21 @@ defmodule NFTablesEx.Match.Advanced do
   @doc """
   Match against a named set.
 
-  The set must already exist in the table. Use NFTablesEx.Set to manage sets.
+  The set must already exist in the table. Use Builder to create sets.
 
   ## Example
 
-      # Create set first
-      :ok = NFTablesEx.Set.add(pid, %{
-        name: "blocklist",
+      # Create set first using Builder
+      alias NFTablesEx.Builder
+
+      Builder.new()
+      |> Builder.add(
+        set: "blocklist",
         table: "filter",
         family: :inet,
-        key_type: :ipv4_addr
-      })
+        type: :ipv4_addr
+      )
+      |> Builder.execute(pid)
 
       # Match against set
       builder

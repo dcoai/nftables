@@ -5,7 +5,7 @@ defmodule NFTablesEx.Match.Layer2 do
   Provides functions for matching MAC addresses, network interfaces, and VLAN tags.
   """
 
-  alias NFTablesEx.{Match, JsonExpr}
+  alias NFTablesEx.{Match, Expr}
 
   @doc """
   Match source MAC address.
@@ -16,7 +16,7 @@ defmodule NFTablesEx.Match.Layer2 do
   """
   @spec source_mac(Match.t(), String.t()) :: Match.t()
   def source_mac(builder, mac) when is_binary(mac) do
-    expr = JsonExpr.payload_match("ether", "saddr", mac)
+    expr = Expr.payload_match("ether", "saddr", mac)
     Match.add_expr(builder, expr)
   end
 
@@ -29,21 +29,21 @@ defmodule NFTablesEx.Match.Layer2 do
   """
   @spec dest_mac(Match.t(), String.t()) :: Match.t()
   def dest_mac(builder, mac) when is_binary(mac) do
-    expr = JsonExpr.payload_match("ether", "daddr", mac)
+    expr = Expr.payload_match("ether", "daddr", mac)
     Match.add_expr(builder, expr)
   end
 
   @doc "Match input interface name"
   @spec iif(Match.t(), String.t()) :: Match.t()
   def iif(builder, ifname) when is_binary(ifname) do
-    expr = JsonExpr.meta_match("iifname", ifname)
+    expr = Expr.meta_match("iifname", ifname)
     Match.add_expr(builder, expr)
   end
 
   @doc "Match output interface name"
   @spec oif(Match.t(), String.t()) :: Match.t()
   def oif(builder, ifname) when is_binary(ifname) do
-    expr = JsonExpr.meta_match("oifname", ifname)
+    expr = Expr.meta_match("oifname", ifname)
     Match.add_expr(builder, expr)
   end
 
@@ -62,7 +62,7 @@ defmodule NFTablesEx.Match.Layer2 do
   """
   @spec vlan_id(Match.t(), non_neg_integer()) :: Match.t()
   def vlan_id(builder, vlan_id) when is_integer(vlan_id) and vlan_id >= 0 and vlan_id <= 4095 do
-    expr = JsonExpr.payload_match("vlan", "id", vlan_id)
+    expr = Expr.payload_match("vlan", "id", vlan_id)
     Match.add_expr(builder, expr)
   end
 
@@ -76,7 +76,7 @@ defmodule NFTablesEx.Match.Layer2 do
   """
   @spec vlan_pcp(Match.t(), non_neg_integer()) :: Match.t()
   def vlan_pcp(builder, pcp) when is_integer(pcp) and pcp >= 0 and pcp <= 7 do
-    expr = JsonExpr.payload_match("vlan", "pcp", pcp)
+    expr = Expr.payload_match("vlan", "pcp", pcp)
     Match.add_expr(builder, expr)
   end
 end
