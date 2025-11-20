@@ -22,6 +22,28 @@ High-performance Elixir bindings for Linux nftables via the official libnftables
 - **Zero Dependencies** - Direct bindings to libnftables, no external processes
 - **Fast** - JSON-based communication proven 41-5000% faster than ETF in benchmarks
 
+## Advanced Features ✨
+
+NFTables includes comprehensive support for advanced nftables capabilities:
+
+### Hardware Acceleration & Performance
+- **Flowtables** - Hardware-accelerated packet forwarding for established connections
+- **Meters/Dynamic Sets** - Per-key rate limiting with composite key support
+
+### Deep Packet Inspection
+- **Raw Payload Matching** - Offset-based packet header access for custom protocols
+- **Socket Matching & TPROXY** - Transparent proxy support without destination changes
+
+### Specialized Protocols
+- **SCTP** - Stream Control Transmission Protocol (WebRTC, telephony)
+- **DCCP** - Datagram Congestion Control Protocol (streaming, gaming)
+- **GRE** - Generic Routing Encapsulation (VPN tunnels)
+
+### Security & Intelligence
+- **OSF (OS Fingerprinting)** - Passive operating system detection via TCP SYN analysis
+
+See [ADVANCED_FEATURES_COMPLETE.md](ADVANCED_FEATURES_COMPLETE.md) for comprehensive documentation of all advanced features.
+
 ## Architecture
 
 ```
@@ -171,10 +193,10 @@ getcap priv/port_nftables
 
 ```elixir
 # Start NFTex
-{:ok, pid} = NFTablesEx.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Build and execute a rule to block an IP
-alias NFTablesEx.{Builder, Rule}
+alias NFTables.{Builder, Rule}
 
 Builder.new(family: :inet)
 |> Builder.add(table: "filter")
@@ -193,8 +215,8 @@ Builder.new(family: :inet)
 ### Manage IP Blocklists with Sets
 
 ```elixir
-{:ok, pid} = NFTablesEx.start_link()
-alias NFTablesEx.Builder
+{:ok, pid} = NFTables.start_link()
+alias NFTables.Builder
 
 # Add IPs to an existing blocklist set
 malicious_ips = ["192.168.1.100", "10.0.0.99", "172.16.5.50"]
@@ -209,13 +231,13 @@ Builder.new()
 |> Builder.execute(pid)
 
 # List all blocked IPs
-{:ok, %{set_elements: elements}} = NFTablesEx.Query.list_set_elements(pid, "filter", "blocklist", family: :inet)
+{:ok, %{set_elements: elements}} = NFTables.Query.list_set_elements(pid, "filter", "blocklist", family: :inet)
 ```
 
 ### Build Complex Rules (New API)
 
 ```elixir
-alias NFTablesEx.{Builder, Rule}
+alias NFTables.{Builder, Rule}
 
 # Build a sophisticated firewall rule with the new fluent API
 :ok = Builder.new(family: :inet)
@@ -272,14 +294,14 @@ alias NFTablesEx.{Builder, Rule}
 
 ## New Builder + Rule API
 
-NFTablesEx now provides a powerful, composable API for building firewall rules:
+NFTables now provides a powerful, composable API for building firewall rules:
 
 ### Builder Module - Command Construction
 
 The `Builder` module provides a pure functional interface for constructing nftables commands:
 
 ```elixir
-alias NFTablesEx.Builder
+alias NFTables.Builder
 
 # Build commands without executing
 builder = Builder.new(family: :inet)
@@ -300,7 +322,7 @@ json = Builder.to_json(builder)
 The `Rule` module provides a fluent API for building rule expressions:
 
 ```elixir
-alias NFTablesEx.Rule
+alias NFTables.Rule
 
 # Build rule expressions
 expr = Rule.new()
@@ -455,7 +477,7 @@ Builder.new()
 
 ### Query Round-Trip Support
 
-NFTablesEx now supports importing existing firewall configurations back into Builder commands, enabling powerful query-modify-reapply workflows:
+NFTables now supports importing existing firewall configurations back into Builder commands, enabling powerful query-modify-reapply workflows:
 
 #### Import Entire Ruleset
 
@@ -693,7 +715,7 @@ The Query module now handles all listing operations:
 The Builder module is the primary interface for creating nftables configurations:
 
 ```elixir
-alias NFTablesEx.Builder
+alias NFTables.Builder
 
 # Create table, chain, and set atomically
 Builder.new(family: :inet)
@@ -719,8 +741,8 @@ Builder.new(family: :inet)
 |> Builder.execute(pid)
 
 # Query operations
-{:ok, tables} = NFTablesEx.Query.list_tables(pid, family: :inet)
-{:ok, chains} = NFTablesEx.Query.list_chains(pid, family: :inet)
+{:ok, tables} = NFTables.Query.list_tables(pid, family: :inet)
+{:ok, chains} = NFTables.Query.list_chains(pid, family: :inet)
 ```
 
 ### NFTex.Rule - Rule Expression Building
@@ -728,7 +750,7 @@ Builder.new(family: :inet)
 The `Rule` module now provides a fluent API for building rule expressions:
 
 ```elixir
-alias NFTablesEx.{Builder, Rule}
+alias NFTables.{Builder, Rule}
 
 # Build complex rules using the fluent API
 :ok = Builder.new(family: :inet)
@@ -755,8 +777,8 @@ alias NFTablesEx.{Builder, Rule}
 The Match module provides a streamlined, pure functional API for building rule expressions:
 
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor}
+import NFTables.Match
+alias NFTables.{Builder, Executor}
 
 # Build rule expressions with clean, chainable API
 expr = rule()
@@ -793,8 +815,41 @@ Builder.new()
 - **Pure functional** - No side effects, expressions are data
 - **Chainable API** - Build complex rules step by step
 - **Convenience aliases** - `source/1`, `dest/1`, `dport/1`, `sport/1`, `tcp/1`, `udp/1`
-- **Protocol helpers** - `tcp/0`, `udp/0`, `icmp/0` for common protocols
+- **Protocol helpers** - `tcp/0`, `udp/0`, `icmp/0`, `sctp/0`, `dccp/0`, `gre/0` for common protocols
 - **Composable** - Build expressions in one context, execute in another
+- **Advanced features** - Flowtables, meters, raw payload, TPROXY, OSF, and more
+
+**Available Matchers:**
+- **IP**: `source_ip/2`, `dest_ip/2`, `source/2`, `dest/2`
+- **Ports**: `sport/2`, `dport/2`, `port/2` (supports ranges)
+- **Protocol**: `protocol/2`, `tcp/1`, `udp/1`, `icmp/1`, `sctp/1`, `dccp/1`, `gre/1`
+- **State**: `state/2`, `ct_state/2` - Connection tracking
+- **Interface**: `iif/2`, `oif/2` - Input/output interfaces
+- **Layer 2**: `source_mac/2`, `dest_mac/2`, `vlan_id/2`
+- **CT**: `ct_status/2`, `ct_bytes/3`, `ct_packets/3`, `limit_connections/2`
+- **Advanced**: `mark/2`, `dscp/2`, `icmp_type/2`, `tcp_flags/3`, `ttl/3`
+- **Raw Payload**: `payload_raw/5`, `payload_raw_masked/6` - Deep packet inspection
+- **Socket**: `socket_transparent/1` - Socket matching
+- **OSF**: `osf_name/2`, `osf_version/2` - OS fingerprinting
+- **SCTP/DCCP**: Use `sctp()/dccp()` for protocol, then `dport()/sport()` for ports
+- **GRE**: `gre_version/2`, `gre_key/2`, `gre_flags/2` - GRE fields
+- **Sets**: `in_set/3` - Match against named sets
+
+**Available Actions:**
+- **Meters**: `meter_update/5`, `meter_add/5` - Per-key rate limiting
+- **Counters**: `counter/1` - Packet/byte counting
+- **Logging**: `log/2` - Packet logging
+- **Rate Limiting**: `limit/3`, `rate_limit/3` - Simple rate limiting
+- **Marking**: `set_mark/2`, `set_connmark/2`, `save_mark/1`, `restore_mark/1`
+- **Modification**: `set_dscp/2`, `set_ttl/2`, `increment_ttl/1`, `decrement_ttl/1`
+- **CT**: `set_ct_label/2`, `set_ct_helper/2`, `set_ct_zone/2`
+
+**Available Verdicts:**
+- **Terminal**: `accept/1`, `drop/1`, `reject/1`, `reject/2`
+- **Flow Control**: `jump/2`, `goto/2`, `return/1`, `continue/1`
+- **NAT**: `snat_to/2`, `dnat_to/2`, `masquerade/1`, `redirect_to/2`
+- **Advanced**: `tproxy/2` - Transparent proxy
+- **Special**: `notrack/1`, `queue_to_userspace/2`, `synproxy/1`, `flow_offload/1`
 
 See the [Match documentation](lib/nftex/match.ex) for the full API.
 
@@ -896,8 +951,8 @@ alias NFTex.NAT
 ### Connection Tracking
 
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor}
+import NFTables.Match
+alias NFTables.{Builder, Executor}
 
 # Track connection state
 expr = rule()
@@ -910,7 +965,7 @@ Builder.new()
 |> Executor.execute(pid)
 
 # Or using Policy helpers for common patterns
-:ok = NFTablesEx.Policy.accept_established(pid)
+:ok = NFTables.Policy.accept_established(pid)
 
 # Connection limits
 expr = rule()
@@ -935,6 +990,230 @@ expr = rule()
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "FORWARD", family: :inet)
 |> Executor.execute(pid)
+```
+
+### Hardware Acceleration with Flowtables
+
+Offload established connections to hardware for dramatic performance improvements:
+
+```elixir
+alias NFTables.Builder
+
+# Create flowtable for hardware offloading
+Builder.new(family: :inet)
+|> Builder.add(table: "filter")
+|> Builder.add(
+  flowtable: "fastpath",
+  hook: :ingress,
+  priority: 0,
+  devices: ["eth0", "eth1"]
+)
+|> Builder.execute(pid)
+
+# Add rule to offload established connections
+import NFTables.Match
+
+offload_rule = rule()
+  |> state([:established, :related])
+  |> flow_offload()
+  |> to_expr()
+
+Builder.new()
+|> Builder.add(rule: offload_rule, table: "filter", chain: "forward", family: :inet)
+|> Builder.execute(pid)
+```
+
+### Per-Key Rate Limiting with Meters
+
+Dynamic rate limiting per IP address or other keys:
+
+```elixir
+import NFTables.Match
+alias NFTables.Match.Meter
+
+# Per-IP SSH rate limiting
+ssh_meter = rule()
+  |> meter_update(
+    Meter.payload(:ip, :saddr),  # Key: source IP
+    "ssh_limits",                # Set name
+    3,                           # 3 attempts
+    :minute                      # per minute
+  )
+  |> tcp()
+  |> dport(22)
+  |> accept()
+  |> to_expr()
+
+# Composite key (IP + port) for connection limits
+conn_meter = rule()
+  |> meter_add(
+    Meter.composite_key([
+      Meter.payload(:ip, :saddr),
+      Meter.payload(:tcp, :dport)
+    ]),
+    "conn_limits",
+    10,
+    :second,
+    burst: 5
+  )
+  |> accept()
+  |> to_expr()
+```
+
+### Deep Packet Inspection with Raw Payload
+
+Match custom protocols using offset-based packet access:
+
+```elixir
+import NFTables.Match
+
+# Match DNS queries (port 53 via raw payload)
+dns_block = rule()
+  |> udp()
+  |> payload_raw(:th, 16, 16, 53)  # Transport header, offset 16, length 16 bits, value 53
+  |> log("DNS query blocked: ")
+  |> drop()
+  |> to_expr()
+
+# Check TCP SYN flag using masked match
+syn_counter = rule()
+  |> tcp()
+  |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)  # TCP flags offset, mask SYN bit
+  |> counter()
+  |> to_expr()
+
+# Match HTTP GET method
+http_get = rule()
+  |> tcp()
+  |> dport(80)
+  |> payload_raw(:ih, 0, 32, "GET ")  # Inner header, first 4 bytes
+  |> log("HTTP GET: ")
+  |> accept()
+  |> to_expr()
+```
+
+### Transparent Proxy with TPROXY
+
+Intercept traffic without changing destination addresses:
+
+```elixir
+import NFTables.Match
+alias NFTables.Builder
+
+# Setup transparent proxy for HTTP traffic
+Builder.new(family: :ip)
+|> Builder.add(table: "tproxy")
+|> Builder.add(
+  chain: "prerouting",
+  type: :filter,
+  hook: :prerouting,
+  priority: -150,
+  policy: :accept
+)
+|> Builder.execute(pid)
+
+# Mark existing transparent sockets
+mark_existing = rule()
+  |> socket_transparent()
+  |> set_mark(1)
+  |> accept()
+  |> to_expr()
+
+# TPROXY new HTTP connections
+tproxy_http = rule()
+  |> tcp()
+  |> dport(80)
+  |> mark(0)
+  |> tproxy(to: 8080)
+  |> to_expr()
+
+Builder.new()
+|> Builder.add(rule: mark_existing, table: "tproxy", chain: "prerouting", family: :ip)
+|> Builder.add(rule: tproxy_http, table: "tproxy", chain: "prerouting", family: :ip)
+|> Builder.execute(pid)
+```
+
+### Specialized Protocols
+
+Support for SCTP, DCCP, and GRE protocols:
+
+```elixir
+import NFTables.Match
+
+# SCTP (WebRTC data channels) - use generic dport/sport
+sctp_rule = rule()
+  |> sctp()
+  |> dport(9899)
+  |> accept()
+  |> to_expr()
+
+# DCCP (streaming media) - use generic dport/sport
+dccp_rule = rule()
+  |> dccp()
+  |> sport(5000)
+  |> dport(6000)
+  |> log("DCCP traffic: ")
+  |> accept()
+  |> to_expr()
+
+# GRE (VPN tunnels)
+gre_rule = rule()
+  |> gre()
+  |> gre_version(0)
+  |> gre_key(12345)
+  |> source_ip("10.0.0.1")
+  |> accept()
+  |> to_expr()
+
+# Port ranges supported for SCTP/DCCP
+sctp_range = rule()
+  |> sctp()
+  |> dport(9000..9999)
+  |> counter()
+  |> to_expr()
+```
+
+### OS Fingerprinting
+
+Passive operating system detection for security policies:
+
+```elixir
+import NFTables.Match
+
+# Allow SSH only from Linux systems
+linux_ssh = rule()
+  |> tcp()
+  |> dport(22)
+  |> osf_name("Linux")
+  |> limit(10, :minute)
+  |> accept()
+  |> to_expr()
+
+# Rate limit Windows connections
+windows_limit = rule()
+  |> osf_name("Windows", ttl: :strict)
+  |> limit(10, :second, burst: 5)
+  |> accept()
+  |> to_expr()
+
+# Block unknown OS
+block_unknown = rule()
+  |> osf_name("unknown")
+  |> log("Unknown OS blocked: ")
+  |> drop()
+  |> to_expr()
+
+# OS-based marking for routing
+mark_by_os = [
+  rule() |> osf_name("Linux") |> set_mark(1) |> to_expr(),
+  rule() |> osf_name("Windows") |> set_mark(2) |> to_expr(),
+  rule() |> osf_name("MacOS") |> set_mark(3) |> to_expr()
+]
+```
+
+**Note:** OSF requires the pf.os database to be loaded:
+```bash
+nfnl_osf -f /usr/share/pf.os
 ```
 
 ### Raw JSON Commands
@@ -1003,7 +1282,7 @@ NFTex supports distributed firewall architectures where a central command & cont
 Builder allows you to construct nftables configurations without executing them immediately:
 
 ```elixir
-alias NFTablesEx.{Builder, Match}
+alias NFTables.{Builder, Match}
 import Match
 
 # Build configuration without executing
@@ -1035,7 +1314,7 @@ Builder.execute(builder, pid)
 Builder natively supports atomic batch operations - multiple commands are executed in a single transaction:
 
 ```elixir
-alias NFTablesEx.Builder
+alias NFTables.Builder
 
 # Build multiple operations atomically
 builder = Builder.new()
@@ -1079,8 +1358,8 @@ json = Builder.to_json(builder)
 The Match API generates pure expressions that can be combined with Builder for remote execution:
 
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.Builder
+import NFTables.Match
+alias NFTables.Builder
 
 # Build complex rule as Builder command (not yet executed)
 builder = Builder.new(family: :inet)
@@ -1106,7 +1385,7 @@ MyTransport.send_to_node("firewall-2", json_cmd)
 MyTransport.send_to_node("firewall-3", json_cmd)
 
 # On remote nodes, execute received command
-NFTablesEx.Executor.execute(Jason.decode!(json_cmd), pid: pid)
+NFTables.Executor.execute(Jason.decode!(json_cmd), pid: pid)
 ```
 
 ### Builder Operations Reference
@@ -1114,7 +1393,7 @@ NFTablesEx.Executor.execute(Jason.decode!(json_cmd), pid: pid)
 Builder provides a unified interface for all nftables operations:
 
 ```elixir
-alias NFTablesEx.{Builder, Match}
+alias NFTables.{Builder, Match}
 import Match
 
 # Table operations
@@ -1155,7 +1434,7 @@ Builder.new()
 
 ```elixir
 defmodule MyApp.DistributedFirewall do
-  alias NFTablesEx.{Builder, Executor, Match}
+  alias NFTables.{Builder, Executor, Match}
   import Match
 
   # On C&C node - build firewall configuration
@@ -1214,7 +1493,7 @@ defmodule MyApp.DistributedFirewall do
 
   # On firewall nodes - minimal shim
   def execute_received_command(json_cmd) do
-    {:ok, pid} = NFTablesEx.start_link()
+    {:ok, pid} = NFTables.start_link()
     Executor.execute(json_cmd, pid: pid)
   end
 end

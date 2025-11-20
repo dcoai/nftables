@@ -22,7 +22,7 @@ defmodule NFTex.TestHelpers do
 
   **WARNING**: Even with isolated test table names, netfilter hooks are GLOBAL.
 
-  A chain with `hook: :input` in table "nftex_test_filter" has the SAME effect
+  A chain with `hook: :input` in table "nftables_test_filter" has the SAME effect
   as a chain with `hook: :input` in the production "filter" table. Both attach
   to the kernel's global netfilter infrastructure and filter ALL traffic.
 
@@ -30,7 +30,7 @@ defmodule NFTex.TestHelpers do
 
   ## Safe Testing Approach
 
-  1. **ALWAYS use the "nftex_test_" prefix** for all test table names
+  1. **ALWAYS use the "nftables_test_" prefix** for all test table names
   2. **NEVER create chains with hooks in tests** (always use `hook: nil` or omit it)
   3. Create regular chains WITHOUT hooks for testing chain logic
   4. Use `test_mode: true` when calling Policy functions
@@ -73,7 +73,7 @@ defmodule NFTex.TestHelpers do
   @doc """
   Creates an isolated test table with a safe name.
 
-  Table names are prefixed with "nftex_test_" to clearly identify them as test tables.
+  Table names are prefixed with "nftables_test_" to clearly identify them as test tables.
 
   ## Options
 
@@ -82,11 +82,11 @@ defmodule NFTex.TestHelpers do
   ## Examples
 
       {:ok, table_name} = setup_test_table(pid, "integration", family: :inet)
-      # Creates table: "nftex_test_integration"
+      # Creates table: "nftables_test_integration"
   """
   def setup_test_table(pid, test_name, opts \\ []) do
     family = Keyword.get(opts, :family, :inet)
-    table_name = "nftex_test_#{test_name}"
+    table_name = "nftables_test_#{test_name}"
 
     # Clean up if exists from previous failed test
     Table.delete(pid, table_name, family)
@@ -111,7 +111,7 @@ defmodule NFTex.TestHelpers do
 
   **Netfilter hooks are GLOBAL to the kernel**, regardless of table name.
 
-  Even though this function creates an isolated test table with "nftex_test_"
+  Even though this function creates an isolated test table with "nftables_test_"
   prefix, a chain with a hook (e.g., `:input`) will attach to the kernel's
   global netfilter infrastructure and filter ALL incoming packets on the host.
 
@@ -214,7 +214,7 @@ defmodule NFTex.TestHelpers do
 
   ## Examples
 
-      iex> safe_table_name?("nftex_test_integration")
+      iex> safe_table_name?("nftables_test_integration")
       true
 
       iex> safe_table_name?("filter")
@@ -246,23 +246,23 @@ defmodule NFTex.TestHelpers do
   end
 
   @doc """
-  Ensures a table name has the "nftex_test_" prefix.
+  Ensures a table name has the "nftables_test_" prefix.
 
   This helps with identifying and cleaning up test tables.
 
   ## Examples
 
       iex> ensure_test_prefix("my_table")
-      "nftex_test_my_table"
+      "nftables_test_my_table"
 
-      iex> ensure_test_prefix("nftex_test_already")
-      "nftex_test_already"
+      iex> ensure_test_prefix("nftables_test_already")
+      "nftables_test_already"
   """
   def ensure_test_prefix(table_name) do
-    if String.starts_with?(table_name, "nftex_test_") do
+    if String.starts_with?(table_name, "nftables_test_") do
       table_name
     else
-      "nftex_test_#{table_name}"
+      "nftables_test_#{table_name}"
     end
   end
 end

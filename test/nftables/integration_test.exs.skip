@@ -1,0 +1,616 @@
+defmodule NFTables.IntegrationTest do
+  use ExUnit.Case, async: false
+
+  alias NFTables.{Table, Chain, Match, Policy, TestHelpers, Builder, Rule}
+  import NFTables.QueryHelpers
+
+  # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
+  # the host's network connectivity. All tables are prefixed with "nftex_test_"
+  # and chains without hooks are used when possible to prevent traffic filtering.
+
+  setup do
+    {:ok, pid} = NFTables.start_link()
+
+    # Use isolated test tables
+    test_table = "nftex_test_integration"
+    filter_test_table = "nftex_test_filter"
+    nat_test_table = "nftex_test_nat"
+
+    # Cleanup any leftover tables from previous test runs
+    Table.delete(pid, test_table, :inet)
+    Table.delete(pid, filter_test_table, :inet)
+    Table.delete(pid, nat_test_table, :inet)
+
+    on_exit(fn ->
+      if Process.alive?(pid) do
+        TestHelpers.cleanup_test_table(pid, test_table, :inet)
+        TestHelpers.cleanup_test_table(pid, filter_test_table, :inet)
+        TestHelpers.cleanup_test_table(pid, nat_test_table, :inet)
+        NFTables.stop(pid)
+      end
+    end)
+
+    {:ok, pid: pid, test_table: test_table, filter_test_table: filter_test_table, nat_test_table: nat_test_table}
+  end
+
+  describe "complete firewall setup" do
+    test "builds secure server with Chain + Match + Policy", %{pid: pid, test_table: test_table} do
+      # Step 1: Create table
+      assert :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Step 2: Create INPUT chain WITHOUT hook (safe - won't filter real traffic)
+      # Using a regular chain instead of hooked chain for safety
+      assert :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      # Step 3: Apply common policies
+      assert :ok = Policy.accept_loopback(pid,
+        table: test_table,
+        chain: "INPUT"
+      )
+
+      assert :ok = Policy.accept_established(pid,
+        table: test_table,
+        chain: "INPUT"
+      )
+
+      assert :ok = Policy.drop_invalid(pid,
+        table: test_table,
+        chain: "INPUT"
+      )
+
+      # Step 4: Add service-specific rules
+      assert :ok = Policy.allow_ssh(pid,
+        table: test_table,
+        chain: "INPUT",
+        rate_limit: 10
+      )
+
+      # Step 5: Add custom rule with Match
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.dest_port(8080)
+        |> Match.rate_limit(100, :second)
+        |> Match.counter()
+        |> Match.accept()
+        |> Match.commit()
+
+      # Verify chain exists and has rules
+      assert chain_exists?(pid, test_table, "INPUT", :inet)
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 5
+    end
+
+    test "uses Policy.setup_basic_firewall for quick setup", %{pid: pid, filter_test_table: filter_test_table} do
+      # Use isolated test table instead of production "filter" table
+      Table.delete(pid, filter_test_table, :inet)
+
+      # One-line complete firewall using test table (test_mode prevents hooks)
+      assert :ok = Policy.setup_basic_firewall(pid,
+        table: filter_test_table,
+        allow_services: [:ssh, :http, :https],
+        ssh_rate_limit: 10,
+        test_mode: true
+      )
+
+      # Verify it's all set up
+      assert table_exists?(pid, filter_test_table, :inet)
+      assert chain_exists?(pid, filter_test_table, "INPUT", :inet)
+
+      {:ok, rules} = list_rules(pid, filter_test_table, "INPUT", family: :inet)
+      # Should have loopback, established, invalid drop, and 3 services
+      assert length(rules) >= 6
+    end
+  end
+
+  describe "NAT gateway scenario" do
+    test "sets up masquerading and port forwarding", %{pid: pid, nat_test_table: nat_test_table} do
+      # Use isolated test NAT table
+      Table.delete(pid, nat_test_table, :inet)
+
+      # Step 1: Create NAT table (isolated test table)
+      assert :ok = Table.add(pid, %{name: nat_test_table, family: :inet})
+
+      # Step 2: Create POSTROUTING chain WITHOUT hook (safe)
+      # Using regular chains instead of hooked chains for safety
+      assert :ok = Chain.add(pid, %{
+        table: nat_test_table,
+        name: "POSTROUTING",
+        family: :inet
+      })
+
+      # Step 3: Create PREROUTING chain WITHOUT hook (safe)
+      assert :ok = Chain.add(pid, %{
+        table: nat_test_table,
+        name: "PREROUTING",
+        family: :inet
+      })
+
+      # Step 4: Add masquerade rule for outgoing interface
+      assert :ok =
+        Match.new(pid, nat_test_table, "POSTROUTING")
+        |> Match.oif("eth0")
+        |> Match.commit()
+      # Note: Would add masquerade expression if it was exposed in Match
+
+      # Step 5: Add port forwarding rule (DNAT)
+      # This would use NAT expressions which we have in ExpressionBuilder
+      # but not yet in Match
+
+      # Verify setup
+      assert chain_exists?(pid, nat_test_table, "POSTROUTING", :inet)
+      assert chain_exists?(pid, nat_test_table, "PREROUTING", :inet)
+    end
+  end
+
+  describe "rate limiting scenario" do
+    test "applies rate limits to multiple services", %{pid: pid, test_table: test_table} do
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Create regular chain WITHOUT hook (safe)
+      :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      # SSH with strict rate limit
+      assert :ok = Policy.allow_ssh(pid,
+        table: test_table,
+        chain: "INPUT",
+        rate_limit: 5
+      )
+
+      # HTTP with higher rate limit
+      assert :ok = Policy.allow_http(pid,
+        table: test_table,
+        chain: "INPUT",
+        rate_limit: 100
+      )
+
+      # Custom service with burst
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.dest_port(9000)
+        |> Match.rate_limit(50, :second, burst: 100)
+        |> Match.accept()
+        |> Match.commit()
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 3
+    end
+  end
+
+  describe "logging scenario" do
+    test "adds logging to multiple rules", %{pid: pid, test_table: test_table} do
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Create regular chain WITHOUT hook (safe)
+      :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      # SSH with logging
+      assert :ok = Policy.allow_ssh(pid,
+        table: test_table,
+        chain: "INPUT",
+        log: true
+      )
+
+      # Block specific IP with logging
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.source_ip(<<192, 168, 1, 100>>)
+        |> Match.log("BLOCKED-IP: ")
+        |> Match.drop()
+        |> Match.commit()
+
+      # Log all dropped packets (at end of chain)
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.log("DROP-DEFAULT: ")
+        |> Match.commit()
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 3
+    end
+  end
+
+  describe "multiple chains in same table" do
+    test "creates and uses multiple chains", %{pid: pid, test_table: test_table} do
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Create INPUT chain WITHOUT hook (safe)
+      assert :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      # Create FORWARD chain WITHOUT hook (safe)
+      assert :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "FORWARD",
+        family: :inet
+      })
+
+      # Create custom chain (no hook)
+      assert :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "custom_rules",
+        family: :inet
+      })
+
+      # Add rules to each chain
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.dest_port(80)
+        |> Match.accept()
+        |> Match.commit()
+
+      assert :ok =
+        Match.new(pid, test_table, "FORWARD")
+        |> Match.ct_state([:established, :related])
+        |> Match.accept()
+        |> Match.commit()
+
+      assert :ok =
+        Match.new(pid, test_table, "custom_rules")
+        |> Match.dest_port(443)
+        |> Match.accept()
+        |> Match.commit()
+
+      # Verify all chains exist
+      assert chain_exists?(pid, test_table, "INPUT", :inet)
+      assert chain_exists?(pid, test_table, "FORWARD", :inet)
+      assert chain_exists?(pid, test_table, "custom_rules", :inet)
+    end
+  end
+
+  describe "resource cleanup" do
+    test "cleans up table and all chains", %{pid: pid, test_table: test_table} do
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Create multiple chains WITHOUT hooks (safe)
+      :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "custom",
+        family: :inet
+      })
+
+      # Add rules
+      :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.dest_port(80)
+        |> Match.accept()
+        |> Match.commit()
+
+      # Verify everything exists
+      assert table_exists?(pid, test_table, :inet)
+      assert chain_exists?(pid, test_table, "INPUT", :inet)
+
+      # Delete table (should clean up chains and rules)
+      assert :ok = Table.delete(pid, test_table, :inet)
+
+      # Verify cleanup
+      refute table_exists?(pid, test_table, :inet)
+      refute chain_exists?(pid, test_table, "INPUT", :inet)
+    end
+  end
+
+  describe "complex rule combinations" do
+    test "combines multiple match criteria", %{pid: pid, test_table: test_table} do
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Create regular chain WITHOUT hook (safe)
+      :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      # Complex rule: specific IP + specific port + rate limit + logging
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.source_ip(<<10, 0, 0, 100>>)
+        |> Match.dest_port(8080)
+        |> Match.ct_state([:new])
+        |> Match.rate_limit(10, :minute)
+        |> Match.log("SPECIAL: ")
+        |> Match.counter()
+        |> Match.accept()
+        |> Match.commit()
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "creates firewall with interface-specific rules", %{pid: pid, test_table: test_table} do
+      :ok = Table.add(pid, %{name: test_table, family: :inet})
+
+      # Create regular chain WITHOUT hook (safe)
+      :ok = Chain.add(pid, %{
+        table: test_table,
+        name: "INPUT",
+        family: :inet
+      })
+
+      # Accept from loopback
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.iif("lo")
+        |> Match.accept()
+        |> Match.commit()
+
+      # Strict rules for external interface
+      assert :ok =
+        Match.new(pid, test_table, "INPUT")
+        |> Match.iif("eth0")
+        |> Match.dest_port(22)
+        |> Match.rate_limit(5, :minute)
+        |> Match.accept()
+        |> Match.commit()
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 2
+    end
+  end
+
+  describe "error propagation" do
+    test "propagates errors from Chain operations", %{pid: pid} do
+      # Try to create rule in non-existent chain
+      result =
+        Match.new(pid, "nonexistent_table", "INPUT")
+        |> Match.dest_port(80)
+        |> Match.accept()
+        |> Match.commit()
+
+      assert {:error, _reason} = result
+    end
+
+    test "propagates errors from Policy operations", %{pid: pid} do
+      # Try to apply policy to non-existent table/chain
+      result = Policy.accept_loopback(pid,
+        table: "nonexistent",
+        chain: "INPUT"
+      )
+
+      assert {:error, _reason} = result
+    end
+  end
+
+  describe "Builder + Rule integration (new fluent API)" do
+    test "builds simple SSH rule with Rule and Builder", %{pid: pid, test_table: test_table} do
+      # Build rule using Rule module's fluent API
+      expr_list = Rule.new()
+                  |> Rule.protocol(:tcp)
+                  |> Rule.port(22)
+                  |> Rule.state([:new])
+                  |> Rule.log("SSH: ")
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      # Use Builder to create table, chain, and add rule
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      # Verify rule was added
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds multiple rules with Rule and batches with Builder", %{pid: pid, test_table: test_table} do
+      # Build multiple rules using Rule module
+      ssh_rule = Rule.new()
+                 |> Rule.protocol(:tcp)
+                 |> Rule.port(22)
+                 |> Rule.limit(10, :minute)
+                 |> Rule.accept()
+                 |> Rule.to_expr()
+
+      http_rule = Rule.new()
+                  |> Rule.protocol(:tcp)
+                  |> Rule.port(80)
+                  |> Rule.counter()
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      https_rule = Rule.new()
+                   |> Rule.protocol(:tcp)
+                   |> Rule.port(443)
+                   |> Rule.counter()
+                   |> Rule.accept()
+                   |> Rule.to_expr()
+
+      # Build entire firewall configuration in one go
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rules([ssh_rule, http_rule, https_rule])
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      # Verify all rules were added
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 3
+    end
+
+    test "builds complex rule with multiple matches", %{pid: pid, test_table: test_table} do
+      # Complex rule with multiple criteria
+      expr_list = Rule.new()
+                  |> Rule.source("10.0.0.0/8")
+                  |> Rule.protocol(:tcp)
+                  |> Rule.dport(8080)
+                  |> Rule.state([:new])
+                  |> Rule.limit(50, :second, burst: 100)
+                  |> Rule.log("API: ", level: "info")
+                  |> Rule.counter()
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds DROP rule with logging", %{pid: pid, test_table: test_table} do
+      # Block specific IP with logging
+      expr_list = Rule.new()
+                  |> Rule.source("192.168.1.100")
+                  |> Rule.log("BLOCKED: ")
+                  |> Rule.counter()
+                  |> Rule.drop()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds NAT rule with SNAT", %{pid: pid, nat_test_table: nat_test_table} do
+      # SNAT rule for outgoing traffic
+      expr_list = Rule.new()
+                  |> Rule.oif("eth0")
+                  |> Rule.snat("203.0.113.1")
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(nat_test_table)
+               |> Builder.add_chain("POSTROUTING")
+               |> Builder.set_table(nat_test_table)
+               |> Builder.set_chain("POSTROUTING")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds NAT rule with masquerade", %{pid: pid, nat_test_table: nat_test_table} do
+      # Masquerade for dynamic IP
+      expr_list = Rule.new()
+                  |> Rule.oif("ppp0")
+                  |> Rule.masquerade()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(nat_test_table)
+               |> Builder.add_chain("POSTROUTING")
+               |> Builder.set_table(nat_test_table)
+               |> Builder.set_chain("POSTROUTING")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = list_rules(pid, nat_test_table, "POSTROUTING", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds rule with connection tracking features", %{pid: pid, test_table: test_table} do
+      # Accept established/related connections
+      expr_list = Rule.new()
+                  |> Rule.state([:established, :related])
+                  |> Rule.counter()
+                  |> Rule.accept()
+                  |> Rule.to_expr()
+
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rule(expr_list)
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 1
+    end
+
+    test "builds complete firewall with Builder + Rule", %{pid: pid, test_table: test_table} do
+      # Define rules using Rule module
+      loopback = Rule.new() |> Rule.iif("lo") |> Rule.accept() |> Rule.to_expr()
+
+      established = Rule.new()
+                    |> Rule.state([:established, :related])
+                    |> Rule.accept()
+                    |> Rule.to_expr()
+
+      invalid = Rule.new() |> Rule.state([:invalid]) |> Rule.drop() |> Rule.to_expr()
+
+      ssh = Rule.new()
+            |> Rule.protocol(:tcp)
+            |> Rule.port(22)
+            |> Rule.state([:new])
+            |> Rule.limit(10, :minute)
+            |> Rule.accept()
+            |> Rule.to_expr()
+
+      web = Rule.new()
+            |> Rule.protocol(:tcp)
+            |> Rule.port(80)
+            |> Rule.state([:new])
+            |> Rule.accept()
+            |> Rule.to_expr()
+
+      # Build complete firewall configuration
+      result = Builder.new(family: :inet)
+               |> Builder.add_table(test_table)
+               |> Builder.add_chain("INPUT")
+               |> Builder.set_table(test_table)
+               |> Builder.set_chain("INPUT")
+               |> Builder.add_rules([loopback, established, invalid, ssh, web])
+               |> Builder.execute(pid)
+
+      assert result == :ok
+
+      # Verify all rules were added
+      {:ok, rules} = list_rules(pid, test_table, "INPUT", family: :inet)
+      assert length(rules) >= 5
+    end
+  end
+end

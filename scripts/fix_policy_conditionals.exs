@@ -2,7 +2,7 @@
 
 # Fix remaining conditional functions in Policy module
 
-file_path = "/home/dco/Projects/nftables_ex/lib/nftex/policy.ex"
+file_path = "/home/dco/Projects/nftables_ex/lib/nftables/policy.ex"
 content = File.read!(file_path)
 
 # Fix allow_any function pattern

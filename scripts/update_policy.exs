@@ -2,7 +2,7 @@
 
 # Script to update Policy module from old Match API to new API
 
-file_path = "/home/dco/Projects/nftables_ex/lib/nftex/policy.ex"
+file_path = "/home/dco/Projects/nftables_ex/lib/nftables/policy.ex"
 content = File.read!(file_path)
 
 # Replace Match.new pattern with rule() and extract expr building

@@ -7,7 +7,7 @@
 
 Mix.install([{:nftables_ex, path: Path.expand("..", __DIR__)}])
 
-alias NFTablesEx.Query
+alias NFTables.Query
 
 defmodule DistributedQueryExample do
   @moduledoc """
@@ -86,7 +86,7 @@ defmodule DistributedQueryExample do
     # Build query commands centrally
 
     defmodule MyApp.FirewallMonitor do
-      alias NFTablesEx.Query
+      alias NFTables.Query
 
       # Collect firewall state from multiple nodes
       def collect_firewall_state(nodes) do
@@ -122,10 +122,10 @@ defmodule DistributedQueryExample do
 
     defmodule MyApp.FirewallNode do
       def execute_command(json_cmd) do
-        {:ok, pid} = NFTablesEx.start_link()
+        {:ok, pid} = NFTables.start_link()
 
         # Execute the pre-built command
-        case NFTablesEx.Port.commit(pid, json_cmd, 5000) do
+        case NFTables.Port.commit(pid, json_cmd, 5000) do
           {:ok, response} -> {:ok, response}
           {:error, reason} -> {:error, reason}
         end

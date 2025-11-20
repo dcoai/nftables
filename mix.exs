@@ -1,12 +1,12 @@
-defmodule NFTablesEx.MixProject do
+defmodule NFTables.MixProject do
   use Mix.Project
 
   @version "0.4.0"
-  @source_url "https://github.com/yourusername/nftables_ex"
+  @source_url "https://github.com/yourusername/nftables"
 
   def project do
     [
-      app: :nftables_ex,
+      app: :nftables,
       version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
@@ -21,7 +21,7 @@ defmodule NFTablesEx.MixProject do
       package: package(),
 
       # Docs
-      name: "NFTablesEx",
+      name: "NFTables",
       source_url: @source_url,
       docs: docs()
     ]
@@ -47,7 +47,7 @@ defmodule NFTablesEx.MixProject do
   defp description do
     """
     Pure Elixir library for working with Linux nftables rules. Provides high-level APIs
-    for building tables, chains, rules, and sets. Works with NFTablesEx.Port for
+    for building tables, chains, rules, and sets. Works with NFTables.Port for
     communicating with the kernel firewall, or can generate JSON/rule definitions
     independently for inspection, testing, or remote execution.
     """
@@ -55,7 +55,7 @@ defmodule NFTablesEx.MixProject do
 
   defp package do
     [
-      name: "nftables_ex",
+      name: "nftables",
       files: ~w(lib .formatter.exs mix.exs README.md LICENSE),
       licenses: ["MIT"],
       links: %{
@@ -78,23 +78,23 @@ defmodule NFTablesEx.MixProject do
       ],
       groups_for_modules: [
         "Core API": [
-          NFTablesEx.Builder,
-          NFTablesEx.Match,
-          NFTablesEx.Query
+          NFTables.Builder,
+          NFTables.Match,
+          NFTables.Query
         ],
         "Convenience API": [
-          NFTablesEx.Policy,
-          NFTablesEx.NAT,
-          NFTablesEx.Rule
+          NFTables.Policy,
+          NFTables.NAT,
+          NFTables.Rule
         ],
         "Execution": [
-          NFTablesEx.Executor,
-          NFTablesEx.Decoder
+          NFTables.Executor,
+          NFTables.Decoder
         ],
         "Internal API": [
-          NFTablesEx.Validation,
-          NFTablesEx.Expr,
-          NFTablesEx.Formatter
+          NFTables.Validation,
+          NFTables.Expr,
+          NFTables.Formatter
         ]
       ]
     ]

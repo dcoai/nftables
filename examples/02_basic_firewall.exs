@@ -20,7 +20,7 @@
 #   - libnftables installed
 #   - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 
-Mix.install([{:nftex, path: "."}])
+Mix.install([{:nftables, path: "."}])
 
 defmodule BasicFirewall do
   @moduledoc """

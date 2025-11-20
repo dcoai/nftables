@@ -44,10 +44,10 @@ mix test
 ### Run Specific Test File
 
 ```bash
-mix test test/nftex/rule_test.exs
-mix test test/nftex/query_test.exs
-mix test test/nftex/set_operations_test.exs
-mix test test/nftex/policy_test.exs
+mix test test/nftables/rule_test.exs
+mix test test/nftables/query_test.exs
+mix test test/nftables/set_operations_test.exs
+mix test test/nftables/policy_test.exs
 ```
 
 ### Run Tests with Tags
@@ -76,14 +76,14 @@ mix test --trace
 ### Run Specific Test by Line Number
 
 ```bash
-mix test test/nftex/rule_test.exs:22
+mix test test/nftables/rule_test.exs:22
 ```
 
 ## Test Organization
 
 ### High-Level API Tests
 
-Located in `test/nftex/`:
+Located in `test/nftables/`:
 
 - **rule_test.exs** - Tests for NFTex.Rule
   - `block_ip/4` - Blocking IP addresses
@@ -111,7 +111,7 @@ Located in `test/nftex/`:
 
 ### Port Tests
 
-Located in `test/nftex/`:
+Located in `test/nftables/`:
 
 - **json_port_test.exs** - JSON port communication tests
 - **etf_port_test.exs** - ETF port communication tests
@@ -244,7 +244,7 @@ open cover/excoveralls.html
 
 When adding new features:
 
-1. Add tests in `test/nftex/` for high-level APIs
+1. Add tests in `test/nftables/` for high-level APIs
 2. Add tests in `test/` root for low-level operations
 3. Use appropriate tags (`:integration`, `:requires_chain`, etc.)
 4. Document any prerequisites in test comments

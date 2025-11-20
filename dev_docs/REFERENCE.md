@@ -2,6 +2,27 @@
 
 Complete reference guide for the NFTex library.
 
+## Advanced Features
+
+NFTables now includes comprehensive support for advanced nftables capabilities:
+
+- **Flowtables** - Hardware-accelerated packet forwarding
+- **Meters/Dynamic Sets** - Per-key rate limiting with composite keys
+- **Raw Payload Matching** - Offset-based packet inspection for custom protocols
+- **Socket Matching & TPROXY** - Transparent proxy support
+- **SCTP/DCCP/GRE** - Specialized protocol matching
+- **OSF (OS Fingerprinting)** - Passive OS detection
+
+**Documentation:**
+- [ADVANCED_FEATURES_COMPLETE.md](../ADVANCED_FEATURES_COMPLETE.md) - Complete feature documentation
+- [METERS_IMPLEMENTATION_PROGRESS.md](../METERS_IMPLEMENTATION_PROGRESS.md) - Meters details
+- [PHASE2_IMPLEMENTATION_SUMMARY.md](../PHASE2_IMPLEMENTATION_SUMMARY.md) - Raw payload & TPROXY
+- [PHASE3_IMPLEMENTATION_SUMMARY.md](../PHASE3_IMPLEMENTATION_SUMMARY.md) - Protocols & OSF
+
+See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced features.
+
+---
+
 ## Table of Contents
 
 1. [nftables Documentation & Mapping](#nftables-documentation--mapping)

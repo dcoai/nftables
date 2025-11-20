@@ -21,7 +21,7 @@
 # Note: This example will READ parameters but only WRITES if you
 #       explicitly confirm. Original values are restored.
 
-Mix.install([{:nftex, path: "."}])
+Mix.install([{:nftables, path: "."}])
 
 defmodule SysctlManagement do
   @moduledoc """

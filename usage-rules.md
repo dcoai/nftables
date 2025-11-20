@@ -1,8 +1,8 @@
-# NFTablesEx Usage Rules
+# NFTables Usage Rules
 
 ## Overview
 
-NFTablesEx provides a pure functional API for building nftables firewall rules via Elixir. This document describes best practices, patterns, and conventions for using the library.
+NFTables provides a pure functional API for building nftables firewall rules via Elixir. This document describes best practices, patterns, and conventions for using the library.
 
 ---
 
@@ -20,8 +20,8 @@ The **Match module** is the primary interface for building firewall rules. It fo
 
 **Example:**
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor}
+import NFTables.Match
+alias NFTables.{Builder, Executor}
 
 # Build pure expression (no side effects)
 expr = rule()
@@ -45,8 +45,8 @@ Builder.new()
 
 **Pattern:**
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor}
+import NFTables.Match
+alias NFTables.{Builder, Executor}
 
 # Step 1: Build expression (Match)
 expr = rule() |> tcp() |> dport(80) |> accept() |> to_expr()
@@ -99,7 +99,7 @@ Both patterns work identically. Use whichever is clearer in your context.
 
 **Usage:**
 ```elixir
-import NFTablesEx.Match
+import NFTables.Match
 
 # All functions now available without Match. prefix
 expr = rule()
@@ -126,7 +126,7 @@ expr = rule()
 
 **Usage:**
 ```elixir
-alias NFTablesEx.Builder
+alias NFTables.Builder
 
 builder = Builder.new(family: :inet)
 |> Builder.add_table("filter")
@@ -152,7 +152,7 @@ json = Builder.to_json(builder)
 
 **Usage:**
 ```elixir
-alias NFTablesEx.Executor
+alias NFTables.Executor
 
 # Execute Builder
 {:ok, response} = Executor.execute(builder, pid)
@@ -176,7 +176,7 @@ response = Executor.execute!(builder, pid)
 
 **Usage:**
 ```elixir
-alias NFTablesEx.Policy
+alias NFTables.Policy
 
 # Quick setup
 :ok = Policy.setup_basic_firewall(pid,
@@ -203,7 +203,7 @@ alias NFTablesEx.Policy
 
 **Usage:**
 ```elixir
-alias NFTablesEx.NAT
+alias NFTables.NAT
 
 # Source NAT
 :ok = NAT.source_nat(pid, "10.0.0.0/24", "203.0.113.1")
@@ -228,7 +228,7 @@ alias NFTablesEx.NAT
 
 **Usage:**
 ```elixir
-alias NFTablesEx.Query
+alias NFTables.Query
 
 {:ok, tables} = Query.list_tables(pid, family: :inet)
 {:ok, chains} = Query.list_chains(pid, family: :inet)
@@ -350,7 +350,7 @@ Builder.new()
 ### Port Forwarding (DNAT)
 
 ```elixir
-alias NFTablesEx.NAT
+alias NFTables.NAT
 
 # Forward external port 8080 to internal 10.0.0.10:80
 :ok = NAT.port_forward(pid, 8080, "10.0.0.10", 80)
@@ -385,8 +385,8 @@ Builder.new()
 |> Executor.execute(pid)
 
 # Add/remove IPs dynamically
-:ok = NFTablesEx.Set.add_elements(pid, "filter", "blocklist", :inet, ["1.2.3.4"])
-:ok = NFTablesEx.Set.delete_elements(pid, "filter", "blocklist", :inet, ["1.2.3.4"])
+:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ["1.2.3.4"])
+:ok = NFTables.Set.delete_elements(pid, "filter", "blocklist", :inet, ["1.2.3.4"])
 ```
 
 ### SYN Proxy (DDoS Protection)
@@ -430,8 +430,8 @@ Builder.new()
 
 **DO:**
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor}
+import NFTables.Match
+alias NFTables.{Builder, Executor}
 
 expr = rule() |> tcp() |> dport(22) |> accept() |> to_expr()
 
@@ -494,7 +494,7 @@ Builder.new() |> Builder.add_rule(builder, ...)  # Wrong! Need to_expr() first
 
 **DO:**
 ```elixir
-alias NFTablesEx.Policy
+alias NFTables.Policy
 
 :ok = Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
@@ -515,21 +515,21 @@ rule() |> state([:invalid]) |> drop() |> to_expr() |> ...
 
 **DO:**
 ```elixir
-import NFTablesEx.Match
+import NFTables.Match
 
 rule() |> tcp() |> dport(22) |> accept()
 ```
 
 **DON'T:**
 ```elixir
-NFTablesEx.Match.rule() |> NFTablesEx.Match.tcp() |> NFTablesEx.Match.dport(22) |> NFTablesEx.Match.accept()
+NFTables.Match.rule() |> NFTables.Match.tcp() |> NFTables.Match.dport(22) |> NFTables.Match.accept()
 ```
 
 ### 7. Use Atomic Multi-Command Operations with Builder
 
 **DO:**
 ```elixir
-alias NFTablesEx.Builder
+alias NFTables.Builder
 
 Builder.new(family: :inet)
 |> Builder.add_table("filter")
@@ -554,7 +554,7 @@ Builder.new() |> Builder.add_rule(expr3) |> Builder.execute(pid)
 
 **DO:**
 ```elixir
-alias NFTablesEx.NAT
+alias NFTables.NAT
 
 :ok = NAT.port_forward(pid, 8080, "10.0.0.10", 80)
 :ok = NAT.source_nat(pid, "10.0.0.0/24", "203.0.113.1")
@@ -570,7 +570,7 @@ rule() |> tcp() |> dport(8080) |> dnat_to("10.0.0.10", port: 80) |> ...
 
 **DO:**
 ```elixir
-alias NFTablesEx.Query
+alias NFTables.Query
 
 {:ok, rules} = Query.list_rules(pid, "filter", "INPUT", family: :inet)
 {:ok, tables} = Query.list_tables(pid, family: :inet)
@@ -592,7 +592,7 @@ Rule.list(pid, "filter", "INPUT")  # Old API - deprecated!
 ```elixir
 # Use isolated test tables
 table = "test_#{:rand.uniform(1_000_000)}"
-:ok = NFTablesEx.Table.add(pid, %{name: table, family: :inet})
+:ok = NFTables.Table.add(pid, %{name: table, family: :inet})
 
 # Test with isolated table
 Builder.new()
@@ -600,7 +600,7 @@ Builder.new()
 |> Executor.execute(pid)
 
 # Cleanup
-:ok = NFTablesEx.Table.delete(pid, table, :inet)
+:ok = NFTables.Table.delete(pid, table, :inet)
 ```
 
 **DON'T:**
@@ -615,7 +615,7 @@ Builder.new()
 
 ```elixir
 test "building SSH rule expression" do
-  import NFTablesEx.Match
+  import NFTables.Match
 
   # Test pure expression building (no execution, no pid needed)
   expr = rule()
@@ -659,8 +659,8 @@ System.cmd("sudo", ["nft", "list", "ruleset"])  # Won't work!
 The Match API is designed for **distributed firewall architectures**:
 
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.Builder
+import NFTables.Match
+alias NFTables.Builder
 
 # Central C&C node - Build configuration
 builder = Builder.new(family: :inet)
@@ -677,7 +677,7 @@ json_cmd = Builder.to_json(builder)
 MyTransport.send_to_nodes(["fw-1", "fw-2", "fw-3"], json_cmd)
 
 # On remote nodes - Execute received command
-NFTablesEx.Executor.execute(json_cmd, pid)
+NFTables.Executor.execute(json_cmd, pid)
 ```
 
 **Benefits:**
@@ -706,8 +706,8 @@ Match.new(pid, "filter", "INPUT")
 The new pure functional Match API:
 
 ```elixir
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor}
+import NFTables.Match
+alias NFTables.{Builder, Executor}
 
 expr = rule()
   |> tcp()
@@ -733,12 +733,12 @@ Builder.new()
 ## Complete Example
 
 ```elixir
-# Setup NFTablesEx
-{:ok, pid} = NFTablesEx.start_link()
+# Setup NFTables
+{:ok, pid} = NFTables.start_link()
 
 # Import for clean syntax
-import NFTablesEx.Match
-alias NFTablesEx.{Builder, Executor, Policy}
+import NFTables.Match
+alias NFTables.{Builder, Executor, Policy}
 
 # Use Policy for common patterns
 :ok = Policy.setup_basic_firewall(pid,
@@ -769,13 +769,13 @@ Builder.new()
 |> Executor.execute(pid)
 
 # Manage IP blocklist
-:ok = NFTablesEx.Set.add_elements(pid, "filter", "blocklist", :inet, [
+:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, [
   "1.2.3.4",
   "5.6.7.8"
 ])
 
 # Query existing rules
-{:ok, rules} = NFTablesEx.Query.list_rules(pid, "filter", "INPUT", family: :inet)
+{:ok, rules} = NFTables.Query.list_rules(pid, "filter", "INPUT", family: :inet)
 IO.inspect(rules, label: "Current Rules")
 ```
 

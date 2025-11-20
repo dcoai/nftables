@@ -1,4 +1,4 @@
-defmodule NFTablesEx.QueryHelpers do
+defmodule NFTables.QueryHelpers do
   @moduledoc """
   Test helper functions for the new Query/Executor/Decoder pipeline pattern.
 
@@ -6,7 +6,7 @@ defmodule NFTablesEx.QueryHelpers do
   the new architecture.
   """
 
-  alias NFTablesEx.{Query, Executor, Decoder}
+  alias NFTables.{Query, Executor, Decoder}
 
   @doc """
   List rules in a specific chain (convenience wrapper for tests).
