@@ -37,7 +37,7 @@ defmodule NFTables.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nftables_ex_port, path: "../nftables_ex_port"},
+      {:nftables_port, path: "../nftables_port"},
       {:jason, "~> 1.4"},
       {:usage_rules, "~> 0.1.25", only: :dev},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
