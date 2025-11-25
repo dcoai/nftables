@@ -32,7 +32,14 @@ defmodule NFTables.Match.IP do
     end
 
     # Build JSON expression for IP source address match
-    expr = Expr.payload_match(protocol, "saddr", ip_str)
+    expr = if String.contains?(ip_str, "/") do
+      # CIDR notation - use prefix match
+      [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
+      Expr.payload_match_prefix(protocol, "saddr", addr, String.to_integer(prefix_len))
+    else
+      # Single IP - use regular match
+      Expr.payload_match(protocol, "saddr", ip_str)
+    end
     Match.add_expr(builder, expr)
   end
 
@@ -61,7 +68,14 @@ defmodule NFTables.Match.IP do
     end
 
     # Build JSON expression for IP destination address match
-    expr = Expr.payload_match(protocol, "daddr", ip_str)
+    expr = if String.contains?(ip_str, "/") do
+      # CIDR notation - use prefix match
+      [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
+      Expr.payload_match_prefix(protocol, "daddr", addr, String.to_integer(prefix_len))
+    else
+      # Single IP - use regular match
+      Expr.payload_match(protocol, "daddr", ip_str)
+    end
     Match.add_expr(builder, expr)
   end
 
