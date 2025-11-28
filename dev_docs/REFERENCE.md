@@ -1,6 +1,6 @@
-# NFTex API Reference
+# NFTables API Reference
 
-Complete reference guide for the NFTex library.
+Complete reference guide for the NFTables library.
 
 ## Advanced Features
 
@@ -26,18 +26,18 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 ## Table of Contents
 
 1. [nftables Documentation & Mapping](#nftables-documentation--mapping)
-2. [NFTex.Port - Port Management](#nftexport---port-management)
-3. [NFTex.Table - Table Operations](#nftextable---table-operations)
-4. [NFTex.Chain - Chain Operations](#nftexchain---chain-operations)
-5. [NFTex.Rule - Rule Operations](#nftexrule---rule-operations)
-6. [NFTex.Match - Fluent Rule Construction](#nftexrulebuilder---fluent-rule-construction)
-7. [NFTex.Set - Set Operations](#nftexset---set-operations)
-8. [NFTex.Policy - Pre-built Policies](#nftexpolicy---pre-built-policies)
-9. [NFTex.Sysctl - Kernel Parameter Management](#nftexsysctl---kernel-parameter-management)
-10. [NFTex.Sysctl.Network - Network Helpers](#nftexsysctlnetwork---network-helpers)
-11. [NFTex.Query - Query Operations](#nftexquery---query-operations)
-12. [NFTex.NAT - NAT Operations](#nftexnat---nat-operations)
-13. [NFTex.JSONBuilder - JSON Command Builder](#nftexjsonbuilder---json-command-builder)
+2. [NFTables.Port - Port Management](#nftexport---port-management)
+3. [NFTables.Table - Table Operations](#nftextable---table-operations)
+4. [NFTables.Chain - Chain Operations](#nftexchain---chain-operations)
+5. [NFTables.Rule - Rule Operations](#nftexrule---rule-operations)
+6. [NFTables.Match - Fluent Rule Construction](#nftexrulebuilder---fluent-rule-construction)
+7. [NFTables.Set - Set Operations](#nftexset---set-operations)
+8. [NFTables.Policy - Pre-built Policies](#nftexpolicy---pre-built-policies)
+9. [NFTables.Sysctl - Kernel Parameter Management](#nftexsysctl---kernel-parameter-management)
+10. [NFTables.Sysctl.Network - Network Helpers](#nftexsysctlnetwork---network-helpers)
+11. [NFTables.Query - Query Operations](#nftexquery---query-operations)
+12. [NFTables.NAT - NAT Operations](#nftexnat---nat-operations)
+13. [NFTables.JSONBuilder - JSON Command Builder](#nftexjsonbuilder---json-command-builder)
 
 ---
 
@@ -55,23 +55,23 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 - Netfilter Project: https://www.netfilter.org/
 - nftables on GitHub: https://github.com/google/nftables
 
-### Mapping nftables Concepts to NFTex
+### Mapping nftables Concepts to NFTables
 
-#### Command Line → NFTex API
+#### Command Line → NFTables API
 
-| nftables Command | NFTex Equivalent |
+| nftables Command | NFTables Equivalent |
 |-----------------|------------------|
-| `nft add table inet filter` | `NFTex.Table.add(pid, %{name: "filter", family: :inet})` |
-| `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `NFTex.Chain.add(pid, %{table: "filter", name: "input", family: :inet, type: :filter, hook: :input, priority: 0, policy: :drop})` |
-| `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `NFTex.Rule.block_ip(pid, "filter", "input", "192.168.1.1")` |
-| `nft add set inet filter blocklist { type ipv4_addr; }` | `NFTex.Set.add(pid, %{table: "filter", name: "blocklist", family: :inet, type: "ipv4_addr"})` |
-| `nft add element inet filter blocklist { 192.168.1.1 }` | `NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])` |
-| `nft list ruleset` | `NFTex.Query.list_rules(pid)` |
-| `nft list tables` | `NFTex.Query.list_tables(pid)` |
+| `nft add table inet filter` | `NFTables.Table.add(pid, %{name: "filter", family: :inet})` |
+| `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `NFTables.Chain.add(pid, %{table: "filter", name: "input", family: :inet, type: :filter, hook: :input, priority: 0, policy: :drop})` |
+| `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `NFTables.Rule.block_ip(pid, "filter", "input", "192.168.1.1")` |
+| `nft add set inet filter blocklist { type ipv4_addr; }` | `NFTables.Set.add(pid, %{table: "filter", name: "blocklist", family: :inet, type: "ipv4_addr"})` |
+| `nft add element inet filter blocklist { 192.168.1.1 }` | `NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])` |
+| `nft list ruleset` | `NFTables.Query.list_rules(pid)` |
+| `nft list tables` | `NFTables.Query.list_tables(pid)` |
 
 #### nftables Syntax → Match
 
-| nftables Rule Syntax | NFTex Match |
+| nftables Rule Syntax | NFTables Match |
 |---------------------|-------------------|
 | `ip saddr 192.168.1.1` | `Match.source_ip("192.168.1.1")` |
 | `tcp dport 22` | `Match.tcp() \|> Match.dport(22)` |
@@ -86,7 +86,7 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 
 #### Protocol Families
 
-| nftables Family | NFTex Atom |
+| nftables Family | NFTables Atom |
 |----------------|-----------|
 | `inet` | `:inet` |
 | `ip` | `:inet` or `:ip` |
@@ -97,7 +97,7 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 
 #### Chain Types and Hooks
 
-| nftables Type | NFTex Atom | Available Hooks |
+| nftables Type | NFTables Atom | Available Hooks |
 |--------------|-----------|----------------|
 | `filter` | `:filter` | `:prerouting`, `:input`, `:forward`, `:output`, `:postrouting` |
 | `nat` | `:nat` | `:prerouting`, `:input`, `:output`, `:postrouting` |
@@ -105,7 +105,7 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 
 #### Connection Tracking States
 
-| nftables State | NFTex Atom |
+| nftables State | NFTables Atom |
 |---------------|-----------|
 | `new` | `:new` |
 | `established` | `:established` |
@@ -115,11 +115,11 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 
 ### JSON Format vs nft Syntax
 
-NFTex uses a **hybrid approach**:
+NFTables uses a **hybrid approach**:
 
 1. **JSON format** for structured operations (tables, chains, sets):
    ```elixir
-   NFTex.Table.add(pid, %{name: "filter", family: :inet})
+   NFTables.Table.add(pid, %{name: "filter", family: :inet})
    # Generates: {"nftables": [{"add": {"table": {"family": "inet", "name": "filter"}}}]}
    ```
 
@@ -135,22 +135,22 @@ Both formats are processed by the same `libnftables.nft_run_cmd_from_buffer()` f
 
 ---
 
-## NFTex.Port - Port Management
+## NFTables.Port - Port Management
 
-Start and manage the NFTex port process.
+Start and manage the NFTables port process.
 
 ### Functions
 
 #### `start_link/1`
 
-Start the NFTex port process.
+Start the NFTables port process.
 
 ```elixir
 # Start with default options
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Start with custom options
-{:ok, pid} = NFTex.start_link(check_capabilities: false)
+{:ok, pid} = NFTables.start_link(check_capabilities: false)
 ```
 
 **Options:**
@@ -160,10 +160,10 @@ Start the NFTex port process.
 
 #### `stop/1`
 
-Stop the NFTex port process.
+Stop the NFTables port process.
 
 ```elixir
-:ok = NFTex.Port.stop(pid)
+:ok = NFTables.Port.stop(pid)
 ```
 
 #### `call/2`
@@ -173,17 +173,17 @@ Send a raw command to the port.
 ```elixir
 # JSON command
 json = ~s({"nftables": [{"list": {"tables": {}}}]})
-{:ok, response} = NFTex.Port.call(pid, json)
+{:ok, response} = NFTables.Port.call(pid, json)
 
 # nft syntax command
-{:ok, response} = NFTex.Port.call(pid, "list tables")
+{:ok, response} = NFTables.Port.call(pid, "list tables")
 ```
 
 **Note:** Most users should use higher-level APIs instead of calling this directly.
 
 ---
 
-## NFTex.Table - Table Operations
+## NFTables.Table - Table Operations
 
 Manage nftables tables.
 
@@ -195,13 +195,13 @@ Create a new table.
 
 ```elixir
 # Create inet table
-:ok = NFTex.Table.add(pid, %{
+:ok = NFTables.Table.add(pid, %{
   name: "filter",
   family: :inet
 })
 
 # Create ip6 table
-:ok = NFTex.Table.add(pid, %{
+:ok = NFTables.Table.add(pid, %{
   name: "filter6",
   family: :inet6
 })
@@ -216,7 +216,7 @@ Create a new table.
 Delete a table.
 
 ```elixir
-:ok = NFTex.Table.delete(pid, "filter", :inet)
+:ok = NFTables.Table.delete(pid, "filter", :inet)
 ```
 
 #### `list/2`
@@ -224,7 +224,7 @@ Delete a table.
 List all tables.
 
 ```elixir
-{:ok, tables} = NFTex.Table.list(pid, family: :inet)
+{:ok, tables} = NFTables.Table.list(pid, family: :inet)
 
 for table <- tables do
   IO.puts("Table: #{table.name}")
@@ -236,14 +236,14 @@ end
 Check if a table exists.
 
 ```elixir
-if NFTex.Table.exists?(pid, "filter", :inet) do
+if NFTables.Table.exists?(pid, "filter", :inet) do
   IO.puts("Table exists")
 end
 ```
 
 ---
 
-## NFTex.Chain - Chain Operations
+## NFTables.Chain - Chain Operations
 
 Manage nftables chains.
 
@@ -255,7 +255,7 @@ Create a new chain.
 
 ```elixir
 # Create base chain (with hook)
-:ok = NFTex.Chain.add(pid, %{
+:ok = NFTables.Chain.add(pid, %{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -266,7 +266,7 @@ Create a new chain.
 })
 
 # Create regular chain (no hook)
-:ok = NFTex.Chain.add(pid, %{
+:ok = NFTables.Chain.add(pid, %{
   table: "filter",
   name: "custom_rules",
   family: :inet
@@ -292,7 +292,7 @@ Create a new chain.
 Delete a chain.
 
 ```elixir
-:ok = NFTex.Chain.delete(pid, "filter", "INPUT", :inet)
+:ok = NFTables.Chain.delete(pid, "filter", "INPUT", :inet)
 ```
 
 #### `list/2`
@@ -300,7 +300,7 @@ Delete a chain.
 List all chains.
 
 ```elixir
-{:ok, chains} = NFTex.Chain.list(pid, family: :inet)
+{:ok, chains} = NFTables.Chain.list(pid, family: :inet)
 
 for chain <- chains do
   IO.puts("Chain: #{chain.name} (table: #{chain.table})")
@@ -312,7 +312,7 @@ end
 Check if a chain exists.
 
 ```elixir
-if NFTex.Chain.exists?(pid, "filter", "INPUT", :inet) do
+if NFTables.Chain.exists?(pid, "filter", "INPUT", :inet) do
   IO.puts("Chain exists")
 end
 ```
@@ -322,12 +322,12 @@ end
 Set chain policy.
 
 ```elixir
-:ok = NFTex.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
+:ok = NFTables.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
 ```
 
 ---
 
-## NFTex.Rule - Rule Operations
+## NFTables.Rule - Rule Operations
 
 Manage firewall rules.
 
@@ -338,7 +338,7 @@ Manage firewall rules.
 Block an IP address.
 
 ```elixir
-:ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
+:ok = NFTables.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
 ```
 
 #### `accept_ip/4`
@@ -346,7 +346,7 @@ Block an IP address.
 Accept an IP address.
 
 ```elixir
-:ok = NFTex.Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
+:ok = NFTables.Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
 ```
 
 #### `add/5`
@@ -354,7 +354,7 @@ Accept an IP address.
 Add a rule with custom nft syntax.
 
 ```elixir
-:ok = NFTex.Rule.add(pid, "filter", "INPUT", :inet, "tcp dport 80 accept")
+:ok = NFTables.Rule.add(pid, "filter", "INPUT", :inet, "tcp dport 80 accept")
 ```
 
 #### `list/3`
@@ -362,7 +362,7 @@ Add a rule with custom nft syntax.
 List rules in a chain.
 
 ```elixir
-{:ok, rules} = NFTex.Rule.list(pid, "filter", "INPUT", family: :inet)
+{:ok, rules} = NFTables.Rule.list(pid, "filter", "INPUT", family: :inet)
 
 for rule <- rules do
   IO.inspect(rule)
@@ -374,19 +374,19 @@ end
 Delete a rule by handle.
 
 ```elixir
-:ok = NFTex.Rule.delete(pid, "filter", "INPUT", :inet, 42)
+:ok = NFTables.Rule.delete(pid, "filter", "INPUT", :inet, 42)
 ```
 
 ---
 
-## NFTex.Match - Fluent Rule Construction
+## NFTables.Match - Fluent Rule Construction
 
 Build complex rules using a chainable API.
 
 ### Basic Usage
 
 ```elixir
-alias NFTex.Match
+alias NFTables.Match
 
 Match.new(pid, "filter", "INPUT")
 |> Match.source_ip("192.168.1.1")
@@ -573,7 +573,7 @@ Match.new(pid, "filter", "FORWARD")
 
 ---
 
-## NFTex.Set - Set Operations
+## NFTables.Set - Set Operations
 
 Manage nftables sets for efficient IP/port matching.
 
@@ -584,7 +584,7 @@ Manage nftables sets for efficient IP/port matching.
 Create a new set.
 
 ```elixir
-:ok = NFTex.Set.add(pid, %{
+:ok = NFTables.Set.add(pid, %{
   table: "filter",
   name: "blocklist",
   family: :inet,
@@ -592,7 +592,7 @@ Create a new set.
 })
 
 # With flags
-:ok = NFTex.Set.add(pid, %{
+:ok = NFTables.Set.add(pid, %{
   table: "filter",
   name: "interval_set",
   family: :inet,
@@ -601,7 +601,7 @@ Create a new set.
 })
 
 # With timeout
-:ok = NFTex.Set.add(pid, %{
+:ok = NFTables.Set.add(pid, %{
   table: "filter",
   name: "temp_block",
   family: :inet,
@@ -628,7 +628,7 @@ Create a new set.
 Delete a set.
 
 ```elixir
-:ok = NFTex.Set.delete(pid, "filter", "blocklist", :inet)
+:ok = NFTables.Set.delete(pid, "filter", "blocklist", :inet)
 ```
 
 #### `add_elements/5`
@@ -637,10 +637,10 @@ Add elements to a set.
 
 ```elixir
 # Add single IP
-:ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])
+:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])
 
 # Add multiple IPs
-:ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, [
+:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, [
   "192.168.1.1",
   "192.168.1.2",
   "10.0.0.50"
@@ -652,7 +652,7 @@ Add elements to a set.
 Delete elements from a set.
 
 ```elixir
-:ok = NFTex.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])
+:ok = NFTables.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])
 ```
 
 #### `list_elements/3`
@@ -660,7 +660,7 @@ Delete elements from a set.
 List elements in a set.
 
 ```elixir
-{:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
+{:ok, elements} = NFTables.Set.list_elements(pid, "filter", "blocklist")
 
 for elem <- elements do
   IO.puts("IP: #{elem.key_ip}")
@@ -672,7 +672,7 @@ end
 Check if a set exists.
 
 ```elixir
-if NFTex.Set.exists?(pid, "filter", "blocklist", :inet) do
+if NFTables.Set.exists?(pid, "filter", "blocklist", :inet) do
   IO.puts("Set exists")
 end
 ```
@@ -682,7 +682,7 @@ end
 List all sets.
 
 ```elixir
-{:ok, sets} = NFTex.Set.list(pid, family: :inet)
+{:ok, sets} = NFTables.Set.list(pid, family: :inet)
 
 for set <- sets do
   IO.puts("Set: #{set.name} (type: #{set.type})")
@@ -691,7 +691,7 @@ end
 
 ---
 
-## NFTex.Policy - Pre-built Policies
+## NFTables.Policy - Pre-built Policies
 
 High-level firewall policy functions.
 
@@ -702,7 +702,7 @@ High-level firewall policy functions.
 Set up a complete basic firewall in one call.
 
 ```elixir
-:ok = NFTex.Policy.setup_basic_firewall(pid,
+:ok = NFTables.Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
   ssh_rate_limit: 10
 )
@@ -718,7 +718,7 @@ Set up a complete basic firewall in one call.
 Accept all loopback traffic.
 
 ```elixir
-:ok = NFTex.Policy.accept_loopback(pid)
+:ok = NFTables.Policy.accept_loopback(pid)
 ```
 
 #### `accept_established/1`
@@ -726,7 +726,7 @@ Accept all loopback traffic.
 Accept established and related connections.
 
 ```elixir
-:ok = NFTex.Policy.accept_established(pid)
+:ok = NFTables.Policy.accept_established(pid)
 ```
 
 #### `drop_invalid/1`
@@ -734,7 +734,7 @@ Accept established and related connections.
 Drop invalid packets.
 
 ```elixir
-:ok = NFTex.Policy.drop_invalid(pid)
+:ok = NFTables.Policy.drop_invalid(pid)
 ```
 
 #### `allow_ssh/2`
@@ -743,10 +743,10 @@ Allow SSH with optional rate limiting.
 
 ```elixir
 # Basic SSH allow
-:ok = NFTex.Policy.allow_ssh(pid)
+:ok = NFTables.Policy.allow_ssh(pid)
 
 # With rate limiting
-:ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10, log: true)
+:ok = NFTables.Policy.allow_ssh(pid, rate_limit: 10, log: true)
 ```
 
 #### `allow_http/2`
@@ -754,10 +754,10 @@ Allow SSH with optional rate limiting.
 Allow HTTP traffic.
 
 ```elixir
-:ok = NFTex.Policy.allow_http(pid)
+:ok = NFTables.Policy.allow_http(pid)
 
 # With rate limiting
-:ok = NFTex.Policy.allow_http(pid, rate_limit: 100)
+:ok = NFTables.Policy.allow_http(pid, rate_limit: 100)
 ```
 
 #### `allow_https/1`
@@ -765,7 +765,7 @@ Allow HTTP traffic.
 Allow HTTPS traffic.
 
 ```elixir
-:ok = NFTex.Policy.allow_https(pid)
+:ok = NFTables.Policy.allow_https(pid)
 ```
 
 #### `allow_dns/1`
@@ -773,12 +773,12 @@ Allow HTTPS traffic.
 Allow DNS traffic (TCP and UDP).
 
 ```elixir
-:ok = NFTex.Policy.allow_dns(pid)
+:ok = NFTables.Policy.allow_dns(pid)
 ```
 
 ---
 
-## NFTex.Sysctl - Kernel Parameter Management
+## NFTables.Sysctl - Kernel Parameter Management
 
 Safely read and write kernel network parameters.
 
@@ -789,8 +789,8 @@ Safely read and write kernel network parameters.
 Get a sysctl parameter value.
 
 ```elixir
-{:ok, "0"} = NFTex.Sysctl.get(pid, "net.ipv4.ip_forward")
-{:ok, "1"} = NFTex.Sysctl.get(pid, "net.ipv4.tcp_syncookies")
+{:ok, "0"} = NFTables.Sysctl.get(pid, "net.ipv4.ip_forward")
+{:ok, "1"} = NFTables.Sysctl.get(pid, "net.ipv4.tcp_syncookies")
 ```
 
 #### `set/3`
@@ -798,8 +798,8 @@ Get a sysctl parameter value.
 Set a sysctl parameter value.
 
 ```elixir
-:ok = NFTex.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
-:ok = NFTex.Sysctl.set(pid, "net.ipv4.tcp_syncookies", "1")
+:ok = NFTables.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
+:ok = NFTables.Sysctl.set(pid, "net.ipv4.tcp_syncookies", "1")
 ```
 
 #### `get!/2`
@@ -807,7 +807,7 @@ Set a sysctl parameter value.
 Get a sysctl parameter value, raising on error.
 
 ```elixir
-value = NFTex.Sysctl.get!(pid, "net.ipv4.ip_forward")
+value = NFTables.Sysctl.get!(pid, "net.ipv4.ip_forward")
 ```
 
 #### `set!/3`
@@ -815,7 +815,7 @@ value = NFTex.Sysctl.get!(pid, "net.ipv4.ip_forward")
 Set a sysctl parameter value, raising on error.
 
 ```elixir
-:ok = NFTex.Sysctl.set!(pid, "net.ipv4.ip_forward", "1")
+:ok = NFTables.Sysctl.set!(pid, "net.ipv4.ip_forward", "1")
 ```
 
 ### Supported Parameters
@@ -867,7 +867,7 @@ Set a sysctl parameter value, raising on error.
 
 ---
 
-## NFTex.Sysctl.Network - Network Helpers
+## NFTables.Sysctl.Network - Network Helpers
 
 High-level helpers for common sysctl operations.
 
@@ -878,7 +878,7 @@ High-level helpers for common sysctl operations.
 Enable IPv4 forwarding.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.enable_ipv4_forwarding(pid)
+:ok = NFTables.Sysctl.Network.enable_ipv4_forwarding(pid)
 ```
 
 #### `disable_ipv4_forwarding/1`
@@ -886,7 +886,7 @@ Enable IPv4 forwarding.
 Disable IPv4 forwarding.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.disable_ipv4_forwarding(pid)
+:ok = NFTables.Sysctl.Network.disable_ipv4_forwarding(pid)
 ```
 
 #### `ipv4_forwarding_enabled?/1`
@@ -894,7 +894,7 @@ Disable IPv4 forwarding.
 Check if IPv4 forwarding is enabled.
 
 ```elixir
-{:ok, true} = NFTex.Sysctl.Network.ipv4_forwarding_enabled?(pid)
+{:ok, true} = NFTables.Sysctl.Network.ipv4_forwarding_enabled?(pid)
 ```
 
 #### `enable_ipv6_forwarding/1`
@@ -902,7 +902,7 @@ Check if IPv4 forwarding is enabled.
 Enable IPv6 forwarding.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.enable_ipv6_forwarding(pid)
+:ok = NFTables.Sysctl.Network.enable_ipv6_forwarding(pid)
 ```
 
 #### `disable_ipv6_forwarding/1`
@@ -910,7 +910,7 @@ Enable IPv6 forwarding.
 Disable IPv6 forwarding.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.disable_ipv6_forwarding(pid)
+:ok = NFTables.Sysctl.Network.disable_ipv6_forwarding(pid)
 ```
 
 #### `enable_syncookies/1`
@@ -918,7 +918,7 @@ Disable IPv6 forwarding.
 Enable TCP SYN cookies (DDoS protection).
 
 ```elixir
-:ok = NFTex.Sysctl.Network.enable_syncookies(pid)
+:ok = NFTables.Sysctl.Network.enable_syncookies(pid)
 ```
 
 #### `disable_syncookies/1`
@@ -926,7 +926,7 @@ Enable TCP SYN cookies (DDoS protection).
 Disable TCP SYN cookies.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.disable_syncookies(pid)
+:ok = NFTables.Sysctl.Network.disable_syncookies(pid)
 ```
 
 #### `set_conntrack_max/2`
@@ -934,7 +934,7 @@ Disable TCP SYN cookies.
 Set maximum connection tracking entries.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.set_conntrack_max(pid, 131072)
+:ok = NFTables.Sysctl.Network.set_conntrack_max(pid, 131072)
 ```
 
 #### `get_conntrack_max/1`
@@ -942,7 +942,7 @@ Set maximum connection tracking entries.
 Get current connection tracking maximum.
 
 ```elixir
-{:ok, 65536} = NFTex.Sysctl.Network.get_conntrack_max(pid)
+{:ok, 65536} = NFTables.Sysctl.Network.get_conntrack_max(pid)
 ```
 
 #### `ignore_ping/1`
@@ -950,7 +950,7 @@ Get current connection tracking maximum.
 Ignore all ICMP ping requests (stealth mode).
 
 ```elixir
-:ok = NFTex.Sysctl.Network.ignore_ping(pid)
+:ok = NFTables.Sysctl.Network.ignore_ping(pid)
 ```
 
 #### `allow_ping/1`
@@ -958,7 +958,7 @@ Ignore all ICMP ping requests (stealth mode).
 Allow ICMP ping requests.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.allow_ping(pid)
+:ok = NFTables.Sysctl.Network.allow_ping(pid)
 ```
 
 #### `configure_router/2`
@@ -966,7 +966,7 @@ Allow ICMP ping requests.
 Configure common router settings.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.configure_router(pid,
+:ok = NFTables.Sysctl.Network.configure_router(pid,
   ipv4_forwarding: true,
   ipv6_forwarding: true,
   syncookies: true,
@@ -985,7 +985,7 @@ Configure common router settings.
 Apply security hardening settings.
 
 ```elixir
-:ok = NFTex.Sysctl.Network.harden_security(pid)
+:ok = NFTables.Sysctl.Network.harden_security(pid)
 ```
 
 **Settings Applied:**
@@ -996,7 +996,7 @@ Apply security hardening settings.
 
 ---
 
-## NFTex.Query - Query Operations
+## NFTables.Query - Query Operations
 
 Query nftables configuration.
 
@@ -1007,7 +1007,7 @@ Query nftables configuration.
 List all tables.
 
 ```elixir
-{:ok, tables} = NFTex.Query.list_tables(pid, family: :inet)
+{:ok, tables} = NFTables.Query.list_tables(pid, family: :inet)
 
 for table <- tables do
   IO.puts("Table: #{table.name} (family: #{table.family})")
@@ -1019,7 +1019,7 @@ end
 List all chains.
 
 ```elixir
-{:ok, chains} = NFTex.Query.list_chains(pid, family: :inet)
+{:ok, chains} = NFTables.Query.list_chains(pid, family: :inet)
 
 for chain <- chains do
   IO.puts("Chain: #{chain.name} (table: #{chain.table})")
@@ -1034,7 +1034,7 @@ end
 List all sets.
 
 ```elixir
-{:ok, sets} = NFTex.Query.list_sets(pid, family: :inet)
+{:ok, sets} = NFTables.Query.list_sets(pid, family: :inet)
 
 for set <- sets do
   IO.puts("Set: #{set.name} (type: #{set.type})")
@@ -1046,7 +1046,7 @@ end
 List all rules.
 
 ```elixir
-{:ok, rules} = NFTex.Query.list_rules(pid, family: :inet)
+{:ok, rules} = NFTables.Query.list_rules(pid, family: :inet)
 
 for rule <- rules do
   IO.inspect(rule)
@@ -1058,7 +1058,7 @@ end
 List elements in a specific set.
 
 ```elixir
-{:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocklist")
+{:ok, elements} = NFTables.Query.list_set_elements(pid, "filter", "blocklist")
 
 for elem <- elements do
   IO.puts("Element: #{elem.key_ip}")
@@ -1067,7 +1067,7 @@ end
 
 ---
 
-## NFTex.NAT - NAT Operations
+## NFTables.NAT - NAT Operations
 
 Network Address Translation operations.
 
@@ -1078,7 +1078,7 @@ Network Address Translation operations.
 Set up NAT with masquerading.
 
 ```elixir
-:ok = NFTex.NAT.setup_masquerade(pid, %{
+:ok = NFTables.NAT.setup_masquerade(pid, %{
   table: "nat",
   out_interface: "eth0",
   masquerade_source: "10.0.0.0/24"
@@ -1090,7 +1090,7 @@ Set up NAT with masquerading.
 Add port forwarding rule.
 
 ```elixir
-:ok = NFTex.NAT.add_port_forward(pid, %{
+:ok = NFTables.NAT.add_port_forward(pid, %{
   table: "nat",
   protocol: :tcp,
   external_port: 8080,
@@ -1104,7 +1104,7 @@ Add port forwarding rule.
 Add destination NAT rule.
 
 ```elixir
-:ok = NFTex.NAT.add_dnat_rule(pid, %{
+:ok = NFTables.NAT.add_dnat_rule(pid, %{
   table: "nat",
   chain: "PREROUTING",
   protocol: :tcp,
@@ -1118,7 +1118,7 @@ Add destination NAT rule.
 Add source NAT rule.
 
 ```elixir
-:ok = NFTex.NAT.add_snat_rule(pid, %{
+:ok = NFTables.NAT.add_snat_rule(pid, %{
   table: "nat",
   chain: "POSTROUTING",
   source: "10.0.0.0/24",
@@ -1128,7 +1128,7 @@ Add source NAT rule.
 
 ---
 
-## NFTex.JSONBuilder - JSON Command Builder
+## NFTables.JSONBuilder - JSON Command Builder
 
 Low-level JSON command construction (rarely needed by most users).
 
@@ -1139,7 +1139,7 @@ Low-level JSON command construction (rarely needed by most users).
 Build add table JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.add_table("inet", "filter")
+cmd = NFTables.JSONBuilder.add_table("inet", "filter")
 json = Jason.encode!(cmd)
 ```
 
@@ -1148,7 +1148,7 @@ json = Jason.encode!(cmd)
 Build delete table JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.delete_table("inet", "filter")
+cmd = NFTables.JSONBuilder.delete_table("inet", "filter")
 ```
 
 #### `list_tables/1`
@@ -1156,7 +1156,7 @@ cmd = NFTex.JSONBuilder.delete_table("inet", "filter")
 Build list tables JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.list_tables(family: :inet)
+cmd = NFTables.JSONBuilder.list_tables(family: :inet)
 ```
 
 #### `add_chain/4`
@@ -1164,7 +1164,7 @@ cmd = NFTex.JSONBuilder.list_tables(family: :inet)
 Build add chain JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.add_chain("inet", "filter", "INPUT",
+cmd = NFTables.JSONBuilder.add_chain("inet", "filter", "INPUT",
   type: :filter,
   hook: :input,
   priority: 0,
@@ -1177,7 +1177,7 @@ cmd = NFTex.JSONBuilder.add_chain("inet", "filter", "INPUT",
 Build delete chain JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.delete_chain("inet", "filter", "INPUT")
+cmd = NFTables.JSONBuilder.delete_chain("inet", "filter", "INPUT")
 ```
 
 #### `add_set/4`
@@ -1185,7 +1185,7 @@ cmd = NFTex.JSONBuilder.delete_chain("inet", "filter", "INPUT")
 Build add set JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.add_set("inet", "filter", "blocklist",
+cmd = NFTables.JSONBuilder.add_set("inet", "filter", "blocklist",
   type: "ipv4_addr"
 )
 ```
@@ -1195,7 +1195,7 @@ cmd = NFTex.JSONBuilder.add_set("inet", "filter", "blocklist",
 Build delete set JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.delete_set("inet", "filter", "blocklist")
+cmd = NFTables.JSONBuilder.delete_set("inet", "filter", "blocklist")
 ```
 
 #### `add_element/4`
@@ -1203,7 +1203,7 @@ cmd = NFTex.JSONBuilder.delete_set("inet", "filter", "blocklist")
 Build add element JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.add_element("inet", "filter", "blocklist",
+cmd = NFTables.JSONBuilder.add_element("inet", "filter", "blocklist",
   ["192.168.1.1", "192.168.1.2"]
 )
 ```
@@ -1213,7 +1213,7 @@ cmd = NFTex.JSONBuilder.add_element("inet", "filter", "blocklist",
 Build delete element JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.delete_element("inet", "filter", "blocklist",
+cmd = NFTables.JSONBuilder.delete_element("inet", "filter", "blocklist",
   ["192.168.1.1"]
 )
 ```
@@ -1223,7 +1223,7 @@ cmd = NFTex.JSONBuilder.delete_element("inet", "filter", "blocklist",
 Build add rule JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.add_rule("inet", "filter", "INPUT",
+cmd = NFTables.JSONBuilder.add_rule("inet", "filter", "INPUT",
   "ip saddr 192.168.1.1 drop"
 )
 ```
@@ -1233,7 +1233,7 @@ cmd = NFTex.JSONBuilder.add_rule("inet", "filter", "INPUT",
 Build delete rule JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.delete_rule("inet", "filter", "INPUT", 42)
+cmd = NFTables.JSONBuilder.delete_rule("inet", "filter", "INPUT", 42)
 ```
 
 #### `list_ruleset/1`
@@ -1241,7 +1241,7 @@ cmd = NFTex.JSONBuilder.delete_rule("inet", "filter", "INPUT", 42)
 Build list ruleset JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.list_ruleset(family: :inet)
+cmd = NFTables.JSONBuilder.list_ruleset(family: :inet)
 ```
 
 #### `flush_ruleset/1`
@@ -1249,7 +1249,7 @@ cmd = NFTex.JSONBuilder.list_ruleset(family: :inet)
 Build flush ruleset JSON.
 
 ```elixir
-cmd = NFTex.JSONBuilder.flush_ruleset(family: :inet)
+cmd = NFTables.JSONBuilder.flush_ruleset(family: :inet)
 ```
 
 #### `sysctl_get/1`
@@ -1257,7 +1257,7 @@ cmd = NFTex.JSONBuilder.flush_ruleset(family: :inet)
 Build sysctl get JSON.
 
 ```elixir
-json = NFTex.JSONBuilder.sysctl_get("net.ipv4.ip_forward")
+json = NFTables.JSONBuilder.sysctl_get("net.ipv4.ip_forward")
 ```
 
 #### `sysctl_set/2`
@@ -1265,14 +1265,14 @@ json = NFTex.JSONBuilder.sysctl_get("net.ipv4.ip_forward")
 Build sysctl set JSON.
 
 ```elixir
-json = NFTex.JSONBuilder.sysctl_set("net.ipv4.ip_forward", "1")
+json = NFTables.JSONBuilder.sysctl_set("net.ipv4.ip_forward", "1")
 ```
 
 ---
 
 ## Error Handling
 
-All NFTex functions return either:
+All NFTables functions return either:
 - `{:ok, result}` on success
 - `{:error, reason}` on failure
 - `:ok` for operations with no return value
@@ -1280,7 +1280,7 @@ All NFTex functions return either:
 **Example:**
 
 ```elixir
-case NFTex.Table.add(pid, %{name: "filter", family: :inet}) do
+case NFTables.Table.add(pid, %{name: "filter", family: :inet}) do
   :ok ->
     IO.puts("Table created")
 
@@ -1293,7 +1293,7 @@ end
 
 ```elixir
 # Raises RuntimeError on failure
-value = NFTex.Sysctl.get!(pid, "net.ipv4.ip_forward")
+value = NFTables.Sysctl.get!(pid, "net.ipv4.ip_forward")
 ```
 
 ---

@@ -25,7 +25,7 @@ defmodule RateLimiting do
   Advanced rate limiting for DDoS protection and resource management.
   """
 
-  alias NFTex.{Table, Chain, RuleBuilder, Policy}
+  alias NFTables.{Table, Chain, RuleBuilder, Policy}
 
   def run do
     IO.puts("Setting up Rate Limiting Firewall...")
@@ -45,8 +45,8 @@ defmodule RateLimiting do
 
   defp setup_rate_limiting do
     # Use JSON-based port (Elixir maps/terms)
-    {:ok, pid} = NFTex.start_link()
-    IO.puts("✓ NFTex started (JSON-based port)")
+    {:ok, pid} = NFTables.start_link()
+    IO.puts("✓ NFTables started (JSON-based port)")
 
     # Clean existing filter table
     case Table.delete(pid, "filter", :inet) do

@@ -3,7 +3,7 @@
 # Sysctl Network Parameter Management Example
 #
 # This example demonstrates how to safely manage Linux kernel network
-# parameters via NFTex's sysctl API.
+# parameters via NFTables's sysctl API.
 #
 # Features:
 # - Read/write network kernel parameters
@@ -25,17 +25,17 @@ Mix.install([{:nftables, path: "."}])
 
 defmodule SysctlManagement do
   @moduledoc """
-  Demonstrates sysctl network parameter management with NFTex.
+  Demonstrates sysctl network parameter management with NFTables.
   """
 
-  alias NFTex.{Sysctl, Sysctl.Network}
+  alias NFTables.{Sysctl, Sysctl.Network}
 
   def run do
-    IO.puts("=== NFTex Sysctl Management Example ===\n")
+    IO.puts("=== NFTables Sysctl Management Example ===\n")
 
-    # Start NFTex
-    {:ok, pid} = NFTex.start_link()
-    IO.puts("✓ NFTex started\n")
+    # Start NFTables
+    {:ok, pid} = NFTables.start_link()
+    IO.puts("✓ NFTables started\n")
 
     # 1. Read current network parameters
     demo_read_parameters(pid)

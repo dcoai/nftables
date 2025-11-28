@@ -60,7 +60,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTex process
+  - `pid` - NFTables process
   - `interface` - Outgoing interface name (e.g., "eth0", "wan0")
   - `opts` - Options:
     - `:table` - NAT table name (default: "nat")
@@ -99,7 +99,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTex process
+  - `pid` - NFTables process
   - `external_port` - Port to listen on
   - `internal_ip` - Destination IP address
   - `internal_port` - Destination port (defaults to external_port)
@@ -162,7 +162,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTex process
+  - `pid` - NFTables process
   - `public_ip` - External IP address
   - `private_ip` - Internal IP address
   - `opts` - Options:
@@ -193,7 +193,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTex process
+  - `pid` - NFTables process
   - `source` - Source IP or CIDR (e.g., "192.168.1.0/24")
   - `nat_ip` - IP to NAT to
   - `opts` - Options:
@@ -243,7 +243,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTex process
+  - `pid` - NFTables process
   - `dest` - Destination IP to match
   - `nat_ip` - IP to NAT to
   - `opts` - Options:

@@ -1,9 +1,9 @@
 #!/usr/bin/env elixir
 
-# Advanced NFTex Features Demo
+# Advanced NFTables Features Demo
 #
 # This example demonstrates the new match expressions, NAT operations,
-# and connection tracking features added to NFTex.
+# and connection tracking features added to NFTables.
 #
 # Prerequisites:
 # - CAP_NET_ADMIN capability set on the port binary
@@ -11,21 +11,21 @@
 
 defmodule AdvancedFeaturesDemo do
   @moduledoc """
-  Demonstrates advanced NFTex features including:
+  Demonstrates advanced NFTables features including:
   - Extended match expressions (TCP flags, packet length, TTL, MAC, marks, DSCP)
   - NAT operations (masquerade, port forwarding, static NAT)
   - Advanced connection tracking (direction, status, marks)
   - Packet modification (set marks)
   """
 
-  alias NFTex.{Table, Chain, RuleBuilder, NAT}
+  alias NFTables.{Table, Chain, RuleBuilder, NAT}
 
   def run do
-    IO.puts("\n=== Advanced NFTex Features Demo ===\n")
+    IO.puts("\n=== Advanced NFTables Features Demo ===\n")
 
-    # Start NFTex with Port (JSON-based communication)
-    {:ok, pid} = NFTex.start_link(check_capabilities: false)
-    IO.puts("✓ NFTex started\n")
+    # Start NFTables with Port (JSON-based communication)
+    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    IO.puts("✓ NFTables started\n")
 
     # Clean up any existing test tables
     cleanup(pid)

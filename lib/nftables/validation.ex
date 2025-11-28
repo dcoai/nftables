@@ -1,6 +1,6 @@
 defmodule NFTables.Validation do
   @moduledoc """
-  Validation helpers for NFTex operations with user-friendly error messages.
+  Validation helpers for NFTables operations with user-friendly error messages.
 
   This module provides validation functions that return clear, actionable error messages
   to help users quickly identify and fix issues.
@@ -211,7 +211,7 @@ defmodule NFTables.Validation do
       "Failed to add rule to filter/INPUT: Table or chain not found. Ensure the table and chain exist (e.g., 'nft add table filter' and 'nft add chain filter INPUT ...')"
 
       iex> NFTables.Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{operation: :rule_add})
-      "Failed to add rule: Permission denied. NFTex requires CAP_NET_ADMIN capability. Run: sudo setcap cap_net_admin=ep path/to/priv/port_nftables"
+      "Failed to add rule: Permission denied. NFTables requires CAP_NET_ADMIN capability. Run: sudo setcap cap_net_admin=ep path/to/priv/port_nftables"
   """
   @spec enhance_netlink_error(String.t() | integer(), map()) :: String.t()
   def enhance_netlink_error(error, context \\ %{})
@@ -248,7 +248,7 @@ defmodule NFTables.Validation do
     base_msg = operation_prefix(operation)
 
     "#{base_msg}: Permission denied. " <>
-      "NFTex requires CAP_NET_ADMIN capability. " <>
+      "NFTables requires CAP_NET_ADMIN capability. " <>
       "Run: sudo setcap cap_net_admin=ep path/to/priv/port_nftables"
   end
 

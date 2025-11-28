@@ -2,21 +2,21 @@
 
 # IP Blocklist Example
 #
-# This example demonstrates how to use NFTex to create and manage
+# This example demonstrates how to use NFTables to create and manage
 # an IP address blocklist using nftables sets.
 #
 # **Format**: This example uses JSON format for communication with libnftables.
 #
 # Requirements:
-# - The NFTex port binary must have CAP_NET_ADMIN capability
+# - The NFTables port binary must have CAP_NET_ADMIN capability
 # - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 #
 # Usage:
 #   mix run examples/04_ip_blocklist.exs
 
-# Start NFTex (JSON-based port)
-{:ok, pid} = NFTex.start_link()
-IO.puts("✓ NFTex started (JSON-based port)\n")
+# Start NFTables (JSON-based port)
+{:ok, pid} = NFTables.start_link()
+IO.puts("✓ NFTables started (JSON-based port)\n")
 
 # Configuration
 table = "filter"
@@ -27,7 +27,7 @@ IO.puts("Creating blocklist set...")
 
 # Try to create the set (will fail if it already exists, which is fine)
 # Use the high-level Set API instead of raw JSON
-case NFTex.Set.add(pid, %{
+case NFTables.Set.add(pid, %{
   name: blocklist_name,
   table: table,
   family: :inet,
@@ -44,7 +44,7 @@ end
 
 # Step 2: Check if the set exists
 IO.puts("\nChecking if set exists...")
-if NFTex.Set.exists?(pid, table, blocklist_name, :inet) do
+if NFTables.Set.exists?(pid, table, blocklist_name, :inet) do
   IO.puts("✓ Set '#{blocklist_name}' exists")
 else
   IO.puts("✗ Set '#{blocklist_name}' does not exist")
@@ -62,7 +62,7 @@ blocked_ips = [
   "203.0.113.42"    # TEST-NET-3 (example)
 ]
 
-case NFTex.Set.add_elements(pid, table, blocklist_name, :inet, blocked_ips) do
+case NFTables.Set.add_elements(pid, table, blocklist_name, :inet, blocked_ips) do
   :ok ->
     IO.puts("✓ Added #{length(blocked_ips)} IPs to blocklist:")
     for ip_str <- blocked_ips do
@@ -76,7 +76,7 @@ end
 # Step 4: List all blocked IPs
 IO.puts("\nCurrent blocklist:")
 
-case NFTex.Set.list_elements(pid, table, blocklist_name) do
+case NFTables.Set.list_elements(pid, table, blocklist_name) do
   {:ok, elements} ->
     IO.puts("✓ Blocked IPs (#{length(elements)} total):")
     for elem <- Enum.sort_by(elements, & &1.key_ip) do
@@ -93,7 +93,7 @@ IO.puts("\nRemoving false positive...")
 
 ip_to_unblock = ["192.168.1.100"]
 
-case NFTex.Set.delete_elements(pid, table, blocklist_name, :inet, ip_to_unblock) do
+case NFTables.Set.delete_elements(pid, table, blocklist_name, :inet, ip_to_unblock) do
   :ok ->
     IO.puts("✓ Removed 192.168.1.100 from blocklist")
 
@@ -104,7 +104,7 @@ end
 # Step 6: Verify the IP was removed
 IO.puts("\nUpdated blocklist:")
 
-case NFTex.Set.list_elements(pid, table, blocklist_name) do
+case NFTables.Set.list_elements(pid, table, blocklist_name) do
   {:ok, elements} ->
     IO.puts("✓ Blocked IPs (#{length(elements)} remaining):")
     for elem <- Enum.sort_by(elements, & &1.key_ip) do
@@ -118,7 +118,7 @@ end
 # Step 7: Show all sets in the filter table
 IO.puts("\nAll sets in '#{table}' table:")
 
-case NFTex.Set.list(pid, family: :inet) do
+case NFTables.Set.list(pid, family: :inet) do
   {:ok, sets} ->
     filter_sets = Enum.filter(sets, fn s -> s.table == table end)
     IO.puts("✓ Found #{length(filter_sets)} sets:")
@@ -141,7 +141,7 @@ Next steps:
 
   2. Integrate with your application to dynamically update the blocklist
 
-  3. Use NFTex.Set.add_elements/5 to block new IPs in real-time
+  3. Use NFTables.Set.add_elements/5 to block new IPs in real-time
 
-  4. Use NFTex.Set.delete_elements/5 to unblock IPs
+  4. Use NFTables.Set.delete_elements/5 to unblock IPs
 """)

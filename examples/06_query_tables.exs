@@ -2,28 +2,28 @@
 
 # Query Tables Example
 #
-# This example demonstrates how to use NFTex.Query to inspect
+# This example demonstrates how to use NFTables.Query to inspect
 # your current nftables configuration.
 #
 # **Format**: This example uses JSON format for communication with libnftables.
 #
 # Requirements:
-# - The NFTex port binary must have CAP_NET_ADMIN capability
+# - The NFTables port binary must have CAP_NET_ADMIN capability
 # - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 #
 # Usage:
 #   mix run examples/06_query_tables.exs
 
-# Start NFTex (JSON-based port)
-{:ok, pid} = NFTex.start_link()
-IO.puts("NFTex Query Examples (JSON-based port)\n")
+# Start NFTables (JSON-based port)
+{:ok, pid} = NFTables.start_link()
+IO.puts("NFTables Query Examples (JSON-based port)\n")
 IO.puts(String.duplicate("=", 60))
 
 # Query 1: List all tables
 IO.puts("\n1. LISTING ALL TABLES (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTex.Query.list_tables(pid, family: :inet) do
+case NFTables.Query.list_tables(pid, family: :inet) do
   {:ok, tables} ->
     IO.puts("Found #{length(tables)} tables:")
     for table <- tables do
@@ -40,7 +40,7 @@ end
 IO.puts("\n2. LISTING ALL CHAINS (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTex.Query.list_chains(pid, family: :inet) do
+case NFTables.Query.list_chains(pid, family: :inet) do
   {:ok, chains} ->
     IO.puts("Found #{length(chains)} chains:")
 
@@ -74,7 +74,7 @@ end
 IO.puts("\n3. LISTING ALL SETS (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTex.Query.list_sets(pid, family: :inet) do
+case NFTables.Query.list_sets(pid, family: :inet) do
   {:ok, sets} ->
     IO.puts("Found #{length(sets)} sets:")
 
@@ -97,7 +97,7 @@ end
 IO.puts("\n4. LISTING ALL RULES (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTex.Query.list_rules(pid, family: :inet) do
+case NFTables.Query.list_rules(pid, family: :inet) do
   {:ok, rules} ->
     IO.puts("Found #{length(rules)} rules:")
 
@@ -116,11 +116,11 @@ IO.puts("\n5. EXAMINING SET ELEMENTS")
 IO.puts(String.duplicate("-", 60))
 
 # Find a set to examine
-case NFTex.Query.list_sets(pid, family: :inet) do
+case NFTables.Query.list_sets(pid, family: :inet) do
   {:ok, [first_set | _]} ->
     IO.puts("Examining set: #{first_set.name} in table #{first_set.table}")
 
-    case NFTex.Query.list_set_elements(pid, first_set.table, first_set.name, family: :inet) do
+    case NFTables.Query.list_set_elements(pid, first_set.table, first_set.name, family: :inet) do
       {:ok, []} ->
         IO.puts("  (empty set)")
 

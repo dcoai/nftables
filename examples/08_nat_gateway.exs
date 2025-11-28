@@ -33,7 +33,7 @@ defmodule NATGatewayExample do
   - Transparent HTTP proxy for content filtering
   """
 
-  alias NFTex.{Table, Chain, NAT, RuleBuilder}
+  alias NFTables.{Table, Chain, NAT, RuleBuilder}
 
   # Network configuration
   @wan_interface "eth0"
@@ -59,11 +59,11 @@ defmodule NATGatewayExample do
 
   def run do
     IO.puts("\n╔═══════════════════════════════════════════════╗")
-    IO.puts("║      NFTex - NAT Gateway Configuration       ║")
+    IO.puts("║      NFTables - NAT Gateway Configuration       ║")
     IO.puts("╚═══════════════════════════════════════════════╝\n")
 
-    {:ok, pid} = NFTex.start_link(check_capabilities: false)
-    IO.puts("✓ NFTex started (JSON-based port)\n")
+    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    IO.puts("✓ NFTables started (JSON-based port)\n")
 
     # Cleanup and setup
     cleanup(pid)

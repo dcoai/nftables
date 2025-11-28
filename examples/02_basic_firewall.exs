@@ -27,7 +27,7 @@ defmodule BasicFirewall do
   Complete basic firewall setup with secure defaults.
   """
 
-  alias NFTex.{Table, Chain, Policy}
+  alias NFTables.{Table, Chain, Policy}
 
   def run do
     IO.puts("Setting up basic firewall...")
@@ -47,10 +47,10 @@ defmodule BasicFirewall do
   end
 
   defp setup_firewall do
-    # Start NFTex (JSON-based port)
-    {:ok, pid} = NFTex.start_link()
+    # Start NFTables (JSON-based port)
+    {:ok, pid} = NFTables.start_link()
 
-    IO.puts("✓ NFTex started (JSON-based port)")
+    IO.puts("✓ NFTables started (JSON-based port)")
 
     # Clean slate - delete existing filter table if it exists
     case Table.delete(pid, "filter", :inet) do
@@ -125,7 +125,7 @@ defmodule BasicFirewall do
   end
 
   defp display_rules(pid) do
-    case NFTex.Query.list_chains(pid, family: :inet) do
+    case NFTables.Query.list_chains(pid, family: :inet) do
       {:ok, chains} ->
         for chain <- chains do
           IO.puts("Chain #{chain.name} (table: #{chain.table})")

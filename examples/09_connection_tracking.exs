@@ -44,7 +44,7 @@ defmodule ConnectionTrackingExample do
   - Policy routing: Different marks for different WANs
   """
 
-  alias NFTex.{Table, Chain, RuleBuilder, Query}
+  alias NFTables.{Table, Chain, RuleBuilder, Query}
 
   # Connection marks for WAN selection
   @mark_wan0 100  # Primary fiber
@@ -53,12 +53,12 @@ defmodule ConnectionTrackingExample do
 
   def run do
     IO.puts("\n╔═══════════════════════════════════════════════╗")
-    IO.puts("║   NFTex - Connection Tracking Demo          ║")
+    IO.puts("║   NFTables - Connection Tracking Demo          ║")
     IO.puts("║   Multi-WAN Load Balancing & Failover        ║")
     IO.puts("╚═══════════════════════════════════════════════╝\n")
 
-    {:ok, pid} = NFTex.start_link(check_capabilities: false)
-    IO.puts("✓ NFTex started (JSON-based port)\n")
+    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    IO.puts("✓ NFTables started (JSON-based port)\n")
 
     # Cleanup and setup
     cleanup(pid)

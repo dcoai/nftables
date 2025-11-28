@@ -1,10 +1,10 @@
-# NFTex Examples
+# NFTables Examples
 
-This directory contains practical examples demonstrating how to use NFTex for common nftables operations.
+This directory contains practical examples demonstrating how to use NFTables for common nftables operations.
 
 ## Prerequisites
 
-Before running these examples, ensure the NFTex port binary has the required capability:
+Before running these examples, ensure the NFTables port binary has the required capability:
 
 ```bash
 sudo setcap cap_net_admin=ep priv/port_nftables
@@ -46,7 +46,7 @@ These examples use the current JSON-based API (libnftables) and are ordered in t
 
 **First Step:** Configure kernel network parameters before setting up firewall rules.
 
-Demonstrates safe management of Linux kernel network parameters via NFTex's sysctl API.
+Demonstrates safe management of Linux kernel network parameters via NFTables's sysctl API.
 
 **Topics covered:**
 - Reading current network parameters (IPv4/IPv6 forwarding, TCP settings, etc.)
@@ -81,9 +81,9 @@ Complete secure firewall setup with defense-in-depth approach.
 Demonstrates creating dynamic firewall rules to block malicious IPs and allow trusted sources.
 
 **Topics covered:**
-- Using `NFTex.Rule.block_ip/4` for simple IP blocking
-- Using `NFTex.Rule.accept_ip/4` for allowlist rules
-- Listing rules with `NFTex.Rule.list/4`
+- Using `NFTables.Rule.block_ip/4` for simple IP blocking
+- Using `NFTables.Rule.accept_ip/4` for allowlist rules
+- Listing rules with `NFTables.Rule.list/4`
 - Automatic counter addition for traffic monitoring
 - Dynamic rule creation without system restart
 
@@ -147,37 +147,37 @@ These will be implemented using the current v0.4.0 API (`JSONBuilder` with nft s
 
 ## API Quick Reference
 
-### NFTex.Policy - Pre-built Firewall Policies (New in 0.3.0)
+### NFTables.Policy - Pre-built Firewall Policies (New in 0.3.0)
 
 High-level functions for common firewall configurations:
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Quick setup: Complete basic firewall in one call
-:ok = NFTex.Policy.setup_basic_firewall(pid,
+:ok = NFTables.Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
   ssh_rate_limit: 10
 )
 
 # Individual policies
-:ok = NFTex.Policy.accept_loopback(pid)
-:ok = NFTex.Policy.accept_established(pid)
-:ok = NFTex.Policy.drop_invalid(pid)
+:ok = NFTables.Policy.accept_loopback(pid)
+:ok = NFTables.Policy.accept_established(pid)
+:ok = NFTables.Policy.drop_invalid(pid)
 
 # Service-specific allows
-:ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10, log: true)
-:ok = NFTex.Policy.allow_http(pid, rate_limit: 100)
-:ok = NFTex.Policy.allow_https(pid)
-:ok = NFTex.Policy.allow_dns(pid)
+:ok = NFTables.Policy.allow_ssh(pid, rate_limit: 10, log: true)
+:ok = NFTables.Policy.allow_http(pid, rate_limit: 100)
+:ok = NFTables.Policy.allow_https(pid)
+:ok = NFTables.Policy.allow_dns(pid)
 ```
 
-### NFTex.Match - Fluent API for Rules
+### NFTables.Match - Fluent API for Rules
 
 Chainable API for building complex rules intuitively:
 
 ```elixir
-alias NFTex.Match
+alias NFTables.Match
 
 # Block IP with logging
 Match.new(pid, "filter", "INPUT")
@@ -227,13 +227,13 @@ Match.new(pid, "filter", "INPUT")
 - `drop/1` - Drop packets silently
 - `reject/1` - Reject with ICMP error
 
-### NFTex.Chain - Chain Management (New in 0.3.0)
+### NFTables.Chain - Chain Management (New in 0.3.0)
 
 High-level chain operations with automatic resource management:
 
 ```elixir
 # Create base chain (hooked into netfilter)
-:ok = NFTex.Chain.add(pid, %{
+:ok = NFTables.Chain.add(pid, %{
   table: "filter",
   name: "INPUT",
   family: :inet,
@@ -244,95 +244,95 @@ High-level chain operations with automatic resource management:
 })
 
 # Create regular chain (for organizing rules)
-:ok = NFTex.Chain.add(pid, %{
+:ok = NFTables.Chain.add(pid, %{
   table: "filter",
   name: "my_custom_rules",
   family: :inet
 })
 
 # List all chains
-{:ok, chains} = NFTex.Chain.list(pid, family: :inet)
+{:ok, chains} = NFTables.Chain.list(pid, family: :inet)
 
 # Check if chain exists
-if NFTex.Chain.exists?(pid, "filter", "INPUT", :inet) do
+if NFTables.Chain.exists?(pid, "filter", "INPUT", :inet) do
   IO.puts("Chain exists")
 end
 
 # Set chain policy
-:ok = NFTex.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
+:ok = NFTables.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
 
 # Delete chain
-:ok = NFTex.Chain.delete(pid, "filter", "INPUT", :inet)
+:ok = NFTables.Chain.delete(pid, "filter", "INPUT", :inet)
 ```
 
-### NFTex.Rule - High-level rule operations
+### NFTables.Rule - High-level rule operations
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Block an IP address
 ip = "192.168.1.100"
-:ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", ip)
+:ok = NFTables.Rule.block_ip(pid, "filter", "INPUT", ip)
 
 # Accept an IP address
-:ok = NFTex.Rule.accept_ip(pid, "filter", "INPUT", ip)
+:ok = NFTables.Rule.accept_ip(pid, "filter", "INPUT", ip)
 
 # List rules in a chain
-{:ok, rules} = NFTex.Rule.list(pid, "filter", "INPUT", family: :inet)
+{:ok, rules} = NFTables.Rule.list(pid, "filter", "INPUT", family: :inet)
 ```
 
-### NFTex.Set - High-level set operations
+### NFTables.Set - High-level set operations
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Add elements to existing set (string format)
 ips = ["192.168.1.100", "10.0.0.50"]
-:ok = NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ips)
+:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ips)
 
 # Delete elements
-:ok = NFTex.Set.delete_elements(pid, "filter", "blocklist", :inet, ips)
+:ok = NFTables.Set.delete_elements(pid, "filter", "blocklist", :inet, ips)
 
 # List elements
-{:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
+{:ok, elements} = NFTables.Set.list_elements(pid, "filter", "blocklist")
 
 # Check if set exists
-exists = NFTex.Set.exists?(pid, "filter", "blocklist", :inet)
+exists = NFTables.Set.exists?(pid, "filter", "blocklist", :inet)
 
 # List all sets
-{:ok, sets} = NFTex.Set.list(pid, family: :inet)
+{:ok, sets} = NFTables.Set.list(pid, family: :inet)
 ```
 
 
-### NFTex.Query - Query operations
+### NFTables.Query - Query operations
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # List tables
-{:ok, tables} = NFTex.Query.list_tables(pid, family: :inet)
+{:ok, tables} = NFTables.Query.list_tables(pid, family: :inet)
 
 # List chains
-{:ok, chains} = NFTex.Query.list_chains(pid, family: :inet)
+{:ok, chains} = NFTables.Query.list_chains(pid, family: :inet)
 
 # List sets
-{:ok, sets} = NFTex.Query.list_sets(pid, family: :inet)
+{:ok, sets} = NFTables.Query.list_sets(pid, family: :inet)
 
 # List rules
-{:ok, rules} = NFTex.Query.list_rules(pid, family: :inet)
+{:ok, rules} = NFTables.Query.list_rules(pid, family: :inet)
 
 # List set elements
-{:ok, elements} = NFTex.Query.list_set_elements(pid, "filter", "blocklist")
+{:ok, elements} = NFTables.Query.list_set_elements(pid, "filter", "blocklist")
 ```
 
-### NFTex.Sysctl - Network Parameter Management (New in 0.5.0)
+### NFTables.Sysctl - Network Parameter Management (New in 0.5.0)
 
 Safe, whitelist-based access to kernel network parameters:
 
 ```elixir
-alias NFTex.{Sysctl, Sysctl.Network}
+alias NFTables.{Sysctl, Sysctl.Network}
 
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Low-level API - Direct parameter access
 {:ok, "0"} = Sysctl.get(pid, "net.ipv4.ip_forward")
@@ -385,10 +385,10 @@ alias NFTex.{Sysctl, Sysctl.Network}
 ```elixir
 # Use string format for IP addresses (v0.4.0+)
 ip = "192.168.1.100"
-:ok = NFTex.Rule.block_ip(pid, "filter", "INPUT", ip)
+:ok = NFTables.Rule.block_ip(pid, "filter", "INPUT", ip)
 
-# NFTex.Query automatically converts hex keys to readable IPs
-{:ok, elements} = NFTex.Set.list_elements(pid, "filter", "blocklist")
+# NFTables.Query automatically converts hex keys to readable IPs
+{:ok, elements} = NFTables.Set.list_elements(pid, "filter", "blocklist")
 for elem <- elements do
   IO.puts(elem.key_ip)  # "192.168.1.100"
 end
@@ -397,7 +397,7 @@ end
 ### Error Handling
 
 ```elixir
-case NFTex.Set.add_elements(pid, "filter", "blocklist", :inet, ips) do
+case NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ips) do
   :ok ->
     IO.puts("IPs blocked successfully")
 
@@ -420,7 +420,7 @@ end
 
 ## Integration with nftables Rules
 
-After creating a set with NFTex, use it in nftables rules:
+After creating a set with NFTables, use it in nftables rules:
 
 ```bash
 # Block IPs in the blocklist
@@ -456,6 +456,6 @@ cd native && zig build && cd ..
 
 ## Next Steps
 
-- Read the module documentation: `h NFTex.Set` and `h NFTex.Query`
+- Read the module documentation: `h NFTables.Set` and `h NFTables.Query`
 - Explore the test files in `/tmp/test_*.exs` for more examples
 - Check out the main project README for advanced usage

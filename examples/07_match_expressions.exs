@@ -23,15 +23,15 @@ defmodule MatchExpressionsExample do
   - MAC-based device authentication
   """
 
-  alias NFTex.{Table, Chain, RuleBuilder}
+  alias NFTables.{Table, Chain, RuleBuilder}
 
   def run do
     IO.puts("\n╔═══════════════════════════════════════════════╗")
-    IO.puts("║   NFTex - Advanced Match Expressions Demo   ║")
+    IO.puts("║   NFTables - Advanced Match Expressions Demo   ║")
     IO.puts("╚═══════════════════════════════════════════════╝\n")
 
-    {:ok, pid} = NFTex.start_link(check_capabilities: false)
-    IO.puts("✓ NFTex started (JSON-based port)\n")
+    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    IO.puts("✓ NFTables started (JSON-based port)\n")
 
     # Cleanup and setup
     cleanup(pid)

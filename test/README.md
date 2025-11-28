@@ -1,6 +1,6 @@
-# NFTex Test Suite
+# NFTables Test Suite
 
-Comprehensive test suite for NFTex nftables bindings.
+Comprehensive test suite for NFTables nftables bindings.
 
 ## Prerequisites
 
@@ -85,27 +85,27 @@ mix test test/nftables/rule_test.exs:22
 
 Located in `test/nftables/`:
 
-- **rule_test.exs** - Tests for NFTex.Rule
+- **rule_test.exs** - Tests for NFTables.Rule
   - `block_ip/4` - Blocking IP addresses
   - `accept_ip/4` - Allowing IP addresses
   - `list/4` - Listing rules in chains
   - Integration workflows
 
-- **query_test.exs** - Tests for NFTex.Query (currently disabled)
+- **query_test.exs** - Tests for NFTables.Query (currently disabled)
   - `list_tables/2` - Query tables
   - `list_chains/2` - Query chains
   - `list_rules/2` - Query rules
   - `list_sets/2` - Query sets
   - `list_set_elements/3` - Query set elements
 
-- **set_operations_test.exs** - Tests for NFTex.Set
+- **set_operations_test.exs** - Tests for NFTables.Set
   - `add_elements/5` - Add IPs to sets
   - `delete_elements/5` - Remove IPs from sets
   - `list_elements/3` - List set contents
   - `exists?/4` - Check if set exists
   - `list/2` - List all sets
 
-- **policy_test.exs** - Tests for NFTex.Policy
+- **policy_test.exs** - Tests for NFTables.Policy
   - Pre-built firewall policies
   - Security baseline configurations
 
@@ -129,18 +129,18 @@ Tests use ExUnit tags for categorization:
 
 ### ✅ Fully Tested
 
-- **NFTex.Port** - Format detection and communication
-- **NFTex.Port** - JSON string communication
-- **NFTex.Port** - ETF term communication
-- **NFTex.Policy** - Pre-built firewall policies
+- **NFTables.Port** - Format detection and communication
+- **NFTables.Port** - JSON string communication
+- **NFTables.Port** - ETF term communication
+- **NFTables.Policy** - Pre-built firewall policies
 
 ### 🚧 Partial Coverage
 
-- **NFTex.Rule** - Basic functionality tested
-- **NFTex.Query** - Currently disabled, needs updates for v0.4.0
-- **NFTex.Set** - Basic operations tested
-- **NFTex.Table** - Table operations tested
-- **NFTex.Chain** - Chain operations tested
+- **NFTables.Rule** - Basic functionality tested
+- **NFTables.Query** - Currently disabled, needs updates for v0.4.0
+- **NFTables.Set** - Basic operations tested
+- **NFTables.Table** - Table operations tested
+- **NFTables.Chain** - Chain operations tested
 
 ### 📋 Planned
 
@@ -208,10 +208,10 @@ defmodule YourModuleTest do
 
   describe "your feature" do
     setup do
-      {:ok, pid} = NFTex.start_link()
+      {:ok, pid} = NFTables.start_link()
       on_exit(fn ->
         if Process.alive?(pid) do
-          NFTex.stop(pid)
+          NFTables.stop(pid)
         end
       end)
       {:ok, pid: pid}

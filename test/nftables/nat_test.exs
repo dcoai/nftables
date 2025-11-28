@@ -9,7 +9,7 @@ defmodule NFTables.NATTest do
   import NFTables.QueryHelpers
 
   setup do
-    # Start NFTex
+    # Start NFTables
     {:ok, pid} = NFTables.start_link(port: NFTables.Port, check_capabilities: false)
 
     # Clean up any existing test tables

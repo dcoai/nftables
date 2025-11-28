@@ -1,4 +1,4 @@
-defmodule NFTex.TestHelpers do
+defmodule NFTables.TestHelpers do
   @moduledoc """
   Test helpers for creating isolated nftables test infrastructure.
 
@@ -40,10 +40,10 @@ defmodule NFTex.TestHelpers do
   ## Usage
 
       setup do
-        {:ok, pid} = NFTex.start_link()
+        {:ok, pid} = NFTables.start_link()
 
         # Create isolated test infrastructure WITHOUT hooks (safe)
-        {:ok, table, chain} = NFTex.TestHelpers.setup_test_table_and_chain(
+        {:ok, table, chain} = NFTables.TestHelpers.setup_test_table_and_chain(
           pid,
           "my_test",
           family: :inet,
@@ -51,7 +51,7 @@ defmodule NFTex.TestHelpers do
         )
 
         on_exit(fn ->
-          NFTex.TestHelpers.cleanup_test_table(pid, table, :inet)
+          NFTables.TestHelpers.cleanup_test_table(pid, table, :inet)
         end)
 
         {:ok, pid: pid, table: table, chain: chain}
@@ -68,7 +68,7 @@ defmodule NFTex.TestHelpers do
       test/support/cleanup_test_tables.sh
   """
 
-  alias NFTex.{Table, Chain}
+  alias NFTables.{Table, Chain}
 
   @doc """
   Creates an isolated test table with a safe name.
@@ -240,7 +240,7 @@ defmodule NFTex.TestHelpers do
       These tables are actively filtering network traffic and modifying them
       during tests can disconnect the host from the network.
 
-      Use NFTex.TestHelpers.setup_test_table/2 to create isolated test tables.
+      Use NFTables.TestHelpers.setup_test_table/2 to create isolated test tables.
       """
     end
   end

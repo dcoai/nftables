@@ -1,6 +1,6 @@
 defmodule NFTables.Supervisor do
   @moduledoc """
-  Supervisor for the NFTex JSON port process.
+  Supervisor for the NFTables JSON port process.
 
   This supervisor ensures the JSON port process is restarted if it crashes,
   providing fault tolerance for the nftables interface.
@@ -8,7 +8,7 @@ defmodule NFTables.Supervisor do
   ## Usage
 
       children = [
-        {NFTables.Supervisor, name: NFTex}
+        {NFTables.Supervisor, name: NFTables}
       ]
 
       Supervisor.start_link(children, strategy: :one_for_one)
@@ -19,7 +19,7 @@ defmodule NFTables.Supervisor do
 
       Builder.new()
       |> Builder.add(table: "filter", family: :inet)
-      |> Builder.execute(NFTex)
+      |> Builder.execute(NFTables)
   """
 
   use Supervisor
@@ -31,7 +31,7 @@ defmodule NFTables.Supervisor do
 
   @impl true
   def init(opts) do
-    port_name = opts[:name] || NFTex
+    port_name = opts[:name] || NFTables
 
     children = [
       {NFTables.Port, [name: port_name]}

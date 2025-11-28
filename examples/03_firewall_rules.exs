@@ -2,22 +2,22 @@
 
 # Firewall Rules Example
 #
-# This example demonstrates how to use NFTex to create firewall rules
+# This example demonstrates how to use NFTables to create firewall rules
 # dynamically for blocking and allowing IP addresses.
 #
 # **Format**: This example uses JSON format for communication with libnftables.
 #
 # Requirements:
-# - The NFTex port binary must have CAP_NET_ADMIN capability
+# - The NFTables port binary must have CAP_NET_ADMIN capability
 # - Run: sudo setcap cap_net_admin=ep priv/port_nftables
 # - A base chain must exist: nft add chain filter INPUT '{ type filter hook input priority 0; }'
 #
 # Usage:
 #   mix run examples/03_firewall_rules.exs
 
-# Start NFTex (JSON-based port)
-{:ok, pid} = NFTex.start_link()
-IO.puts("✓ NFTex started (JSON-based port)\n")
+# Start NFTables (JSON-based port)
+{:ok, pid} = NFTables.start_link()
+IO.puts("✓ NFTables started (JSON-based port)\n")
 
 table = "filter"
 chain = "INPUT"
@@ -41,7 +41,7 @@ trusted_ips = [
 IO.puts("Step 1: Blocking malicious IPs...")
 
 for ip_string <- malicious_ips do
-  case NFTex.Rule.block_ip(pid, table, chain, ip_string) do
+  case NFTables.Rule.block_ip(pid, table, chain, ip_string) do
     :ok ->
       IO.puts("  ✓ Blocked #{ip_string}")
     {:error, reason} ->
@@ -55,7 +55,7 @@ IO.puts("\nMalicious IPs are now blocked. Packets from these addresses will be d
 IO.puts("Step 2: Creating accept rules for trusted IPs...")
 
 for ip_string <- trusted_ips do
-  case NFTex.Rule.accept_ip(pid, table, chain, ip_string) do
+  case NFTables.Rule.accept_ip(pid, table, chain, ip_string) do
     :ok ->
       IO.puts("  ✓ Accepted #{ip_string}")
     {:error, reason} ->
@@ -68,7 +68,7 @@ IO.puts("\nTrusted IPs are now explicitly allowed.\n")
 ## STEP 3: List all rules in the chain
 IO.puts("Step 3: Listing current firewall rules...")
 
-case NFTex.Rule.list(pid, table, chain, family: :inet) do
+case NFTables.Rule.list(pid, table, chain, family: :inet) do
   {:ok, rules} ->
     IO.puts("✓ Total rules in #{table}/#{chain}: #{length(rules)}")
     IO.puts("\nLast 5 rules added:")
@@ -94,9 +94,9 @@ Summary:
   ✓ Rules are now active in the kernel
 
 Key Features Demonstrated:
-  1. NFTex.Rule.block_ip/4  - Simple API for blocking IPs
-  2. NFTex.Rule.accept_ip/4 - Simple API for allowing IPs
-  3. NFTex.Rule.list/4      - Query existing rules
+  1. NFTables.Rule.block_ip/4  - Simple API for blocking IPs
+  2. NFTables.Rule.accept_ip/4 - Simple API for allowing IPs
+  3. NFTables.Rule.list/4      - Query existing rules
   4. Automatic counter addition for traffic monitoring
   5. Dynamic rule creation without restart
 
