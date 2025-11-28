@@ -24,7 +24,6 @@ defmodule NFTables.QueryHelpers do
          |> Executor.execute(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} -> {:ok, Map.get(decoded, :rules, [])}
-      {:ok, %{}} -> {:ok, []}
       :ok -> {:ok, []}
       error -> error
     end
@@ -45,8 +44,6 @@ defmodule NFTables.QueryHelpers do
       {:ok, decoded} ->
         chains = Map.get(decoded, :chains, [])
         Enum.any?(chains, fn c -> c.name == chain_name and c.table == table end)
-      {:ok, %{}} ->
-        false
       :ok ->
         false
       _ ->
@@ -70,7 +67,6 @@ defmodule NFTables.QueryHelpers do
          |> Executor.execute(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} -> {:ok, Map.get(decoded, :chains, [])}
-      {:ok, %{}} -> {:ok, []}
       :ok -> {:ok, []}
       error -> error
     end
@@ -91,8 +87,6 @@ defmodule NFTables.QueryHelpers do
       {:ok, decoded} ->
         sets = Map.get(decoded, :sets, [])
         Enum.any?(sets, fn s -> s.name == set_name and s.table == table end)
-      {:ok, %{}} ->
-        false
       :ok ->
         false
       _ ->
@@ -116,7 +110,6 @@ defmodule NFTables.QueryHelpers do
          |> Executor.execute(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} -> {:ok, Map.get(decoded, :sets, [])}
-      {:ok, %{}} -> {:ok, []}
       :ok -> {:ok, []}
       error -> error
     end
@@ -140,7 +133,6 @@ defmodule NFTables.QueryHelpers do
       {:ok, decoded} ->
         # Set elements are in the :set_elements key
         {:ok, Map.get(decoded, :set_elements, [])}
-      {:ok, %{}} -> {:ok, []}
       :ok -> {:ok, []}
       error -> error
     end

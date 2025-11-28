@@ -145,8 +145,6 @@ defmodule NFTables.BuilderTest do
     end
 
     test "requires table to be set" do
-      expr_list = [%{accept: nil}]
-
       assert_raise ArgumentError, ~r/table must be specified/, fn ->
         Builder.new()
         |> Builder.add(chain: "INPUT")

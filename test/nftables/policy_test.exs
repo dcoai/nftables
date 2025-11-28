@@ -1,7 +1,7 @@
 defmodule NFTables.PolicyTest do
   use ExUnit.Case, async: false
 
-  alias NFTables.{Policy, Builder, Query, TestHelpers}
+  alias NFTables.{Policy, Builder, TestHelpers}
   import NFTables.QueryHelpers
 
   # IMPORTANT: This test uses ISOLATED test tables that do NOT affect
