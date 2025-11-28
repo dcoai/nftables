@@ -47,7 +47,7 @@ defmodule PacketModificationExample do
   4. **Bulk** (Mark 4): Downloads, backups, non-critical
   """
 
-  alias NFTex.{Table, Chain, RuleBuilder}
+  alias NFTables.{Table, Chain, RuleBuilder}
 
   # Packet marks for QoS tiers
   @mark_critical 1  # VoIP, video conferencing
@@ -74,12 +74,12 @@ defmodule PacketModificationExample do
 
   def run do
     IO.puts("\n╔═══════════════════════════════════════════════╗")
-    IO.puts("║   NFTex - Packet Modification Demo          ║")
+    IO.puts("║   NFTables - Packet Modification Demo          ║")
     IO.puts("║   Enterprise QoS & Traffic Classification    ║")
     IO.puts("╚═══════════════════════════════════════════════╝\n")
 
-    {:ok, pid} = NFTex.start_link(check_capabilities: false)
-    IO.puts("✓ NFTex started (JSON-based port)\n")
+    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    IO.puts("✓ NFTables started (JSON-based port)\n")
 
     # Cleanup and setup
     cleanup(pid)

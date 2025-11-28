@@ -1,6 +1,6 @@
-# NFTex - Elixir Interface to nftables
+# NFTables - Elixir Interface to nftables
 
-High-performance Elixir bindings for Linux nftables via the official libnftables JSON API. NFTex provides both high-level helper functions for common firewall operations and flexible rule building with familiar nft syntax.
+High-performance Elixir bindings for Linux nftables via the official libnftables JSON API. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with familiar nft syntax.
 
 ## Features
 
@@ -78,7 +78,7 @@ See [ADVANCED_FEATURES_COMPLETE.md](ADVANCED_FEATURES_COMPLETE.md) for comprehen
 
 ### Hybrid Approach
 
-NFTex uses a **hybrid approach** for optimal simplicity:
+NFTables uses a **hybrid approach** for optimal simplicity:
 
 - **JSON format** for structured data (tables, chains, sets)
 - **nft syntax** for complex rules (simpler than JSON expressions)
@@ -87,14 +87,14 @@ Both formats are processed by the same `libnftables.nft_run_cmd_from_buffer()` f
 
 ### JSON-Only Port
 
-NFTex uses a unified JSON-based port for all communication:
+NFTables uses a unified JSON-based port for all communication:
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # Send JSON commands (for structured operations)
 json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
-{:ok, json_response} = NFTex.Port.call(pid, json_cmd)
+{:ok, json_response} = NFTables.Port.call(pid, json_cmd)
 
 # Or use high-level APIs that handle JSON internally
 Builder.new()
@@ -192,7 +192,7 @@ getcap priv/port_nftables
 ### Block an IP Address (New API)
 
 ```elixir
-# Start NFTex
+# Start NFTables
 {:ok, pid} = NFTables.start_link()
 
 # Build and execute a rule to block an IP
@@ -275,10 +275,10 @@ alias NFTables.{Builder, Rule}
 ### Setup Basic Firewall
 
 ```elixir
-{:ok, pid} = NFTex.start_link()
+{:ok, pid} = NFTables.start_link()
 
 # One command for secure defaults
-:ok = NFTex.Policy.setup_basic_firewall(pid,
+:ok = NFTables.Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
   ssh_rate_limit: 10
 )
@@ -710,7 +710,7 @@ The Query module now handles all listing operations:
 
 ## Core Modules
 
-### NFTex.Builder - Unified Configuration Builder
+### NFTables.Builder - Unified Configuration Builder
 
 The Builder module is the primary interface for creating nftables configurations:
 
@@ -745,7 +745,7 @@ Builder.new(family: :inet)
 {:ok, chains} = NFTables.Query.list_chains(pid, family: :inet)
 ```
 
-### NFTex.Rule - Rule Expression Building
+### NFTables.Rule - Rule Expression Building
 
 The `Rule` module now provides a fluent API for building rule expressions:
 
@@ -767,12 +767,12 @@ alias NFTables.{Builder, Rule}
   |> Builder.execute(pid)
 
 # List rules using Query module
-{:ok, rules} = NFTex.Query.list_rules(pid, "filter", "INPUT", family: :inet)
+{:ok, rules} = NFTables.Query.list_rules(pid, "filter", "INPUT", family: :inet)
 ```
 
 **Note**: The old `Rule.block_ip/4`, `Rule.accept_ip/4`, `Rule.rate_limit/6`, and `Rule.delete/5` functions are deprecated. See the Migration Guide above for how to use the new Builder + Rule API.
 
-### NFTex.Match - Pure Expression Builder
+### NFTables.Match - Pure Expression Builder
 
 The Match module provides a streamlined, pure functional API for building rule expressions:
 
@@ -853,30 +853,30 @@ Builder.new()
 
 See the [Match documentation](lib/nftex/match.ex) for the full API.
 
-### NFTex.Policy - Pre-built Policies
+### NFTables.Policy - Pre-built Policies
 
 ```elixir
 # Quick firewall setup
-:ok = NFTex.Policy.setup_basic_firewall(pid,
+:ok = NFTables.Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
   ssh_rate_limit: 10
 )
 
 # Individual policy helpers
-:ok = NFTex.Policy.accept_loopback(pid)
-:ok = NFTex.Policy.accept_established(pid)
-:ok = NFTex.Policy.drop_invalid(pid)
-:ok = NFTex.Policy.allow_ssh(pid, rate_limit: 10)
-:ok = NFTex.Policy.allow_http(pid)
-:ok = NFTex.Policy.allow_https(pid)
+:ok = NFTables.Policy.accept_loopback(pid)
+:ok = NFTables.Policy.accept_established(pid)
+:ok = NFTables.Policy.drop_invalid(pid)
+:ok = NFTables.Policy.allow_ssh(pid, rate_limit: 10)
+:ok = NFTables.Policy.allow_http(pid)
+:ok = NFTables.Policy.allow_https(pid)
 ```
 
-### NFTex.Sysctl - Network Parameter Management
+### NFTables.Sysctl - Network Parameter Management
 
-NFTex provides safe, whitelist-based access to kernel network parameters via `/proc/sys/net/*`. All operations use the existing CAP_NET_ADMIN capability.
+NFTables provides safe, whitelist-based access to kernel network parameters via `/proc/sys/net/*`. All operations use the existing CAP_NET_ADMIN capability.
 
 ```elixir
-alias NFTex.{Sysctl, Sysctl.Network}
+alias NFTables.{Sysctl, Sysctl.Network}
 
 # Low-level API - direct parameter access
 {:ok, "0"} = Sysctl.get(pid, "net.ipv4.ip_forward")
@@ -922,14 +922,14 @@ alias NFTex.{Sysctl, Sysctl.Network}
 - ICMP settings
 - Security parameters (rp_filter, source routing, redirects)
 
-See `NFTex.Sysctl` and `NFTex.Sysctl.Network` documentation for the complete parameter list.
+See `NFTables.Sysctl` and `NFTables.Sysctl.Network` documentation for the complete parameter list.
 
 ## Advanced Usage
 
 ### NAT Gateway
 
 ```elixir
-alias NFTex.NAT
+alias NFTables.NAT
 
 # Setup NAT with masquerading
 :ok = NAT.setup_masquerade(pid, %{
@@ -1234,7 +1234,7 @@ json_cmd = Jason.encode!(%{
   ]
 })
 
-{:ok, response} = NFTex.Port.call(pid, json_cmd)
+{:ok, response} = NFTables.Port.call(pid, json_cmd)
 result = Jason.decode!(response)
 ```
 
@@ -1242,21 +1242,21 @@ Or use nft command syntax:
 
 ```elixir
 nft_command = "add table inet custom"
-{:ok, response} = NFTex.Port.call(pid, nft_command)
+{:ok, response} = NFTables.Port.call(pid, nft_command)
 ```
 
 Both are processed by `libnftables.nft_run_cmd_from_buffer()`.
 
 ## Distributed Firewall Support
 
-NFTex supports distributed firewall architectures where a central command & control node generates firewall rules and sends them to multiple firewall nodes for execution. This is achieved through separation of command building and execution.
+NFTables supports distributed firewall architectures where a central command & control node generates firewall rules and sends them to multiple firewall nodes for execution. This is achieved through separation of command building and execution.
 
 ### Architecture
 
 ```
 ┌──────────────────────────────┐
 │  C&C Node                    │
-│  (NFTex Library)             │
+│  (NFTables Library)             │
 │                              │
 │  - Builds firewall rules     │
 │  - Generates JSON/nft cmds   │
@@ -1341,7 +1341,7 @@ MyTransport.send_to_node("firewall-1", json)
 
 ### Execution Abstraction
 
-The `NFTex.Executor` module provides clean command execution (typically used via Builder):
+The `NFTables.Executor` module provides clean command execution (typically used via Builder):
 
 ```elixir
 # Builder handles execution internally
@@ -1549,7 +1549,7 @@ mix test
 
 ## Security
 
-NFTex follows security best practices:
+NFTables follows security best practices:
 
 1. **Minimal Privileges** - Port runs with only CAP_NET_ADMIN capability
 2. **Permission Checks** - Port validates file permissions on startup (must not be world-readable/writable/executable)

@@ -89,7 +89,7 @@ defmodule NFTables.Sysctl do
 
   ## Parameters
 
-  - `pid_or_opts` - NFTex process pid or keyword list with `:pid` key
+  - `pid_or_opts` - NFTables process pid or keyword list with `:pid` key
   - `parameter` - Sysctl parameter name (e.g., "net.ipv4.ip_forward")
 
   ## Returns
@@ -119,7 +119,7 @@ defmodule NFTables.Sysctl do
 
   ## Parameters
 
-  - `pid_or_opts` - NFTex process pid or keyword list with `:pid` key
+  - `pid_or_opts` - NFTables process pid or keyword list with `:pid` key
   - `parameter` - Sysctl parameter name (e.g., "net.ipv4.ip_forward")
   - `value` - New value as string
 
@@ -151,7 +151,7 @@ defmodule NFTables.Sysctl do
 
   ## Parameters
 
-  - `pid_or_opts` - NFTex process pid or keyword list with `:pid` key
+  - `pid_or_opts` - NFTables process pid or keyword list with `:pid` key
   - `parameter` - Sysctl parameter name
 
   ## Returns
@@ -175,7 +175,7 @@ defmodule NFTables.Sysctl do
 
   ## Parameters
 
-  - `pid_or_opts` - NFTex process pid or keyword list with `:pid` key
+  - `pid_or_opts` - NFTables process pid or keyword list with `:pid` key
   - `parameter` - Sysctl parameter name
   - `value` - New value as string
 

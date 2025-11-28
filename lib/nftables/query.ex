@@ -317,7 +317,7 @@ defmodule NFTables.Query do
 
   ## Parameters
 
-  - `pid` - NFTex process pid
+  - `pid` - NFTables process pid
   - `table` - Table name
   - `set_name` - Set name
   - `elements` - List of element values (strings)

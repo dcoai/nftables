@@ -151,7 +151,7 @@ defmodule NFTables.Executor do
   def execute!(command, opts \\ []) when is_map(command) do
     case execute(command, opts) do
       {:ok, response} -> response
-      {:error, reason} -> raise "NFTex execution failed: #{inspect(reason)}"
+      {:error, reason} -> raise "NFTables execution failed: #{inspect(reason)}"
     end
   end
 
@@ -172,7 +172,7 @@ defmodule NFTables.Executor do
           nil ->
             raise ArgumentError, """
             No NFTables.Port process found. Either:
-            1. Start NFTex with: NFTables.start_link()
+            1. Start NFTables with: NFTables.start_link()
             2. Pass pid explicitly: Executor.execute(json, pid: pid)
             """
 
