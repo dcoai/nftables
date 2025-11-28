@@ -540,6 +540,13 @@ defmodule NFTables.Builder do
   end
 
 
+  # Helper to normalize set/map types for JSON encoding
+  # Converts {:concat, [:ipv4_addr, :inet_service]} to just a list for nftables JSON
+  defp normalize_set_type({:concat, types}) when is_list(types) do
+    Enum.map(types, &to_string/1)
+  end
+  defp normalize_set_type(type), do: type
+
   @doc """
   Build base specification for an object.
 
@@ -614,7 +621,7 @@ defmodule NFTables.Builder do
     }
     # Add type only if present (for add operations)
     spec_map = if Map.has_key?(req_opts, :type) do
-      Map.put(spec_map, :type, req_opts.type)
+      Map.put(spec_map, :type, normalize_set_type(req_opts.type))
     else
       spec_map
     end

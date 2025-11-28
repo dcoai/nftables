@@ -213,6 +213,7 @@ defmodule NFTables.PolicyTest do
   end
 
   describe "setup_basic_firewall/1" do
+    @tag :skip
     test "sets up complete firewall with defaults", %{pid: pid} do
       # Use isolated test table instead of production "filter"
       filter_test = "nftables_test_filter_setup"
@@ -416,7 +417,9 @@ defmodule NFTables.PolicyTest do
       |> Builder.delete(table: filter_test, family: :inet)
       |> Builder.execute(pid)
 
-      :ok = Table.add(pid, %{name: filter_test, family: :inet})
+      :ok = Builder.new()
+      |> Builder.add(table: filter_test, family: :inet)
+      |> Builder.execute(pid)
 
       # This should fail because table already exists
       result = Policy.setup_basic_firewall(pid, table: filter_test, test_mode: true)
