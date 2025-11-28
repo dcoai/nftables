@@ -24,9 +24,11 @@ defmodule NFTables.PayloadRawTest do
 
     on_exit(fn ->
       # Cleanup: delete test table
-      Builder.new()
-      |> Builder.delete(table: test_table, family: :inet)
-      |> Builder.execute(pid)
+      if Process.alive?(pid) do
+        Builder.new()
+        |> Builder.delete(table: test_table, family: :inet)
+        |> Builder.execute(pid)
+      end
     end)
 
     {:ok, pid: pid, table: test_table}

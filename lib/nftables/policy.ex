@@ -378,34 +378,43 @@ defmodule NFTables.Policy do
     ssh_rate_limit = Keyword.get(opts, :ssh_rate_limit, 10)
     services = Keyword.get(opts, :allow_services, [:ssh])
 
-    # In test mode, ensure table has nftex_test_ prefix and create chains without hooks
+    # In test mode, ensure table has nftables_test_ prefix and create chains without hooks
     table = if test_mode, do: ensure_test_prefix(base_table), else: base_table
 
+    # Build chain attributes as keyword list (Builder expects chain: not name:)
     chain_attrs = if test_mode do
       # Test mode: Create regular chain WITHOUT hook (safe - won't filter traffic)
-      %{
+      [
         table: table,
-        name: "INPUT",
+        chain: "INPUT",
         family: family
-      }
+      ]
     else
       # Production mode: Create base chain WITH hook (filters traffic)
-      %{
+      [
         table: table,
-        name: "INPUT",
+        chain: "INPUT",
         family: family,
         type: :filter,
         hook: :input,
         priority: 0,
         policy: :drop
-      }
+      ]
     end
 
-    # Create table and chain using Builder
-    result = Builder.new()
+    # Create table first
+    table_result = Builder.new()
     |> Builder.add(table: table, family: family)
-    |> Builder.add(Map.to_list(chain_attrs))
     |> execute_rule(pid)
+
+    # Then create chain separately
+    result = case table_result do
+      :ok ->
+        Builder.new()
+        |> Builder.add(chain_attrs)
+        |> execute_rule(pid)
+      error -> error
+    end
 
     case result do
       :ok ->
@@ -430,10 +439,10 @@ defmodule NFTables.Policy do
   end
 
   defp ensure_test_prefix(table_name) do
-    if String.starts_with?(table_name, "nftex_test_") do
+    if String.starts_with?(table_name, "nftables_test_") do
       table_name
     else
-      "nftex_test_#{table_name}"
+      "nftables_test_#{table_name}"
     end
   end
 

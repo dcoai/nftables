@@ -201,10 +201,13 @@ defmodule NFTables.Expr do
   """
   @spec payload_raw_match(atom(), non_neg_integer(), pos_integer(), term(), String.t()) :: map()
   def payload_raw_match(base, offset, length, value, op \\ "==") do
+    # Convert binaries to hex for raw payload matching
+    normalized_value = if is_binary(value), do: binary_to_hex(value), else: normalize_value(value)
+
     %{
       match: %{
         left: payload_raw(base, offset, length),
-        right: normalize_value(value),
+        right: normalized_value,
         op: op
       }
     }
@@ -800,6 +803,18 @@ defmodule NFTables.Expr do
   defp normalize_value({:range, min, max}), do: [min, max]
   defp normalize_value(first..last//_ = _range), do: [first, last]
   defp normalize_value(value), do: to_string(value)
+
+  # Convert binary/string to hex for raw payload matching
+  defp binary_to_hex(value) when is_binary(value) do
+    hex =
+      value
+      |> :binary.bin_to_list()
+      |> Enum.map(&Integer.to_string(&1, 16))
+      |> Enum.map(&String.pad_leading(&1, 2, "0"))
+      |> Enum.join()
+
+    "0x" <> String.downcase(hex)
+  end
 
   # Conditionally add key to map if value is not nil
   defp maybe_put(map, _key, nil), do: map

@@ -68,7 +68,7 @@ defmodule NFTables.TestHelpers do
       test/support/cleanup_test_tables.sh
   """
 
-  alias NFTables.{Table, Chain}
+  alias NFTables.Builder
 
   @doc """
   Creates an isolated test table with a safe name.
@@ -89,9 +89,14 @@ defmodule NFTables.TestHelpers do
     table_name = "nftables_test_#{test_name}"
 
     # Clean up if exists from previous failed test
-    Table.delete(pid, table_name, family)
+    Builder.new()
+    |> Builder.delete(table: table_name, family: family)
+    |> Builder.execute(pid)
 
-    case Table.add(pid, %{name: table_name, family: family}) do
+    Builder.new()
+    |> Builder.add(table: table_name, family: family)
+    |> Builder.execute(pid)
+    |> case do
       :ok -> {:ok, table_name}
       {:error, reason} -> {:error, reason}
     end
@@ -164,26 +169,31 @@ defmodule NFTables.TestHelpers do
   def create_test_chain(pid, table_name, test_name, hook, type, priority, policy, family) do
     chain_name = "test_#{test_name}_chain"
 
-    chain_attrs = %{
+    # Build base chain attributes as keyword list
+    chain_attrs = [
+      chain: chain_name,
       table: table_name,
-      name: chain_name,
       family: family
-    }
+    ]
 
     # Add hook attributes only if hook is specified
     chain_attrs =
       if hook do
-        Map.merge(chain_attrs, %{
-          type: type,
-          hook: hook,
-          priority: priority,
-          policy: policy
-        })
+        chain_attrs ++
+          [
+            type: type,
+            hook: hook,
+            priority: priority,
+            policy: policy
+          ]
       else
         chain_attrs
       end
 
-    case Chain.add(pid, chain_attrs) do
+    Builder.new()
+    |> Builder.add(chain_attrs)
+    |> Builder.execute(pid)
+    |> case do
       :ok -> {:ok, chain_name}
       {:error, reason} -> {:error, reason}
     end
@@ -203,7 +213,9 @@ defmodule NFTables.TestHelpers do
       end)
   """
   def cleanup_test_table(pid, table_name, family \\ :inet) do
-    Table.delete(pid, table_name, family)
+    Builder.new()
+    |> Builder.delete(table: table_name, family: family)
+    |> Builder.execute(pid)
   end
 
   @doc """
