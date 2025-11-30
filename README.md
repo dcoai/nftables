@@ -315,23 +315,25 @@ builder = Builder.new(family: :inet)
 json = Builder.to_json(builder)
 ```
 
-### Rule Module - Expression Building
+### Rule Module - Composable Expression Building
 
 The `Rule` module provides a fluent API for building rule expressions:
 
 ```elixir
 alias NFTables.Rule
 
+def established_related(rule), do: Rule.state([:established, :related])
+
+def ssh(rule, source), do: Rule.source(source) |> Rule.tcp() |> Rule.dport(22)
+
 # Build rule expressions
 ssh_rule = Rule.new()
-|> Rule.source("10.0.0.0/8")           # Match source IP/CIDR
-|> Rule.protocol(:tcp)                   # Match protocol
-|> Rule.dport(22)                        # Match destination port
-|> Rule.state([:established, :related]) # Match connection state
+|> ssh("10.0.0.0/8")
+|> extablished_related()
 |> Rule.limit(10, :minute, burst: 5)    # Rate limiting
 |> Rule.log("SSH: ", level: "info")     # Logging
-|> Rule.counter()                        # Add counter
-|> Rule.accept()                         # Verdict
+|> Rule.counter()                       # Add counter
+|> Rule.accept()                        # Verdict
 # No need to call to_expr() - Builder handles conversion automatically!
 
 # Use with Builder
