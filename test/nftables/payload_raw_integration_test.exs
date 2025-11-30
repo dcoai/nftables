@@ -37,7 +37,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw(:th, 16, 16, 53)
         |> counter()
         |> accept()
-        |> to_expr()
+        
 
       # Create a simple chain without hooks to avoid Builder bug
       result =
@@ -59,7 +59,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw(:ih, 0, 32, "GET ")
         |> log("HTTP GET detected: ")
         |> accept()
-        |> to_expr()
+        
 
       result =
         Builder.new()
@@ -81,7 +81,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> counter()
         |> accept()
-        |> to_expr()
+        
 
       result =
         Builder.new()
@@ -100,7 +100,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         rule()
         |> payload_raw(:nh, 96, 32, <<192, 168, 1, 1>>)
         |> drop()
-        |> to_expr()
+        
 
       result =
         Builder.new()
@@ -121,7 +121,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw_masked(:nh, 48, 16, 0x4000, 0x4000)
         |> counter()
         |> accept()
-        |> to_expr()
+        
 
       result =
         Builder.new()
@@ -141,14 +141,14 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
-        |> to_expr()
+        
 
       http_rule =
         rule()
         |> tcp()
         |> payload_raw(:th, 16, 16, 80)
         |> accept()
-        |> to_expr()
+        
 
       result =
         Builder.new()

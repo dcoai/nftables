@@ -16,8 +16,7 @@ The Match uses a **pure functional pattern** to build JSON expressions:
 
 1. **Initialize** - Create empty expression builder
 2. **Accumulate** - Each function adds JSON expression to list
-3. **Extract** - Get expression list with `to_expr/1`
-4. **Execute** - Send via Builder/Executor separately
+3. **Execute** - Send via Builder/Executor (automatically extracts expression list)
 
 ### Visual Example
 
@@ -47,13 +46,10 @@ builder
 #   %{accept: nil}
 # ]}
 
-# Step 3: Extract expression list
-|> to_expr()
-
-# Step 4: Execute separately
-|> then(fn expr ->
+# Step 3: Execute - Builder automatically extracts expression list
+|> then(fn rule ->
   Builder.new()
-  |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+  |> Builder.add(rule: rule, table: "filter", chain: "INPUT", family: :inet)
   |> Executor.execute(pid)
 end)
 ```
@@ -65,9 +61,7 @@ rule()
     ↓
 Pure expression building (no side effects)
     ↓
-to_expr() - Extract expression list
-    ↓
-Builder.add(rule: ) - Add to configuration
+Builder.add(rule: ) - Automatically extracts expression list and adds to configuration
     ↓
 Executor.execute() - Send to kernel
     ↓
@@ -103,7 +97,6 @@ expr = rule()
   |> rate_limit(5, :minute, burst: 10)
   |> log("SSH_RATELIMIT: ", level: :warn)
   |> drop()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -120,7 +113,6 @@ expr = rule()
   |> limit(5, :minute, burst: 10)  # alias for rate_limit
   |> log("SSH: ")
   |> drop()
-  |> to_expr()
 ```
 
 ### Example 2: Port Forwarding (DNAT)
@@ -137,7 +129,6 @@ expr = rule()
   |> dport(8080)
   |> ct_state([:new])
   |> dnat_to("10.0.0.10", port: 80)
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "nat", chain: "prerouting", family: :inet)
@@ -159,7 +150,6 @@ expr = rule()
   |> counter()
   |> log("BLOCKED_IP: ", level: :info)
   |> drop()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -185,7 +175,6 @@ expr = rule()
   |> counter()
   |> synproxy(mss: 1460, wscale: 7, timestamp: true, sack_perm: true)
   |> accept()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -231,7 +220,6 @@ Builder.new(family: :inet)
 rule()
 |> state([:established, :related])
 |> flow_offload()
-|> to_expr()
 ```
 
 ### Meters (Per-Key Rate Limiting)
@@ -460,7 +448,6 @@ Functionality is organized into sub-modules:
 expr = rule()
   |> state([:established, :related])
   |> accept()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -474,7 +461,6 @@ expr = rule()
   |> dport(80)
   |> limit(100, :second, burst: 200)
   |> accept()
-  |> to_expr()
 ```
 
 ### Log and Drop
@@ -483,7 +469,6 @@ expr = rule()
   |> source("192.168.1.100")
   |> log("BLOCKED: ", level: :warn)
   |> drop()
-  |> to_expr()
 ```
 
 ### NAT Gateway
@@ -491,7 +476,6 @@ expr = rule()
 expr = rule()
   |> oif("eth0")
   |> masquerade()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "nat", chain: "postrouting", family: :inet)
@@ -506,7 +490,6 @@ expr = rule()
   |> ct_state([:new])
   |> limit_connections(100)
   |> drop()
-  |> to_expr()
 ```
 
 ## High-Level Policy Helpers
@@ -535,9 +518,7 @@ rule() - Initialize pure builder
     ↓
 |> tcp() |> dport(22) |> accept() - Build expressions
     ↓
-|> to_expr() - Extract expression list
-    ↓
-Builder.add(rule: expr, ...) - Add to configuration
+Builder.add(rule: rule_struct, ...) - Automatically extract and add to configuration
     ↓
 Executor.execute(pid) - Send to kernel
     ↓

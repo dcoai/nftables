@@ -15,21 +15,18 @@ defmodule NFTables.Rule do
   ## Basic Usage
 
       # Create and build a rule
-      rule = Rule.new()
+      ssh_rule = Rule.new()
       |> Rule.protocol(:tcp)
       |> Rule.port(22)
       |> Rule.state([:new])
       |> Rule.log("SSH: ")
       |> Rule.accept()
 
-      # Extract expression list for Builder
-      expr_list = Rule.to_expr(rule)
-
-      # Use with Builder
+      # Use with Builder - automatically converts to expression list
       Builder.new()
       |> Builder.add(table: "filter")
       |> Builder.add(chain: "input")
-      |> Builder.add(rule: expr_list)
+      |> Builder.add(rule: ssh_rule)
       |> Builder.execute(pid)
 
   ## Common Patterns

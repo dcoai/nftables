@@ -56,6 +56,39 @@ defmodule NFTables.Builder do
       |> Builder.add(table: "filter", chain: "input")  # Sets context
       |> Builder.add(rule: [%{accept: nil}])           # Uses filter/input automatically
       |> Builder.add(rule: [%{drop: nil}])             # Still uses filter/input
+
+  ## Automatic Rule Conversion
+
+  Builder automatically converts `NFTables.Rule` and `NFTables.Match` structs to expression lists,
+  so you don't need to call `to_expr/1` manually:
+
+      import NFTables.Match
+
+      # No need to call to_expr() - Builder handles it automatically
+      ssh_rule = rule() |> tcp() |> dport(22) |> accept()
+
+      builder
+      |> Builder.add(table: "filter", chain: "input")
+      |> Builder.add(rule: ssh_rule)  # Automatically converted to expression list
+      |> Builder.execute(pid)
+
+  This also works with lists of rules:
+
+      rules = [
+        rule() |> tcp() |> dport(22) |> accept(),
+        rule() |> tcp() |> dport(80) |> accept()
+      ]
+
+      # Each rule in the list is automatically converted
+      Enum.reduce(rules, builder, fn r, b ->
+        Builder.add(b, rule: r)
+      end)
+
+  For backwards compatibility, you can still pass expression lists directly:
+
+      # This still works
+      expr_list = rule() |> tcp() |> dport(22) |> accept() |> to_expr()
+      Builder.add(builder, rule: expr_list)
   """
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
@@ -590,7 +623,7 @@ defmodule NFTables.Builder do
       family: req_opts.family,
       table: req_opts.table,
       chain: req_opts.chain,
-      expr: req_opts.rule
+      expr: normalize_rule_value(req_opts.rule)
     }
     %{builder | spec: spec_map}
   end
@@ -602,7 +635,7 @@ defmodule NFTables.Builder do
       family: req_opts.family,
       table: req_opts.table,
       chain: req_opts.chain,
-      expr: req_opts.rules
+      expr: normalize_rule_value(req_opts.rules)
     }
     %{builder | spec: spec_map}
   end
@@ -1298,6 +1331,32 @@ defmodule NFTables.Builder do
   end
 
   ## Private Helpers
+
+  # Normalize rule values - automatically convert Rule/Match structs to expression lists
+  defp normalize_rule_value(%NFTables.Rule{} = rule) do
+    NFTables.Rule.to_expr(rule)
+  end
+
+  defp normalize_rule_value(%NFTables.Match{} = rule) do
+    NFTables.Match.to_expr(rule)
+  end
+
+  defp normalize_rule_value(rules) when is_list(rules) do
+    # Check if this is a list of Rule/Match structs or already an expression list
+    case rules do
+      # Empty list - return as-is
+      [] -> []
+      # List of structs - convert each one
+      [%NFTables.Rule{} | _] = rule_list ->
+        Enum.map(rule_list, &normalize_rule_value/1)
+      [%NFTables.Match{} | _] = rule_list ->
+        Enum.map(rule_list, &normalize_rule_value/1)
+      # Already an expression list (list of maps) - return as-is
+      _ -> rules
+    end
+  end
+
+  defp normalize_rule_value(expr_list), do: expr_list  # Already a list of expressions
 
   # Add a command to the builder
   defp add_command(%__MODULE__{commands: commands} = builder, command) do

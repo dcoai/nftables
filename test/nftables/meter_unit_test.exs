@@ -117,7 +117,6 @@ defmodule NFTables.MeterUnitTest do
         |> ct_state([:new])
         |> meter_update(Meter.payload(:ip, :saddr), "ssh_limits", 3, :minute, burst: 5)
         |> accept()
-        |> to_expr()
 
       builder =
         Builder.new(family: :inet)
