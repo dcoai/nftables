@@ -757,10 +757,16 @@ defmodule NFTables.Expr do
   """
   @spec set_update(term(), String.t(), list(map())) :: map()
   def set_update(elem, set_name, statements) when is_list(statements) do
+    # For composite keys (lists), wrap in concat expression
+    normalized_elem = case elem do
+      list when is_list(list) -> %{concat: list}
+      other -> normalize_value(other)
+    end
+
     %{
       set: %{
         op: "update",
-        elem: normalize_value(elem),
+        elem: normalized_elem,
         set: "@#{set_name}",
         stmt: statements
       }
@@ -783,10 +789,16 @@ defmodule NFTables.Expr do
   """
   @spec set_add_operation(term(), String.t(), list(map())) :: map()
   def set_add_operation(elem, set_name, statements) when is_list(statements) do
+    # For composite keys (lists), wrap in concat expression
+    normalized_elem = case elem do
+      list when is_list(list) -> %{concat: list}
+      other -> normalize_value(other)
+    end
+
     %{
       set: %{
         op: "add",
-        elem: normalize_value(elem),
+        elem: normalized_elem,
         set: "@#{set_name}",
         stmt: statements
       }

@@ -410,7 +410,8 @@ defmodule NFTables.Policy do
     # Then create chain separately
     result = case table_result do
       :ok ->
-        Builder.new()
+        Builder.new(family: family)
+        |> Builder.add(table: table)
         |> Builder.add(chain_attrs)
         |> execute_rule(pid)
       error -> error
