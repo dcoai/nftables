@@ -213,7 +213,6 @@ defmodule NFTables.PolicyTest do
   end
 
   describe "setup_basic_firewall/1" do
-    @tag :skip
     test "sets up complete firewall with defaults", %{pid: pid} do
       # Use isolated test table instead of production "filter"
       filter_test = "nftables_test_filter_setup"

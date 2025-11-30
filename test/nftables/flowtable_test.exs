@@ -43,9 +43,7 @@ defmodule NFTables.FlowtableTest do
       assert :ok == result
     end
 
-    @tag :skip
-    test "creates flowtable with multiple devices", %{pid: pid, table: table} do
-      # Note: Skipped because eth0 might not exist on all systems
+    test "creates flowtable with single device (lo)", %{pid: pid, table: table} do
       result =
         Builder.new()
         |> Builder.add(
@@ -58,8 +56,8 @@ defmodule NFTables.FlowtableTest do
         )
         |> Builder.execute(pid)
 
-      # May fail if kernel doesn't support flowtables
-      assert :ok == result or match?({:error, _}, result)
+      # Should succeed on systems with flowtable support
+      assert :ok == result
     end
 
     test "creates flowtable with hardware offload flag", %{pid: pid, table: table} do
@@ -179,30 +177,6 @@ defmodule NFTables.FlowtableTest do
       assert :ok == result
     end
 
-    @tag :skip
-    test "flushes flowtable", %{pid: pid, table: table} do
-      # Note: Skipped - nftables doesn't support flushing flowtables
-      # Flowtables are automatically managed and don't need manual flushing
-      :ok =
-        Builder.new()
-        |> Builder.add(
-          flowtable: "to_flush",
-          table: table,
-          family: :inet,
-          hook: :ingress,
-          priority: 0,
-          devices: ["lo"]
-        )
-        |> Builder.execute(pid)
-
-      # This operation is not supported by nftables
-      # result =
-      #   Builder.new()
-      #   |> Builder.flush(flowtable: "to_flush", table: table, family: :inet)
-      #   |> Builder.execute(pid)
-      #
-      # assert :ok == result
-    end
   end
 
   describe "JSON generation" do
@@ -303,36 +277,6 @@ defmodule NFTables.FlowtableTest do
   end
 
   describe "batch operations" do
-    @tag :skip
-    test "creates multiple flowtables atomically", %{pid: pid, table: table} do
-      # Generate unique flowtable names to avoid conflicts
-      flow1 = "flow_#{:rand.uniform(1_000_000)}_1"
-      flow2 = "flow_#{:rand.uniform(1_000_000)}_2"
-
-      # Create flowtables with different hooks to avoid conflicts
-      result =
-        Builder.new()
-        |> Builder.add(
-          flowtable: flow1,
-          table: table,
-          family: :inet,
-          hook: :ingress,
-          priority: 0,
-          devices: ["lo"]
-        )
-        |> Builder.add(
-          flowtable: flow2,
-          table: table,
-          family: :inet,
-          hook: :egress,  # Use different hook
-          priority: 0,
-          devices: ["lo"]
-        )
-        |> Builder.execute(pid)
-
-      assert :ok == result
-    end
-
     test "creates table, flowtable, and chain in one batch", %{pid: pid} do
       batch_table = "batch_test_#{:rand.uniform(1_000_000)}"
 
