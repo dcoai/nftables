@@ -195,7 +195,6 @@ defmodule NFTables.MeterTest do
       assert set["size"] == 1000
     end
 
-    @tag :skip
     test "generates correct JSON for meter rule" do
       meter_expr =
         rule()
@@ -211,22 +210,22 @@ defmodule NFTables.MeterTest do
         |> Builder.add(rule: meter_expr, table: "filter", chain: "INPUT")
 
       json = Builder.to_json(builder)
-      decoded = Jason.decode!(json)
+      decoded = Jason.decode!(json, keys: :atoms)
 
-      assert %{"nftables" => [command]} = decoded
-      assert %{"add" => %{"rule" => rule}} = command
+      assert %{nftables: [command]} = decoded
+      assert %{add: %{rule: rule}} = command
 
       # Find set expression in rule
-      set_expr = Enum.find(rule["expr"], fn e -> Map.has_key?(e, :set) end)
+      set_expr = Enum.find(rule.expr, fn e -> Map.has_key?(e, :set) end)
       assert set_expr != nil
-      assert set_expr[:set][:op] == "update"
-      assert set_expr[:set]["set"] == "@ssh_limits"
+      assert set_expr.set.op == "update"
+      assert set_expr.set.set == "@ssh_limits"
 
       # Verify limit statement
-      [limit_stmt] = set_expr[:set][:stmt]
-      assert limit_stmt[:limit][:rate] == 3
-      assert limit_stmt[:limit][:per] == "minute"
-      assert limit_stmt[:limit][:burst] == 5
+      [limit_stmt] = set_expr.set.stmt
+      assert limit_stmt.limit.rate == 3
+      assert limit_stmt.limit.per == "minute"
+      assert limit_stmt.limit.burst == 5
     end
   end
 
@@ -513,7 +512,6 @@ defmodule NFTables.MeterTest do
       assert :ok == result
     end
 
-    @tag :skip
     test "Per-flow bandwidth limiting", %{pid: pid, table: table} do
       # Track by src IP + dst IP + dst port
       :ok =
