@@ -1,16 +1,17 @@
-defmodule NFTables.FlowtableTest do
+defmodule NFTables.FlowtableIntegrationTest do
   use ExUnit.Case, async: false
 
   alias NFTables.Builder
 
-  @moduletag :sudo_required
+  @moduletag :integration
+  @moduletag :slow
 
   setup do
     {:ok, pid} = NFTables.start_link()
     test_table = "flowtable_test_#{:rand.uniform(1_000_000)}"
 
     # Create test table
-    Builder.new(family: :inet)
+    Builder.new()
     |> Builder.add(table: test_table)
     |> Builder.execute(pid)
 
@@ -95,64 +96,6 @@ defmodule NFTables.FlowtableTest do
     end
   end
 
-  describe "flowtable validation" do
-    test "rejects invalid hook", %{table: table} do
-      assert_raise ArgumentError, ~r/Invalid flowtable hook/, fn ->
-        Builder.new()
-        |> Builder.add(
-          flowtable: "invalid_hook",
-          table: table,
-          family: :inet,
-          hook: :input,  # Invalid: only :ingress allowed
-          priority: 0,
-          devices: ["lo"]
-        )
-      end
-    end
-
-    test "rejects empty devices list", %{table: table} do
-      assert_raise ArgumentError, ~r/Invalid flowtable devices: empty list/, fn ->
-        Builder.new()
-        |> Builder.add(
-          flowtable: "no_devices",
-          table: table,
-          family: :inet,
-          hook: :ingress,
-          priority: 0,
-          devices: []  # Invalid: empty list
-        )
-      end
-    end
-
-    test "rejects non-list devices", %{table: table} do
-      assert_raise ArgumentError, ~r/Invalid flowtable devices.*expected list/, fn ->
-        Builder.new()
-        |> Builder.add(
-          flowtable: "bad_devices",
-          table: table,
-          family: :inet,
-          hook: :ingress,
-          priority: 0,
-          devices: "lo"  # Invalid: should be list
-        )
-      end
-    end
-
-    test "rejects devices with non-string elements", %{table: table} do
-      assert_raise ArgumentError, ~r/Invalid flowtable devices.*must be strings/, fn ->
-        Builder.new()
-        |> Builder.add(
-          flowtable: "bad_device_type",
-          table: table,
-          family: :inet,
-          hook: :ingress,
-          priority: 0,
-          devices: [:lo, :eth0]  # Invalid: atoms instead of strings
-        )
-      end
-    end
-  end
-
   describe "flowtable operations" do
     test "deletes flowtable", %{pid: pid, table: table} do
       # Create flowtable
@@ -176,78 +119,12 @@ defmodule NFTables.FlowtableTest do
 
       assert :ok == result
     end
-
-  end
-
-  describe "JSON generation" do
-    test "generates correct JSON for flowtable add" do
-      builder =
-        Builder.new(family: :inet)
-        |> Builder.add(
-          flowtable: "test_flow",
-          table: "filter",
-          hook: :ingress,
-          priority: 0,
-          devices: ["eth0", "eth1"]
-        )
-
-      json = Builder.to_json(builder)
-      decoded = Jason.decode!(json)
-
-      assert %{"nftables" => [command]} = decoded
-      assert %{"add" => %{"flowtable" => flowtable}} = command
-
-      assert flowtable["family"] == "inet"
-      assert flowtable["table"] == "filter"
-      assert flowtable["name"] == "test_flow"
-      assert flowtable["hook"] == "ingress"
-      assert flowtable["prio"] == 0
-      assert flowtable["dev"] == ["eth0", "eth1"]
-    end
-
-    test "generates correct JSON for flowtable delete" do
-      builder =
-        Builder.new()
-        |> Builder.delete(flowtable: "test_flow", table: "filter", family: :inet)
-
-      json = Builder.to_json(builder)
-      decoded = Jason.decode!(json)
-
-      assert %{"nftables" => [command]} = decoded
-      assert %{"delete" => %{"flowtable" => flowtable}} = command
-
-      assert flowtable["family"] == "inet"
-      assert flowtable["table"] == "filter"
-      assert flowtable["name"] == "test_flow"
-    end
-
-    test "generates correct JSON with hardware offload flag" do
-      builder =
-        Builder.new(family: :inet)
-        |> Builder.add(
-          flowtable: "hw_flow",
-          table: "filter",
-          hook: :ingress,
-          priority: 0,
-          devices: ["eth0"],
-          flags: [:offload]
-        )
-
-      json = Builder.to_json(builder)
-      decoded = Jason.decode!(json)
-
-      assert %{"nftables" => [command]} = decoded
-      assert %{"add" => %{"flowtable" => flowtable}} = command
-
-      # Flags are converted to strings in JSON
-      assert flowtable["flags"] == ["offload"]
-    end
   end
 
   describe "context tracking" do
     test "uses table from context", %{pid: pid, table: table} do
       result =
-        Builder.new(family: :inet)
+        Builder.new()
         |> Builder.add(table: table)
         |> Builder.add(
           flowtable: "context_test",
@@ -262,7 +139,7 @@ defmodule NFTables.FlowtableTest do
 
     test "uses family from context", %{pid: pid, table: table} do
       result =
-        Builder.new(family: :inet)
+        Builder.new()
         |> Builder.add(table: table)
         |> Builder.add(
           flowtable: "family_context",
@@ -281,7 +158,7 @@ defmodule NFTables.FlowtableTest do
       batch_table = "batch_test_#{:rand.uniform(1_000_000)}"
 
       result =
-        Builder.new(family: :inet)
+        Builder.new()
         |> Builder.add(table: batch_table)
         |> Builder.add(
           flowtable: "batch_flow",

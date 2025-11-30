@@ -76,6 +76,17 @@ defmodule NFTables.NAT do
   """
   @spec setup_masquerade(pid(), String.t(), keyword()) :: :ok | {:error, term()}
   def setup_masquerade(pid, interface, opts \\ []) when is_binary(interface) do
+    build_masquerade(interface, opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a masquerade rule without executing it.
+
+  Returns a Builder that can be further modified or executed later.
+  """
+  @spec build_masquerade(String.t(), keyword()) :: Builder.t()
+  def build_masquerade(interface, opts \\ []) when is_binary(interface) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "postrouting")
     family = Keyword.get(opts, :family, :inet)
@@ -88,7 +99,6 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -126,6 +136,18 @@ defmodule NFTables.NAT do
   def port_forward(pid, external_port, internal_ip, internal_port, opts \\ [])
       when is_integer(external_port) and is_binary(internal_ip) and
              is_integer(internal_port) do
+    build_port_forward(external_port, internal_ip, internal_port, opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a port forward rule without executing it.
+  """
+  @spec build_port_forward(non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
+          Builder.t()
+  def build_port_forward(external_port, internal_ip, internal_port, opts \\ [])
+      when is_integer(external_port) and is_binary(internal_ip) and
+             is_integer(internal_port) do
     protocol = Keyword.get(opts, :protocol, :tcp)
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "prerouting")
@@ -152,7 +174,6 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -189,6 +210,30 @@ defmodule NFTables.NAT do
   end
 
   @doc """
+  Build a static NAT (1:1) configuration without executing it.
+
+  Returns a Builder with both DNAT and SNAT rules.
+  """
+  @spec build_static_nat(String.t(), String.t(), keyword()) :: Builder.t()
+  def build_static_nat(public_ip, private_ip, opts \\ [])
+      when is_binary(public_ip) and is_binary(private_ip) do
+    table = Keyword.get(opts, :table, "nat")
+    family = Keyword.get(opts, :family, :inet)
+
+    # Build DNAT rule (incoming)
+    dnat_builder = build_dnat_rule(table, "prerouting", family, public_ip, private_ip)
+
+    # Build SNAT rule (outgoing)
+    snat_builder = build_snat_rule(table, "postrouting", family, private_ip, public_ip)
+
+    # Combine both rules into one builder
+    %Builder{
+      family: family,
+      commands: dnat_builder.commands ++ snat_builder.commands
+    }
+  end
+
+  @doc """
   Set up source NAT for a specific source IP or subnet.
 
   ## Parameters
@@ -213,6 +258,16 @@ defmodule NFTables.NAT do
   @spec source_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def source_nat(pid, source, nat_ip, opts \\ [])
       when is_binary(source) and is_binary(nat_ip) do
+    build_source_nat(source, nat_ip, opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a source NAT rule without executing it.
+  """
+  @spec build_source_nat(String.t(), String.t(), keyword()) :: Builder.t()
+  def build_source_nat(source, nat_ip, opts \\ [])
+      when is_binary(source) and is_binary(nat_ip) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "postrouting")
     family = Keyword.get(opts, :family, :inet)
@@ -235,7 +290,6 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -260,6 +314,16 @@ defmodule NFTables.NAT do
   @spec destination_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def destination_nat(pid, dest, nat_ip, opts \\ [])
       when is_binary(dest) and is_binary(nat_ip) do
+    build_destination_nat(dest, nat_ip, opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a destination NAT rule without executing it.
+  """
+  @spec build_destination_nat(String.t(), String.t(), keyword()) :: Builder.t()
+  def build_destination_nat(dest, nat_ip, opts \\ [])
+      when is_binary(dest) and is_binary(nat_ip) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "prerouting")
     family = Keyword.get(opts, :family, :inet)
@@ -281,7 +345,6 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -297,6 +360,16 @@ defmodule NFTables.NAT do
   @spec redirect_port(pid(), non_neg_integer(), non_neg_integer(), keyword()) ::
           :ok | {:error, term()}
   def redirect_port(pid, from_port, to_port, opts \\ [])
+      when is_integer(from_port) and is_integer(to_port) do
+    build_redirect_port(from_port, to_port, opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a port redirect rule without executing it.
+  """
+  @spec build_redirect_port(non_neg_integer(), non_neg_integer(), keyword()) :: Builder.t()
+  def build_redirect_port(from_port, to_port, opts \\ [])
       when is_integer(from_port) and is_integer(to_port) do
     protocol = Keyword.get(opts, :protocol, :tcp)
     table = Keyword.get(opts, :table, "nat")
@@ -315,7 +388,6 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   # Private helpers
@@ -329,6 +401,11 @@ defmodule NFTables.NAT do
   end
 
   defp dnat_rule(pid, table, chain, family, dest_ip, nat_ip) do
+    build_dnat_rule(table, chain, family, dest_ip, nat_ip)
+    |> execute_rule(pid)
+  end
+
+  defp build_dnat_rule(table, chain, family, dest_ip, nat_ip) do
     expr_list =
       rule(family: family)
     |> dest_ip(dest_ip)
@@ -337,10 +414,14 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   defp snat_rule(pid, table, chain, family, source_ip, nat_ip) do
+    build_snat_rule(table, chain, family, source_ip, nat_ip)
+    |> execute_rule(pid)
+  end
+
+  defp build_snat_rule(table, chain, family, source_ip, nat_ip) do
     expr_list =
       rule(family: family)
     |> source_ip(source_ip)
@@ -349,6 +430,5 @@ defmodule NFTables.NAT do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 end

@@ -4,6 +4,7 @@ defmodule NFTables.SysctlTest do
   alias NFTables.{Sysctl, Sysctl.Network}
 
   @moduletag :sysctl
+  @moduletag :slow
 
   # Test parameter that is safe to read/write and commonly available
   @test_param "net.ipv4.tcp_syncookies"
