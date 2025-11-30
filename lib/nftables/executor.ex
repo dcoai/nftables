@@ -41,6 +41,7 @@ defmodule NFTables.Executor do
   """
 
   alias NFTables.Builder
+  alias Jason, as: JSON
 
   @doc """
   Execute an nftables command from a Builder struct or Elixir data structures.
@@ -103,15 +104,15 @@ defmodule NFTables.Executor do
 
       {:ok, response_json} ->
         # Decode JSON response to Elixir structures (ONLY place JSON decoding happens)
-        case JSON.decode(response_json) do
-          {:ok, %{"nftables" => items} = decoded} when is_list(items) ->
+        case JSON.decode(response_json, keys: :atoms) do
+          {:ok, %{nftables: items} = decoded} when is_list(items) ->
             # Check if any item contains an error
-            case Enum.find(items, fn item -> Map.has_key?(item, "error") end) do
-              %{"error" => error} -> {:error, error}
+            case Enum.find(items, fn item -> Map.has_key?(item, :error) end) do
+              %{error: error} -> {:error, error}
               nil -> {:ok, decoded}  # Return decoded Elixir map
             end
 
-          {:ok, %{"error" => error}} ->
+          {:ok, %{error: error}} ->
             {:error, error}
 
           {:ok, decoded} ->

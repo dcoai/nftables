@@ -113,13 +113,13 @@ defmodule NFTables.Decoder do
       #=> {:error, {:write_failed, "Table already exists"}}
   """
   @spec decode({:ok, map()} | {:error, term()}) :: decoded_response()
-  def decode({:ok, %{"nftables" => []}}) do
+  def decode({:ok, %{nftables: []}}) do
     # Empty nftables array - could be write success OR empty read result
     # Return empty read result format for consistency
     {:ok, %{}}
   end
 
-  def decode({:ok, %{"nftables" => items}}) when is_list(items) do
+  def decode({:ok, %{nftables: items}}) when is_list(items) do
     # Filter out metainfo items (nftables metadata, not data or operations)
     items = Enum.reject(items, &is_metainfo_item?/1)
 
@@ -164,16 +164,16 @@ defmodule NFTables.Decoder do
   end
 
   # Metainfo items are nftables metadata (version info, etc.)
-  defp is_metainfo_item?(%{"metainfo" => _}), do: true
+  defp is_metainfo_item?(%{metainfo: _}), do: true
   defp is_metainfo_item?(_), do: false
 
   # Data items have recognizable resource keys
   defp is_data_item?(item) when is_map(item) do
-    Map.has_key?(item, "table") or
-      Map.has_key?(item, "chain") or
-      Map.has_key?(item, "rule") or
-      Map.has_key?(item, "set") or
-      Map.has_key?(item, "element")
+    Map.has_key?(item, :table) or
+      Map.has_key?(item, :chain) or
+      Map.has_key?(item, :rule) or
+      Map.has_key?(item, :set) or
+      Map.has_key?(item, :element)
   end
 
   defp is_data_item?(_), do: false
@@ -188,15 +188,15 @@ defmodule NFTables.Decoder do
   # Decode read-only response (only data items)
   defp decode_read_only(items) do
     # Extract set elements from sets that have "elem" field
-    set_items = items |> Enum.filter(&Map.has_key?(&1, "set"))
+    set_items = items |> Enum.filter(&Map.has_key?(&1, :set))
     set_elements = set_items
-                   |> Enum.filter(fn %{"set" => s} -> Map.has_key?(s, "elem") end)
+                   |> Enum.filter(fn %{set: s} -> Map.has_key?(s, :elem) end)
                    |> Enum.flat_map(&extract_set_elements/1)
 
     decoded = %{
-      tables: items |> Enum.filter(&Map.has_key?(&1, "table")) |> Enum.map(&decode_table/1),
-      chains: items |> Enum.filter(&Map.has_key?(&1, "chain")) |> Enum.map(&decode_chain/1),
-      rules: items |> Enum.filter(&Map.has_key?(&1, "rule")) |> Enum.map(&decode_rule/1),
+      tables: items |> Enum.filter(&Map.has_key?(&1, :table)) |> Enum.map(&decode_table/1),
+      chains: items |> Enum.filter(&Map.has_key?(&1, :chain)) |> Enum.map(&decode_chain/1),
+      rules: items |> Enum.filter(&Map.has_key?(&1, :rule)) |> Enum.map(&decode_rule/1),
       sets: set_items |> Enum.map(&decode_set/1),
       set_elements: set_elements
     }
@@ -225,83 +225,83 @@ defmodule NFTables.Decoder do
   # Singular Decoders (private, composable)
 
   # Decode a single table item
-  defp decode_table(%{"table" => t}) do
+  defp decode_table(%{table: t}) do
     %{
-      name: t["name"],
-      family: String.to_atom(t["family"]),
-      handle: t["handle"]
+      name: t.name,
+      family: t.family,
+      handle: t[:handle]
     }
   end
 
-  defp decode_table(%{"chain" => c}) do
+  defp decode_table(%{chain: c}) do
     %{
-      table: c["table"],
-      family: String.to_atom(c["family"])
+      table: c.table,
+      family: c.family
     }
   end
 
-  defp decode_table(%{"rule" => r}) do
+  defp decode_table(%{rule: r}) do
     %{
-      table: r["table"],
-      family: String.to_atom(r["family"])
+      table: r.table,
+      family: r.family
     }
   end
 
-  defp decode_table(%{"set" => s}) do
+  defp decode_table(%{set: s}) do
     %{
-      table: s["table"],
-      family: String.to_atom(s["family"])
+      table: s.table,
+      family: s.family
     }
   end
 
   # Decode a single chain item (reuses decode_table)
-  defp decode_chain(%{"chain" => c} = item) do
+  defp decode_chain(%{chain: c} = item) do
     decode_table(item)
     |> Map.merge(%{
-      name: c["name"],
-      handle: c["handle"],
-      type: c["type"] && String.to_atom(c["type"]),
-      hook: c["hook"] && String.to_atom(c["hook"]),
-      prio: c["prio"],
-      policy: c["policy"] && String.to_atom(c["policy"])
+      name: c.name,
+      handle: c[:handle],
+      type: c[:type],
+      hook: c[:hook],
+      prio: c[:prio],
+      policy: c[:policy]
     })
   end
 
-  defp decode_chain(%{"rule" => r} = item) do
+  defp decode_chain(%{rule: r} = item) do
     decode_table(item)
-    |> Map.put(:chain, r["chain"])
+    |> Map.put(:chain, r.chain)
   end
 
   # Decode a single rule item (reuses decode_chain which reuses decode_table)
-  defp decode_rule(%{"rule" => r} = item) do
+  defp decode_rule(%{rule: r} = item) do
     decode_chain(item)
     |> Map.merge(%{
-      handle: r["handle"],
-      expr: convert_ranges_to_elixir(r["expr"])
+      handle: r[:handle],
+      expr: convert_ranges_to_elixir(r[:expr])
     })
   end
 
   # Decode a single set item (reuses decode_table)
-  defp decode_set(%{"set" => s} = item) do
+  defp decode_set(%{set: s} = item) do
     decode_table(item)
     |> Map.merge(%{
-      name: s["name"],
-      handle: s["handle"],
-      key_type: s["type"],
-      key_len: s["key_len"],
-      flags: s["flags"]
+      name: s.name,
+      handle: s[:handle],
+      key_type: s[:type],
+      key_len: s[:key_len],
+      flags: s[:flags]
     })
   end
 
   # Extract set elements from a set item that has "elem" field
-  defp extract_set_elements(%{"set" => s}) do
-    case s["elem"] do
+  defp extract_set_elements(%{set: s}) do
+    case s[:elem] do
       elems when is_list(elems) ->
         Enum.map(elems, fn elem ->
           # Elements can be simple values or maps with "val" key
           case elem do
             val when is_binary(val) or is_integer(val) -> %{value: val}
-            %{"val" => val} -> %{value: val}
+            %{val: val} -> %{value: val}
             other -> %{value: other}
           end
         end)
@@ -311,10 +311,10 @@ defmodule NFTables.Decoder do
   end
 
   # Convert JSON range arrays to Elixir ranges
-  # Recursively walks through maps and lists, converting {"range": [min, max]} to min..max
-  defp convert_ranges_to_elixir(%{"range" => [min, max]} = map) when is_integer(min) and is_integer(max) do
+  # Recursively walks through maps and lists, converting {range: [min, max]} to min..max
+  defp convert_ranges_to_elixir(%{range: [min, max]} = map) when is_integer(min) and is_integer(max) do
     # Replace the range array with an Elixir range
-    Map.put(map, "range", min..max)
+    Map.put(map, :range, min..max)
   end
 
   defp convert_ranges_to_elixir(map) when is_map(map) do
