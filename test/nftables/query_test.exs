@@ -7,6 +7,7 @@ defmodule NFTables.QueryTest do
   alias NFTables.{Query, Executor, Decoder}
 
   @moduletag :integration
+  @moduletag :slow
 
   # Prerequisites:
   # - CAP_NET_ADMIN capability set on binary

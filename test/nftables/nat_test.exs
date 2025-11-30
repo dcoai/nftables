@@ -4,6 +4,7 @@ defmodule NFTables.NATTest do
 
   @moduletag :integration
   @moduletag :nat
+  @moduletag :slow
 
   alias NFTables.{Builder, NAT}
   import NFTables.QueryHelpers

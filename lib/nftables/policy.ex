@@ -51,6 +51,23 @@ defmodule NFTables.Policy do
   """
   @spec accept_loopback(pid(), keyword()) :: :ok | {:error, term()}
   def accept_loopback(pid, opts \\ []) do
+    build_accept_loopback(opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a loopback acceptance rule without executing it.
+
+  Returns a Builder that can be further modified or executed later.
+  Useful for testing and composing multiple rules.
+
+  ## Example
+
+      builder = NFTables.Policy.build_accept_loopback()
+      json = Builder.to_json(builder)
+  """
+  @spec build_accept_loopback(keyword()) :: Builder.t()
+  def build_accept_loopback(opts \\ []) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -63,7 +80,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -78,6 +94,15 @@ defmodule NFTables.Policy do
   """
   @spec accept_established(pid(), keyword()) :: :ok | {:error, term()}
   def accept_established(pid, opts \\ []) do
+    build_accept_established(opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build an established/related connection acceptance rule without executing it.
+  """
+  @spec build_accept_established(keyword()) :: Builder.t()
+  def build_accept_established(opts \\ []) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -90,7 +115,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -117,6 +141,15 @@ defmodule NFTables.Policy do
   """
   @spec allow_ssh(pid(), keyword()) :: :ok | {:error, term()}
   def allow_ssh(pid, opts \\ []) do
+    build_allow_ssh(opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build an SSH allow rule without executing it.
+  """
+  @spec build_allow_ssh(keyword()) :: Builder.t()
+  def build_allow_ssh(opts \\ []) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -147,7 +180,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -172,6 +204,14 @@ defmodule NFTables.Policy do
   end
 
   @doc """
+  Build an HTTP allow rule without executing it.
+  """
+  @spec build_allow_http(keyword()) :: Builder.t()
+  def build_allow_http(opts \\ []) do
+    build_allow_port(80, Keyword.put(opts, :service, "HTTP"))
+  end
+
+  @doc """
   Allow HTTPS connections (port 443).
 
   ## Example
@@ -181,6 +221,14 @@ defmodule NFTables.Policy do
   @spec allow_https(pid(), keyword()) :: :ok | {:error, term()}
   def allow_https(pid, opts \\ []) do
     allow_port(pid, 443, Keyword.put(opts, :service, "HTTPS"))
+  end
+
+  @doc """
+  Build an HTTPS allow rule without executing it.
+  """
+  @spec build_allow_https(keyword()) :: Builder.t()
+  def build_allow_https(opts \\ []) do
+    build_allow_port(443, Keyword.put(opts, :service, "HTTPS"))
   end
 
   @doc """
@@ -196,6 +244,14 @@ defmodule NFTables.Policy do
   end
 
   @doc """
+  Build a DNS allow rule without executing it.
+  """
+  @spec build_allow_dns(keyword()) :: Builder.t()
+  def build_allow_dns(opts \\ []) do
+    build_allow_port(53, Keyword.put(opts, :service, "DNS"))
+  end
+
+  @doc """
   Drop invalid packets.
 
   Drops packets with invalid connection tracking state.
@@ -206,6 +262,15 @@ defmodule NFTables.Policy do
   """
   @spec drop_invalid(pid(), keyword()) :: :ok | {:error, term()}
   def drop_invalid(pid, opts \\ []) do
+    build_drop_invalid(opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a drop invalid packets rule without executing it.
+  """
+  @spec build_drop_invalid(keyword()) :: Builder.t()
+  def build_drop_invalid(opts \\ []) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -218,7 +283,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -270,6 +334,15 @@ defmodule NFTables.Policy do
   """
   @spec allow_any(pid(), keyword()) :: :ok | {:error, term()}
   def allow_any(pid, opts \\ []) do
+    build_allow_any(opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build an allow any traffic rule without executing it.
+  """
+  @spec build_allow_any(keyword()) :: Builder.t()
+  def build_allow_any(opts \\ []) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -290,7 +363,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -313,6 +385,15 @@ defmodule NFTables.Policy do
   """
   @spec deny_all(pid(), keyword()) :: :ok | {:error, term()}
   def deny_all(pid, opts \\ []) do
+    build_deny_all(opts)
+    |> execute_rule(pid)
+  end
+
+  @doc """
+  Build a deny all traffic rule without executing it.
+  """
+  @spec build_deny_all(keyword()) :: Builder.t()
+  def build_deny_all(opts \\ []) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -333,7 +414,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   @doc """
@@ -448,6 +528,11 @@ defmodule NFTables.Policy do
   end
 
   defp allow_port(pid, port, opts) do
+    build_allow_port(port, opts)
+    |> execute_rule(pid)
+  end
+
+  defp build_allow_port(port, opts) do
     table = Keyword.get(opts, :table, "filter")
     chain = Keyword.get(opts, :chain, "INPUT")
     family = Keyword.get(opts, :family, :inet)
@@ -479,7 +564,6 @@ defmodule NFTables.Policy do
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-    |> execute_rule(pid)
   end
 
   defp apply_services(pid, services, opts) do
