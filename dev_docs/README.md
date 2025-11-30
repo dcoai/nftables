@@ -85,7 +85,6 @@ expr = rule()
   |> tcp()
   |> dport(22)
   |> accept()
-  |> to_expr()
 
 # Execute separately
 Builder.new()
@@ -109,7 +108,6 @@ expr = rule()
   |> tcp()
   |> dport(22)
   |> accept()
-  |> to_expr()
 
 # Returns: [%{match: ...}, %{match: ...}, %{accept: nil}]
 ```
@@ -128,7 +126,6 @@ expr = rule()
   |> rate_limit(5, :minute, burst: 10)
   |> log("SSH_RATELIMIT: ", level: :warn)
   |> drop()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)

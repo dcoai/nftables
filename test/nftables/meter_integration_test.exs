@@ -78,7 +78,6 @@ defmodule NFTables.MeterIntegrationTest do
         |> ct_state([:new])
         |> meter_update(Meter.payload(:ip, :saddr), "ssh_ratelimit", 3, :minute, burst: 5)
         |> accept()
-        |> to_expr()
 
       result =
         Builder.new()
@@ -97,7 +96,6 @@ defmodule NFTables.MeterIntegrationTest do
         |> dport(80)
         |> meter_update(Meter.payload(:ip, :saddr), "http_limits", 100, :second, burst: 200)
         |> accept()
-        |> to_expr()
 
       result =
         Builder.new(family: :inet)

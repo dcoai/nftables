@@ -53,7 +53,7 @@ defmodule NFTables.Match.Meter do
           burst: 5                # Allow burst of 5
         )
         |> accept()
-        |> to_expr()
+       
 
       Builder.new()
       |> Builder.add(rule: ssh_rule, table: "filter", chain: "input", family: :inet)

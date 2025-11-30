@@ -205,7 +205,6 @@ Builder.new(family: :inet)
   Rule.new()
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 
@@ -253,7 +252,6 @@ alias NFTables.{Builder, Rule}
     |> Rule.log("SSH_ACCESS: ", level: "info")
     |> Rule.counter()
     |> Rule.accept()
-    |> Rule.to_expr()
   )
   |> Builder.execute(pid)
 
@@ -264,10 +262,10 @@ alias NFTables.{Builder, Rule}
   |> Builder.add(table: "filter")
   |> Builder.add(chain: "INPUT")
   |> Builder.add(rule: 
-    Rule.new() |> Rule.source("10.0.0.0/8") |> Rule.drop() |> Rule.to_expr()
+    Rule.new() |> Rule.source("10.0.0.0/8") |> Rule.drop()
   )
   |> Builder.add(rule: 
-    Rule.new() |> Rule.state([:established, :related]) |> Rule.accept() |> Rule.to_expr()
+    Rule.new() |> Rule.state([:established, :related]) |> Rule.accept()
   )
   |> Builder.execute(pid)
 ```
@@ -325,7 +323,7 @@ The `Rule` module provides a fluent API for building rule expressions:
 alias NFTables.Rule
 
 # Build rule expressions
-expr = Rule.new()
+ssh_rule = Rule.new()
 |> Rule.source("10.0.0.0/8")           # Match source IP/CIDR
 |> Rule.protocol(:tcp)                   # Match protocol
 |> Rule.dport(22)                        # Match destination port
@@ -334,13 +332,13 @@ expr = Rule.new()
 |> Rule.log("SSH: ", level: "info")     # Logging
 |> Rule.counter()                        # Add counter
 |> Rule.accept()                         # Verdict
-|> Rule.to_expr()                        # Convert to expression list
+# No need to call to_expr() - Builder handles conversion automatically!
 
 # Use with Builder
 Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
-|> Builder.add(rule: expr)
+|> Builder.add(rule: ssh_rule)          # Automatically converted to expression list
 |> Builder.execute(pid)
 ```
 
@@ -388,7 +386,6 @@ Builder.new()
   Rule.new()
   |> Rule.protocol(:tcp)
   |> Rule.dport_map("port_verdict")  # Map lookup
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -414,7 +411,6 @@ Builder.new()
   |> Rule.dport(80)
   |> Rule.counter_ref("http_traffic")  # Reference named counter
   |> Rule.accept()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -438,7 +434,6 @@ Builder.new()
   Rule.new()
   |> Rule.quota_ref("monthly_limit")
   |> Rule.accept()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -464,7 +459,6 @@ Builder.new()
   |> Rule.dport(22)
   |> Rule.limit_ref("ssh_limit")  # Reference named limit
   |> Rule.accept()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -493,7 +487,6 @@ builder
   Rule.new()
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -579,7 +572,6 @@ builder
   Rule.new()
   |> Rule.source("10.0.0.0/8")
   |> Rule.accept()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -611,7 +603,6 @@ Builder.new(family: :inet)
   Rule.new()
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -632,7 +623,6 @@ Builder.new(family: :inet)
   Rule.new()
   |> Rule.source("10.0.0.1")
   |> Rule.accept()
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -653,7 +643,6 @@ Builder.new(family: :inet)
   Rule.new()
   |> Rule.limit(10, :minute, burst: 5)
   |> Rule.drop()  # or accept() depending on your use case
-  |> Rule.to_expr()
 )
 |> Builder.execute(pid)
 ```
@@ -762,7 +751,6 @@ alias NFTables.{Builder, Rule}
     |> Rule.protocol(:tcp)
     |> Rule.dport(80)
     |> Rule.drop()
-    |> Rule.to_expr()
   )
   |> Builder.execute(pid)
 
@@ -788,7 +776,6 @@ expr = rule()
   |> rate_limit(5, :minute)
   |> counter()
   |> drop()
-  |> to_expr()
 
 # Execute via Builder/Executor pattern
 Builder.new()
@@ -803,7 +790,6 @@ Builder.new()
   |> limit(5, :minute)         # alias for rate_limit
   |> counter()
   |> drop()
-  |> to_expr()
   |> then(fn expr ->
     Builder.new()
     |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -958,7 +944,6 @@ alias NFTables.{Builder, Executor}
 expr = rule()
   |> ct_state([:established, :related])
   |> accept()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -974,7 +959,6 @@ expr = rule()
   |> ct_state([:new])
   |> limit_connections(100)  # Max 100 concurrent connections
   |> drop()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -985,7 +969,6 @@ expr = rule()
   |> ct_bytes(:gt, 1_000_000)  # Over 1MB
   |> log("LARGE_TRANSFER: ")
   |> accept()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "FORWARD", family: :inet)
@@ -1016,7 +999,6 @@ import NFTables.Match
 offload_rule = rule()
   |> state([:established, :related])
   |> flow_offload()
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: offload_rule, table: "filter", chain: "forward", family: :inet)
@@ -1042,7 +1024,6 @@ ssh_meter = rule()
   |> tcp()
   |> dport(22)
   |> accept()
-  |> to_expr()
 
 # Composite key (IP + port) for connection limits
 conn_meter = rule()
@@ -1057,7 +1038,6 @@ conn_meter = rule()
     burst: 5
   )
   |> accept()
-  |> to_expr()
 ```
 
 ### Deep Packet Inspection with Raw Payload
@@ -1073,14 +1053,12 @@ dns_block = rule()
   |> payload_raw(:th, 16, 16, 53)  # Transport header, offset 16, length 16 bits, value 53
   |> log("DNS query blocked: ")
   |> drop()
-  |> to_expr()
 
 # Check TCP SYN flag using masked match
 syn_counter = rule()
   |> tcp()
   |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)  # TCP flags offset, mask SYN bit
   |> counter()
-  |> to_expr()
 
 # Match HTTP GET method
 http_get = rule()
@@ -1089,7 +1067,6 @@ http_get = rule()
   |> payload_raw(:ih, 0, 32, "GET ")  # Inner header, first 4 bytes
   |> log("HTTP GET: ")
   |> accept()
-  |> to_expr()
 ```
 
 ### Transparent Proxy with TPROXY
@@ -1117,7 +1094,6 @@ mark_existing = rule()
   |> socket_transparent()
   |> set_mark(1)
   |> accept()
-  |> to_expr()
 
 # TPROXY new HTTP connections
 tproxy_http = rule()
@@ -1125,7 +1101,6 @@ tproxy_http = rule()
   |> dport(80)
   |> mark(0)
   |> tproxy(to: 8080)
-  |> to_expr()
 
 Builder.new()
 |> Builder.add(rule: mark_existing, table: "tproxy", chain: "prerouting", family: :ip)
@@ -1145,7 +1120,6 @@ sctp_rule = rule()
   |> sctp()
   |> dport(9899)
   |> accept()
-  |> to_expr()
 
 # DCCP (streaming media) - use generic dport/sport
 dccp_rule = rule()
@@ -1154,7 +1128,6 @@ dccp_rule = rule()
   |> dport(6000)
   |> log("DCCP traffic: ")
   |> accept()
-  |> to_expr()
 
 # GRE (VPN tunnels)
 gre_rule = rule()
@@ -1163,14 +1136,12 @@ gre_rule = rule()
   |> gre_key(12345)
   |> source_ip("10.0.0.1")
   |> accept()
-  |> to_expr()
 
 # Port ranges supported for SCTP/DCCP
 sctp_range = rule()
   |> sctp()
   |> dport(9000..9999)
   |> counter()
-  |> to_expr()
 ```
 
 ### OS Fingerprinting
@@ -1187,27 +1158,24 @@ linux_ssh = rule()
   |> osf_name("Linux")
   |> limit(10, :minute)
   |> accept()
-  |> to_expr()
 
 # Rate limit Windows connections
 windows_limit = rule()
   |> osf_name("Windows", ttl: :strict)
   |> limit(10, :second, burst: 5)
   |> accept()
-  |> to_expr()
 
 # Block unknown OS
 block_unknown = rule()
   |> osf_name("unknown")
   |> log("Unknown OS blocked: ")
   |> drop()
-  |> to_expr()
 
 # OS-based marking for routing
 mark_by_os = [
-  rule() |> osf_name("Linux") |> set_mark(1) |> to_expr(),
-  rule() |> osf_name("Windows") |> set_mark(2) |> to_expr(),
-  rule() |> osf_name("MacOS") |> set_mark(3) |> to_expr()
+  rule() |> osf_name("Linux") |> set_mark(1),
+  rule() |> osf_name("Windows") |> set_mark(2),
+  rule() |> osf_name("MacOS") |> set_mark(3)
 ]
 ```
 
@@ -1297,7 +1265,7 @@ builder = Builder.new(family: :inet)
   policy: :drop
 )
 |> Builder.add(
-  rule: rule() |> source_ip("192.168.1.100") |> drop() |> to_expr(),
+  rule: rule() |> source_ip("192.168.1.100") |> drop(),
   table: "filter",
   chain: "INPUT"
 )
@@ -1373,7 +1341,6 @@ builder = Builder.new(family: :inet)
   |> rate_limit(10, :minute)
   |> log("SSH_ATTACK: ")
   |> drop()
-  |> to_expr()
 )
 
 # Convert to JSON command for remote execution
@@ -1421,9 +1388,9 @@ Builder.new()
 |> Builder.delete(set: "blocklist", table: "filter", family: :inet)
 
 # Rule operations with Match expressions
-block_ip_expr = rule() |> source_ip("192.168.1.100") |> drop() |> to_expr()
-accept_ip_expr = rule() |> source_ip("10.0.0.1") |> accept() |> to_expr()
-rate_limit_expr = rule() |> tcp() |> dport(22) |> limit(10, :second) |> accept() |> to_expr()
+block_ip_expr = rule() |> source_ip("192.168.1.100") |> drop()
+accept_ip_expr = rule() |> source_ip("10.0.0.1") |> accept()
+rate_limit_expr = rule() |> tcp() |> dport(22) |> limit(10, :second) |> accept()
 
 Builder.new()
 |> Builder.add(rule: block_ip_expr, table: "filter", chain: "INPUT", family: :inet)
@@ -1440,11 +1407,10 @@ defmodule MyApp.DistributedFirewall do
   # On C&C node - build firewall configuration
   def build_firewall_config() do
     # Build expressions
-    loopback_expr = rule() |> source_ip("127.0.0.1") |> accept() |> to_expr()
+    loopback_expr = rule() |> source_ip("127.0.0.1") |> accept()
     ssh_rate_limit_expr = rule()
       |> tcp() |> dport(22) |> state([:new])
       |> limit(10, :minute) |> accept()
-      |> to_expr()
 
     # Build complete configuration
     Builder.new(family: :inet)

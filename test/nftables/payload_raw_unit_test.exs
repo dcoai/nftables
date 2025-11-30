@@ -180,7 +180,6 @@ defmodule NFTables.PayloadRawUnitTest do
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
-        |> to_expr()
 
       builder =
         Builder.new()
@@ -213,7 +212,6 @@ defmodule NFTables.PayloadRawUnitTest do
         |> tcp()
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> accept()
-        |> to_expr()
 
       builder =
         Builder.new()

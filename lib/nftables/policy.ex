@@ -76,7 +76,7 @@ defmodule NFTables.Policy do
       rule(family: family)
       |> iif("lo")
       |> accept()
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -111,7 +111,7 @@ defmodule NFTables.Policy do
       rule(family: family)
       |> state([:established, :related])
       |> accept()
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -176,7 +176,7 @@ defmodule NFTables.Policy do
     expr_list =
       builder
       |> accept()
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -279,7 +279,7 @@ defmodule NFTables.Policy do
       rule(family: family)
       |> ct_state([:invalid])
     |> drop()
-    |> to_expr()
+   
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -359,7 +359,7 @@ defmodule NFTables.Policy do
     expr_list =
       builder
       |> accept()
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -410,7 +410,7 @@ defmodule NFTables.Policy do
     expr_list =
       builder
       |> drop()
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -560,7 +560,7 @@ defmodule NFTables.Policy do
     expr_list =
       builder
       |> accept()
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)

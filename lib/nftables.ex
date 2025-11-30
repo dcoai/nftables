@@ -40,13 +40,12 @@ defmodule NFTables do
       # Or use high-level convenience APIs
       import NFTables.Match
 
-      expr_list = rule()
+      block_rule = rule()
       |> source_ip_set("@blocklist")
       |> drop()
-      |> to_expr()
 
       Builder.new()
-      |> Builder.add(rule: expr_list, table: "filter", chain: "input")
+      |> Builder.add(rule: block_rule, table: "filter", chain: "input")
       |> Builder.execute(pid)
 
   ## Module Organization

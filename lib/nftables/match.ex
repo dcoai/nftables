@@ -20,9 +20,9 @@ defmodule NFTables.Match do
       import NFTables.Match
       alias NFTables.{Builder, Executor}
 
-      # Build rule expressions
-      ssh_rule = rule() |> tcp() |> dport(22) |> limit(10, :minute) |> accept() |> to_expr()
-      established_rule = rule() |> state([:established, :related]) |> accept() |> to_expr()
+      # Build rule expressions - Builder automatically converts to expression lists
+      ssh_rule = rule() |> tcp() |> dport(22) |> limit(10, :minute) |> accept()
+      established_rule = rule() |> state([:established, :related]) |> accept()
 
       # Use with Builder/Executor
       Builder.new()

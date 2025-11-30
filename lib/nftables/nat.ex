@@ -95,7 +95,7 @@ defmodule NFTables.NAT do
       rule(family: family)
     |> oif(interface)
     |> masquerade()
-    |> to_expr()
+   
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -170,7 +170,7 @@ defmodule NFTables.NAT do
       end).()
       |> dport(external_port)
       |> dnat_to(internal_ip, port: internal_port)
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -286,7 +286,7 @@ defmodule NFTables.NAT do
     expr_list =
       builder
       |> snat_to(nat_ip)
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -341,7 +341,7 @@ defmodule NFTables.NAT do
       builder
       |> dest_ip(dest)
       |> dnat_to(nat_ip)
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -384,7 +384,7 @@ defmodule NFTables.NAT do
       end).()
       |> dport(from_port)
       |> redirect_to(to_port)
-      |> to_expr()
+     
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -410,7 +410,7 @@ defmodule NFTables.NAT do
       rule(family: family)
     |> dest_ip(dest_ip)
     |> dnat_to(nat_ip)
-    |> to_expr()
+   
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
@@ -426,7 +426,7 @@ defmodule NFTables.NAT do
       rule(family: family)
     |> source_ip(source_ip)
     |> snat_to(nat_ip)
-    |> to_expr()
+   
 
     Builder.new()
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
