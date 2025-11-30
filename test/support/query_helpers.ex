@@ -38,13 +38,18 @@ defmodule NFTables.QueryHelpers do
   """
   @spec chain_exists?(pid(), String.t(), String.t(), atom()) :: boolean()
   def chain_exists?(pid, table, chain_name, family \\ :inet) do
-    case Query.list_chains(family: family)
+    # Try to list rules in the chain - if the chain doesn't exist, this will fail
+    case Query.list_rules(table, chain_name, family: family)
          |> Executor.execute(pid: pid)
          |> Decoder.decode() do
-      {:ok, decoded} ->
-        chains = Map.get(decoded, :chains, [])
-        Enum.any?(chains, fn c -> c.name == chain_name and c.table == table end)
+      {:ok, _decoded} ->
+        # Chain exists (even if it has no rules)
+        true
       :ok ->
+        # Empty response means chain exists but has no rules
+        true
+      {:error, _reason} ->
+        # Error means chain doesn't exist
         false
       _ ->
         false

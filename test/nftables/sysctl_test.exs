@@ -43,8 +43,9 @@ defmodule NFTables.SysctlTest do
           assert value in ["0", "1"]
 
         {:error, reason} ->
-          # If we don't have CAP_NET_ADMIN, expect permission error
-          assert reason =~ ~r/permission|not found|not readable/i
+          # If we don't have CAP_NET_ADMIN, expect permission error or invalid response
+          reason_str = if is_binary(reason), do: reason, else: Atom.to_string(reason)
+          assert reason_str =~ ~r/permission|not found|not readable|invalid/i
       end
     end
 

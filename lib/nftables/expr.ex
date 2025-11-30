@@ -759,7 +759,7 @@ defmodule NFTables.Expr do
   def set_update(elem, set_name, statements) when is_list(statements) do
     # For composite keys (lists), wrap in concat expression
     normalized_elem = case elem do
-      list when is_list(list) -> %{concat: list}
+      list when is_list(list) and length(list) > 1 -> %{concat: list}
       other -> normalize_value(other)
     end
 
@@ -791,7 +791,7 @@ defmodule NFTables.Expr do
   def set_add_operation(elem, set_name, statements) when is_list(statements) do
     # For composite keys (lists), wrap in concat expression
     normalized_elem = case elem do
-      list when is_list(list) -> %{concat: list}
+      list when is_list(list) and length(list) > 1 -> %{concat: list}
       other -> normalize_value(other)
     end
 
