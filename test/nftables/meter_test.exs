@@ -138,8 +138,11 @@ defmodule NFTables.MeterTest do
         |> to_expr()
 
       set_expr = Enum.find(expr, fn e -> Map.has_key?(e, :set) end)
-      assert is_list(set_expr[:set][:elem])
-      assert length(set_expr[:set][:elem]) == 2
+      # Composite keys should be wrapped in concat
+      assert is_map(set_expr[:set][:elem])
+      assert Map.has_key?(set_expr[:set][:elem], :concat)
+      assert is_list(set_expr[:set][:elem][:concat])
+      assert length(set_expr[:set][:elem][:concat]) == 2
     end
 
     test "builds meter_add operation" do
