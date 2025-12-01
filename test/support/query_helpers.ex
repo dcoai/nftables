@@ -1,12 +1,12 @@
 defmodule NFTables.QueryHelpers do
   @moduledoc """
-  Test helper functions for the new Query/Executor/Decoder pipeline pattern.
+  Test helper functions for the new Query/Local/Decoder pipeline pattern.
 
   These helpers provide convenience functions for tests while maintaining
   the new architecture.
   """
 
-  alias NFTables.{Query, Executor, Decoder}
+  alias NFTables.{Query, Local, Decoder}
 
   @doc """
   List rules in a specific chain (convenience wrapper for tests).
@@ -21,7 +21,7 @@ defmodule NFTables.QueryHelpers do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     case Query.list_rules(table, chain, family: family)
-         |> Executor.execute(pid: pid, timeout: timeout)
+         |> Local.submit(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} -> {:ok, Map.get(decoded, :rules, [])}
       :ok -> {:ok, []}
@@ -40,7 +40,7 @@ defmodule NFTables.QueryHelpers do
   def chain_exists?(pid, table, chain_name, family \\ :inet) do
     # Try to list rules in the chain - if the chain doesn't exist, this will fail
     case Query.list_rules(table, chain_name, family: family)
-         |> Executor.execute(pid: pid)
+         |> Local.submit(pid: pid)
          |> Decoder.decode() do
       {:ok, _decoded} ->
         # Chain exists (even if it has no rules)
@@ -69,7 +69,7 @@ defmodule NFTables.QueryHelpers do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     case Query.list_chains(family: family)
-         |> Executor.execute(pid: pid, timeout: timeout)
+         |> Local.submit(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} -> {:ok, Map.get(decoded, :chains, [])}
       :ok -> {:ok, []}
@@ -87,7 +87,7 @@ defmodule NFTables.QueryHelpers do
   @spec set_exists?(pid(), String.t(), String.t(), atom()) :: boolean()
   def set_exists?(pid, table, set_name, family \\ :inet) do
     case Query.list_sets(family: family)
-         |> Executor.execute(pid: pid)
+         |> Local.submit(pid: pid)
          |> Decoder.decode() do
       {:ok, decoded} ->
         sets = Map.get(decoded, :sets, [])
@@ -112,7 +112,7 @@ defmodule NFTables.QueryHelpers do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     case Query.list_sets(family: family)
-         |> Executor.execute(pid: pid, timeout: timeout)
+         |> Local.submit(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} -> {:ok, Map.get(decoded, :sets, [])}
       :ok -> {:ok, []}
@@ -133,7 +133,7 @@ defmodule NFTables.QueryHelpers do
     timeout = Keyword.get(opts, :timeout, 5000)
 
     case Query.list_set_elements(table, set_name, family: family)
-         |> Executor.execute(pid: pid, timeout: timeout)
+         |> Local.submit(pid: pid, timeout: timeout)
          |> Decoder.decode() do
       {:ok, decoded} ->
         # Set elements are in the :set_elements key
@@ -153,7 +153,7 @@ defmodule NFTables.QueryHelpers do
   @spec table_exists?(pid(), String.t(), atom()) :: boolean()
   def table_exists?(pid, table_name, family \\ :inet) do
     case Query.list_tables(family: family)
-         |> Executor.execute(pid: pid)
+         |> Local.submit(pid: pid)
          |> Decoder.decode() do
       {:ok, decoded} ->
         tables = Map.get(decoded, :tables, [])

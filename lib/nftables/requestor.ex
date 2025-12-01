@@ -63,7 +63,7 @@ defmodule NFTables.Requestor do
           node = Keyword.fetch!(opts, :node)
           commands = NFTables.Builder.to_map(builder)
 
-          case :rpc.call(node, NFTables.Executor, :execute, [commands, opts]) do
+          case :rpc.call(node, NFTables.Local, :submit, [commands, opts]) do
             {:ok, result} -> {:ok, result}
             {:error, reason} -> {:error, {:remote_failure, reason}}
             {:badrpc, reason} -> {:error, {:rpc_error, reason}}
@@ -86,7 +86,7 @@ defmodule NFTables.Requestor do
 
           # Then execute locally
           pid = Keyword.get(opts, :pid) || Process.whereis(NFTables.Port)
-          NFTables.Executor.execute(commands, pid: pid)
+          NFTables.Local.submit(commands, pid: pid)
         end
       end
 
@@ -144,18 +144,16 @@ defmodule NFTables.Requestor do
   | **Use Case** | Direct kernel execution | Remote, testing, audit, etc. |
   | **Configuration** | Requires pid | Uses behaviour module |
 
-  Both can coexist - use `execute/2` for direct local execution and `submit/2`
-  for custom submission strategies.
+  Both approaches work - use `submit/1` with NFTables.Local requestor for direct
+  local execution, or use `submit/2` with custom requestors for alternate strategies.
 
   ## See Also
 
   - `NFTables.Builder.submit/1` - Submit with builder's requestor
   - `NFTables.Builder.submit/2` - Submit with options/override requestor
   - `NFTables.Builder.set_requestor/2` - Set requestor on builder
-  - `NFTables.Builder.execute/2` - Direct local execution
+  - `NFTables.Local` - Default local execution requestor
   """
-
-  alias NFTables.Builder
 
   @doc """
   Callback for submitting a Builder configuration.
@@ -165,7 +163,7 @@ defmodule NFTables.Requestor do
 
   ## Parameters
 
-  - `builder` - NFTables.Builder struct with accumulated commands
+  - `builder` - NFTables.Builder struct or command map with accumulated commands
   - `opts` - Keyword list of options (requestor-specific)
 
   ## Returns
@@ -178,7 +176,13 @@ defmodule NFTables.Requestor do
 
       @impl true
       def submit(builder, opts) do
-        commands = NFTables.Builder.to_map(builder)
+        # Convert builder to command map
+        commands = if is_struct(builder) do
+          NFTables.Builder.to_map(builder)
+        else
+          builder
+        end
+
         node = Keyword.fetch!(opts, :node)
 
         case :rpc.call(node, MyApp, :apply_config, [commands]) do
@@ -187,6 +191,6 @@ defmodule NFTables.Requestor do
         end
       end
   """
-  @callback submit(builder :: Builder.t(), opts :: keyword()) ::
+  @callback submit(builder :: term(), opts :: keyword()) ::
               :ok | {:ok, term()} | {:error, term()}
 end

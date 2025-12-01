@@ -35,7 +35,7 @@ defmodule NFTables do
         table: "filter",
         family: :inet
       )
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
       # Or use high-level convenience APIs
       import NFTables.Match
@@ -46,7 +46,7 @@ defmodule NFTables do
 
       Builder.new()
       |> Builder.add(rule: block_rule, table: "filter", chain: "input")
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
   ## Module Organization
 
@@ -64,7 +64,7 @@ defmodule NFTables do
   ### Low-Level APIs
 
   - `NFTables.Port` - JSON-based port communication (from NFTables.Port package)
-  - `NFTables.Executor` - Execute nftables commands
+  - `NFTables.Local` - Execute nftables commands locally
   - `NFTables.Decoder` - Decode nftables responses
 
   ## Architecture

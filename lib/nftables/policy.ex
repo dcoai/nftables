@@ -21,7 +21,7 @@ defmodule NFTables.Policy do
         priority: 0,
         policy: :drop
       )
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
       # Apply common policies
       :ok = NFTables.Policy.accept_loopback(pid)
@@ -32,11 +32,11 @@ defmodule NFTables.Policy do
 
   - `NFTables.Match` - Fluent API for custom rules
   - `NFTables.Builder` - Configuration builder
-  - `NFTables.Executor` - Execute configurations
+  - `NFTables.Local` - Local execution requestor
   """
 
   import NFTables.Match
-  alias NFTables.{Builder, Executor}
+  alias NFTables.Builder
 
   @doc """
   Accept all loopback traffic.
@@ -511,9 +511,10 @@ defmodule NFTables.Policy do
 
   # Private helpers
 
-  # Execute a Builder and convert {:ok, _} to :ok for consistent API
+  # Execute a Builder and normalize response to :ok for consistent API
   defp execute_rule(builder, pid) do
-    case Executor.execute(builder, pid) do
+    case Builder.submit(builder, pid: pid) do
+      :ok -> :ok
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
     end

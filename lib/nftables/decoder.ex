@@ -6,13 +6,13 @@ defmodule NFTables.Decoder do
 
   ## Architecture
 
-  The Decoder sits between Executor and user code, transforming nftables JSON
+  The Decoder sits between NFTables.Local and user code, transforming nftables JSON
   responses into idiomatic Elixir structures:
 
   ```
-  Query.list_tables()          # Build command (pure function)
-  |> Executor.execute(pid)     # Execute & JSON decode
-  |> Decoder.decode()          # Transform to Elixir
+  Query.list_tables()             # Build command (pure function)
+  |> NFTables.Local.submit(pid: pid)  # Execute & JSON decode
+  |> Decoder.decode()             # Transform to Elixir
   ```
 
   ## Response Types
@@ -54,12 +54,12 @@ defmodule NFTables.Decoder do
       # Write operation
       Builder.new()
       |> Builder.add(table: "filter", family: :inet)
-      |> Builder.execute(pid)
-      #=> :ok (decoded by Executor internally)
+      |> Builder.submit(pid: pid)
+      #=> :ok
 
       # Read operation
       Query.list_tables(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
       #=> {:ok, %{tables: [...]}}
   """
@@ -85,7 +85,7 @@ defmodule NFTables.Decoder do
 
   ## Parameters
 
-  - `response` - The response tuple from Executor.execute/2
+  - `response` - The response tuple from NFTables.Local.submit/2
 
   ## Returns
 

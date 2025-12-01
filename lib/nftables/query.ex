@@ -3,15 +3,15 @@ defmodule NFTables.Query do
   Command builders for querying nftables resources.
 
   This module provides pure functions that build nftables JSON commands for
-  read operations. Commands are meant to be piped through Executor for execution
+  read operations. Commands are meant to be piped through NFTables.Local for execution
   and Decoder for transformation.
 
   ## Pipeline Architecture
 
   ```
-  Query.list_tables(family: :inet)  # Build command (pure function)
-  |> Executor.execute(pid: pid)     # Execute & JSON decode
-  |> Decoder.decode()               # Transform to idiomatic Elixir
+  Query.list_tables(family: :inet)     # Build command (pure function)
+  |> NFTables.Local.submit(pid: pid)   # Execute & JSON decode
+  |> Decoder.decode()                  # Transform to idiomatic Elixir
   ```
 
   ## Examples
@@ -19,19 +19,19 @@ defmodule NFTables.Query do
       # List all tables
       {:ok, %{tables: tables}} =
         Query.list_tables(family: :inet)
-        |> Executor.execute(pid: pid)
+        |> NFTables.Local.submit(pid: pid)
         |> Decoder.decode()
 
       # List rules in a specific chain
       {:ok, %{rules: rules}} =
         Query.list_rules("filter", "INPUT")
-        |> Executor.execute(pid: pid)
+        |> NFTables.Local.submit(pid: pid)
         |> Decoder.decode()
 
       # List entire ruleset
       {:ok, %{tables: tables, chains: chains, rules: rules, sets: sets}} =
         Query.list_ruleset(family: :inet)
-        |> Executor.execute(pid: pid)
+        |> NFTables.Local.submit(pid: pid)
         |> Decoder.decode()
 
       # Build command for remote execution
@@ -46,7 +46,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to list tables.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Options
 
@@ -56,12 +56,12 @@ defmodule NFTables.Query do
 
       # List all tables
       Query.list_tables()
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
 
       # List tables for specific family
       Query.list_tables(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
   """
   @spec list_tables(keyword()) :: map()
@@ -78,7 +78,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to list chains.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Options
 
@@ -87,7 +87,7 @@ defmodule NFTables.Query do
   ## Examples
 
       Query.list_chains(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
   """
   @spec list_chains(keyword()) :: map()
@@ -104,7 +104,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to list rules.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Parameters
 
@@ -122,17 +122,17 @@ defmodule NFTables.Query do
 
       # List all rules for a family
       Query.list_rules(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
 
       # List rules in a specific chain
       Query.list_rules("filter", "INPUT")
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
 
       # With options
       Query.list_rules("filter", "INPUT", family: :inet6)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
   """
   @spec list_rules(keyword()) :: map()
@@ -173,7 +173,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to list sets.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Options
 
@@ -182,7 +182,7 @@ defmodule NFTables.Query do
   ## Examples
 
       Query.list_sets(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
   """
   @spec list_sets(keyword()) :: map()
@@ -199,7 +199,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to list set elements.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Parameters
 
@@ -211,11 +211,11 @@ defmodule NFTables.Query do
   ## Examples
 
       Query.list_set_elements("filter", "blocklist")
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
 
       Query.list_set_elements("filter", "blocklist", family: :inet6)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
   """
   @spec list_set_elements(String.t(), String.t(), keyword()) :: map()
@@ -241,7 +241,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to list the entire ruleset.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Options
 
@@ -251,7 +251,7 @@ defmodule NFTables.Query do
 
       # List entire ruleset
       Query.list_ruleset()
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
       #=> {:ok, %{
       #     tables: [...],
@@ -262,7 +262,7 @@ defmodule NFTables.Query do
 
       # List ruleset for specific family
       Query.list_ruleset(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
   """
   @spec list_ruleset(keyword()) :: map()
@@ -279,7 +279,7 @@ defmodule NFTables.Query do
   @doc """
   Build a command map to flush ruleset.
 
-  Returns a map that can be piped to Executor.execute/2.
+  Returns a map that can be piped to NFTables.Local.submit/2.
 
   ## Options
 
@@ -289,13 +289,13 @@ defmodule NFTables.Query do
 
       # Flush entire ruleset
       Query.flush_ruleset()
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
       #=> :ok
 
       # Flush only specific family
       Query.flush_ruleset(family: :inet)
-      |> Executor.execute(pid: pid)
+      |> NFTables.Local.submit(pid: pid)
       |> Decoder.decode()
       #=> :ok
   """
@@ -351,8 +351,8 @@ defmodule NFTables.Query do
       ]
     }
 
-    # Execute via Executor and decode
-    NFTables.Executor.execute(cmd, pid: pid, timeout: timeout)
+    # Execute via NFTables.Local and decode
+    NFTables.Local.submit(cmd, pid: pid, timeout: timeout)
     |> NFTables.Decoder.decode()
   end
 end

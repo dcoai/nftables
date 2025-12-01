@@ -38,7 +38,7 @@ defmodule NFTables.Match.Meter do
         timeout: 60,    # Expire after 60s inactivity
         size: 10000     # Max 10k tracked IPs
       )
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
       # Step 2: Use meter in rule
       ssh_rule = rule()
@@ -57,7 +57,7 @@ defmodule NFTables.Match.Meter do
 
       Builder.new()
       |> Builder.add(rule: ssh_rule, table: "filter", chain: "input", family: :inet)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
   ## Set Types for Keys
 

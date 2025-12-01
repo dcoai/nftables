@@ -13,14 +13,14 @@ defmodule NFTables.FlowtableIntegrationTest do
     # Create test table
     Builder.new()
     |> Builder.add(table: test_table)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
         Builder.new()
         |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
       end
     end)
 
@@ -39,7 +39,7 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 0,
           devices: ["lo"]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -55,7 +55,7 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 0,
           devices: ["lo"]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       # Should succeed on systems with flowtable support
       assert :ok == result
@@ -73,7 +73,7 @@ defmodule NFTables.FlowtableIntegrationTest do
           devices: ["lo"],
           flags: [:offload]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       # Note: May fail if hardware doesn't support offload, but API should work
       assert :ok == result or match?({:error, _}, result)
@@ -90,7 +90,7 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 100,
           devices: ["lo"]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -109,13 +109,13 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 0,
           devices: ["lo"]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       # Delete flowtable
       result =
         Builder.new()
         |> Builder.delete(flowtable: "to_delete", table: table, family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -132,7 +132,7 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 0,
           devices: ["lo"]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -147,7 +147,7 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 0,
           devices: ["lo"]
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -173,14 +173,14 @@ defmodule NFTables.FlowtableIntegrationTest do
           priority: 0,
           policy: :accept
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
 
       # Cleanup
       Builder.new()
       |> Builder.delete(table: batch_table, family: :inet)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
     end
   end
 end

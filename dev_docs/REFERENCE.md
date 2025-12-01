@@ -29,7 +29,7 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 6. [NFTables.NAT - NAT Operations](#nftablesnat---nat-operations)
 7. [NFTables.Sysctl - Kernel Parameter Management](#nftablessysctl---kernel-parameter-management)
 8. [NFTables.Query - Query Operations](#nftablesquery---query-operations)
-9. [NFTables.Executor - Command Execution](#nftablesexecutor---command-execution)
+9. [NFTables.Local - Command Execution](#nftablesexecutor---command-execution)
 
 ---
 
@@ -53,13 +53,13 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 
 | nftables Command | NFTables Equivalent |
 |-----------------|------------------|
-| `nft add table inet filter` | `Builder.new(family: :inet) \|> Builder.add(table: "filter") \|> Builder.execute(pid)` |
+| `nft add table inet filter` | `Builder.new(family: :inet) \|> Builder.add(table: "filter") \|> Builder.submit(pid: pid)` |
 | `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `Builder.add(chain: "input", type: :filter, hook: :input, priority: 0, policy: :drop)` |
 | `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `Builder.add(rule: rule() \|> source_ip("192.168.1.1") \|> drop())` |
 | `nft add set inet filter blocklist { type ipv4_addr; }` | `Builder.add(set: "blocklist", type: :ipv4_addr)` |
 | `nft add element inet filter blocklist { 192.168.1.1 }` | `Builder.add(element: ["192.168.1.1"], set: "blocklist")` |
-| `nft list ruleset` | `Query.list_ruleset() \|> Executor.execute(pid: pid) \|> Decoder.decode()` |
-| `nft list tables` | `Query.list_tables(family: :inet) \|> Executor.execute(pid: pid)` |
+| `nft list ruleset` | `Query.list_ruleset() \|> Local.submit(pid: pid) \|> Decoder.decode()` |
+| `nft list tables` | `Query.list_tables(family: :inet) \|> Local.submit(pid: pid)` |
 
 #### nftables Syntax → Match API
 
@@ -163,7 +163,7 @@ Builder.new(family: :inet)
   policy: :drop
 )
 |> Builder.add(rule: rule() |> tcp() |> dport(22) |> accept())
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 ### Core Functions
@@ -274,7 +274,7 @@ Builder.flush(builder, [:all])  # Flush entire ruleset
 Execute the accumulated commands.
 
 ```elixir
-result = Builder.execute(builder, pid)
+result = Builder.submit(builder, pid: pid)
 # Returns: :ok or {:error, reason}
 ```
 
@@ -616,7 +616,7 @@ Builder.new(family: :inet)
 |> Builder.add(rule: established_rule)
 |> Builder.add(rule: ssh_rule)
 |> Builder.add(rule: block_rule)
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 ---
@@ -770,27 +770,27 @@ Query current nftables configuration.
 List objects. All return query builders that need to be executed.
 
 ```elixir
-alias NFTables.{Query, Executor, Decoder}
+alias NFTables.{Query, Local, Requestor, Decoder}
 
 # List tables
 {:ok, tables} = Query.list_tables(family: :inet)
-  |> Executor.execute(pid: pid)
+  |> Local.submit(pid: pid)
   |> Decoder.decode()
 
 # List chains
 {:ok, chains} = Query.list_chains(family: :inet)
-  |> Executor.execute(pid: pid)
+  |> Local.submit(pid: pid)
   |> Decoder.decode()
 
 # List all rules
 {:ok, rules} = Query.list_ruleset(family: :inet)
-  |> Executor.execute(pid: pid)
+  |> Local.submit(pid: pid)
   |> Decoder.decode()
 ```
 
 ---
 
-## NFTables.Executor - Command Execution
+## NFTables.Local - Command Execution
 
 Low-level command execution (most users won't need this directly).
 
@@ -802,7 +802,7 @@ Execute a command map or query.
 
 ```elixir
 command = %{nftables: [%{add: %{table: %{family: "inet", name: "filter"}}}]}
-{:ok, response} = NFTables.Executor.execute(command, pid: pid)
+{:ok, response} = NFTables.Local.submit(command, pid: pid)
 ```
 
 ---
@@ -817,7 +817,7 @@ All NFTables functions return either:
 **Example:**
 
 ```elixir
-case Builder.execute(builder, pid) do
+case Builder.submit(builder, pid: pid) do
   :ok ->
     IO.puts("Configuration applied")
 

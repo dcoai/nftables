@@ -91,11 +91,11 @@ defmodule NFTables.TestHelpers do
     # Clean up if exists from previous failed test
     Builder.new()
     |> Builder.delete(table: table_name, family: family)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     Builder.new()
     |> Builder.add(table: table_name, family: family)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
     |> case do
       :ok -> {:ok, table_name}
       {:error, reason} -> {:error, reason}
@@ -192,7 +192,7 @@ defmodule NFTables.TestHelpers do
 
     Builder.new()
     |> Builder.add(chain_attrs)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
     |> case do
       :ok -> {:ok, chain_name}
       {:error, reason} -> {:error, reason}
@@ -215,7 +215,7 @@ defmodule NFTables.TestHelpers do
   def cleanup_test_table(pid, table_name, family \\ :inet) do
     Builder.new()
     |> Builder.delete(table: table_name, family: family)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
   end
 
   @doc """

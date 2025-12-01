@@ -9,14 +9,14 @@ defmodule NFTables.Builder do
   ## Design Philosophy
 
   - **Pure Building**: Builder is immutable, no side effects during construction
-  - **Explicit Execution**: Commands execute only when `execute/2` is called with a pid
+  - **Explicit Submission**: Commands submit only when `submit/1` or `submit/2` is called
   - **Atom Keys**: All JSON uses atom keys (converted to strings during encoding)
   - **Context Tracking**: Automatically tracks table/chain/collection context for chaining
   - **Unified API**: Single set of functions (add/delete/flush/etc) for all object types
 
   ## Basic Usage
 
-      # Create builder
+      # Create builder (automatically uses NFTables.Local as default requestor)
       builder = Builder.new(family: :inet)
 
       # Add table and chain - context is automatically tracked
@@ -31,9 +31,9 @@ defmodule NFTables.Builder do
           %{accept: nil}
         ])
 
-      # Execute when ready
+      # Submit when ready (uses NFTables.Local by default)
       {:ok, pid} = NFTables.start_link()
-      Builder.execute(builder, pid)
+      Builder.submit(builder, pid: pid)
 
   ## Unified API Pattern
 
@@ -46,7 +46,7 @@ defmodule NFTables.Builder do
                      hook: :input, priority: 0, policy: :drop)
       |> Builder.add(set: "blocklist", type: :ipv4_addr)       # Adds set
       |> Builder.add(rule: [%{accept: nil}])                   # Adds rule
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
   ## Context Chaining
 
@@ -70,7 +70,7 @@ defmodule NFTables.Builder do
       builder
       |> Builder.add(table: "filter", chain: "input")
       |> Builder.add(rule: ssh_rule)  # Automatically converted to expression list
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
   This also works with lists of rules:
 
@@ -104,7 +104,7 @@ defmodule NFTables.Builder do
         }
 
   defstruct family: :inet,
-            requestor: nil,
+            requestor: NFTables.Local,
             table: nil,
             chain: nil,
             collection: nil,
@@ -120,11 +120,11 @@ defmodule NFTables.Builder do
   ## Options
 
   - `:family` - Address family (default: `:inet`)
-  - `:requestor` - Module implementing NFTables.Requestor behaviour (default: `nil`)
+  - `:requestor` - Module implementing NFTables.Requestor behaviour (default: `NFTables.Local`)
 
   ## Examples
 
-      Builder.new()
+      Builder.new()  # Uses NFTables.Local by default
       Builder.new(family: :ip6)
       Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
   """
@@ -132,7 +132,7 @@ defmodule NFTables.Builder do
   def new(opts \\ []) do
     %__MODULE__{
       family: Keyword.get(opts, :family, :inet),
-      requestor: Keyword.get(opts, :requestor)
+      requestor: Keyword.get(opts, :requestor, NFTables.Local)
     }
   end
 
@@ -1253,7 +1253,7 @@ defmodule NFTables.Builder do
           %{drop: nil}
         ]
       )
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
       # Or start fresh and import specific elements
       {:ok, tables} = Query.list_tables(pid)
@@ -1267,9 +1267,9 @@ defmodule NFTables.Builder do
   def from_ruleset(pid, opts \\ []) when is_pid(pid) do
     family = Keyword.get(opts, :family, :inet)
 
-    # Use new pipeline pattern: Query -> Executor -> Decoder
+    # Use new pipeline pattern: Query -> NFTables.Local -> Decoder
     with {:ok, decoded} <- NFTables.Query.list_ruleset(family: family)
-                          |> NFTables.Executor.execute(pid: pid)
+                          |> NFTables.Local.submit(pid: pid)
                           |> NFTables.Decoder.decode() do
 
       tables = Map.get(decoded, :tables, [])
@@ -1305,7 +1305,8 @@ defmodule NFTables.Builder do
   @doc """
   Submit the builder configuration using the configured requestor.
 
-  Uses the requestor module specified in the builder's `requestor` field.
+  Uses the requestor module specified in the builder's `requestor` field
+  (defaults to `NFTables.Local` for local execution).
   The requestor must implement the `NFTables.Requestor` behaviour.
 
   This function is useful when you want to use custom submission handlers
@@ -1322,46 +1323,35 @@ defmodule NFTables.Builder do
   - `{:ok, result}` - Successful submission with result
   - `{:error, reason}` - Failed submission
 
-  ## Raises
-
-  - `ArgumentError` - If no requestor is configured in the builder
-
   ## Examples
 
-      # Configure requestor when creating builder
-      builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
+      # Use default local execution (NFTables.Local)
+      {:ok, pid} = NFTables.start_link()
+      builder = Builder.new()
       |> Builder.add(table: "filter")
       |> Builder.add(chain: "INPUT")
-      |> Builder.submit()  # Uses MyApp.RemoteRequestor
+      |> Builder.submit(pid: pid)  # Uses NFTables.Local
+
+      # Configure custom requestor when creating builder
+      builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
+      |> Builder.add(table: "filter")
+      |> Builder.submit(node: :remote_host)  # Uses MyApp.RemoteRequestor
 
       # Or set requestor later
       builder = Builder.new()
       |> Builder.add(table: "filter")
       |> Builder.set_requestor(MyApp.AuditRequestor)
-      |> Builder.submit()
+      |> Builder.submit(audit_id: "12345")
 
   ## See Also
 
   - `NFTables.Requestor` - Behaviour definition and examples
+  - `NFTables.Local` - Default local execution requestor
   - `submit/2` - Submit with options or override requestor
   - `set_requestor/2` - Set requestor module
-  - `execute/2` - Direct local execution (alternative to submit)
   """
   @spec submit(t()) :: :ok | {:ok, term()} | {:error, term()}
-  def submit(%__MODULE__{requestor: nil}) do
-    raise ArgumentError, """
-    No requestor module configured for this builder.
-
-    You must either:
-    1. Set requestor when creating builder: Builder.new(requestor: MyRequestor)
-    2. Set requestor later: builder |> Builder.set_requestor(MyRequestor)
-    3. Pass requestor to submit/2: builder |> Builder.submit(requestor: MyRequestor)
-
-    See NFTables.Requestor documentation for implementing custom requestors.
-    """
-  end
-
-  def submit(%__MODULE__{requestor: requestor} = builder) when is_atom(requestor) do
+  def submit(%__MODULE__{} = builder) do
     submit(builder, [])
   end
 
@@ -1429,6 +1419,9 @@ defmodule NFTables.Builder do
       """
     end
 
+    # Ensure module is loaded before checking
+    Code.ensure_compiled!(requestor)
+
     # Validate that the requestor module exists and exports submit/2
     unless function_exported?(requestor, :submit, 2) do
       raise ArgumentError, """
@@ -1454,40 +1447,6 @@ defmodule NFTables.Builder do
     apply(requestor, :submit, [builder, opts])
   end
 
-  ## Execution
-
-  @doc """
-  Execute the accumulated commands.
-
-  Passes the builder commands (as Elixir maps) to the Executor module.
-  The Executor is responsible for JSON encoding.
-
-  ## Parameters
-
-  - `builder` - The builder with accumulated commands
-  - `pid` - NFTables.Port process pid
-
-  ## Examples
-
-      {:ok, pid} = NFTables.start_link()
-      Builder.new()
-      |> Builder.add_table("filter")
-      |> Builder.execute(pid)
-  """
-  @spec execute(t(), pid()) :: :ok | {:error, term()}
-  def execute(%__MODULE__{commands: commands}, pid) when is_pid(pid) do
-    # Wrap commands in nftables envelope (Elixir map, not JSON)
-    command_map = %{
-      nftables: commands
-    }
-
-    # Pass Elixir map to Executor (it will handle JSON encoding)
-    case NFTables.Executor.execute(command_map, pid: pid) do
-      {:ok, _response} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
   @doc """
   Convert builder to Elixir map structure.
 
@@ -1511,8 +1470,8 @@ defmodule NFTables.Builder do
   @doc """
   Convert builder to JSON string for inspection.
 
-  This delegates to Executor for JSON encoding to maintain the principle
-  that only Executor does JSON encoding/decoding.
+  Uses Jason for JSON encoding. NFTables.Local handles JSON encoding/decoding
+  for actual execution.
 
   ## Examples
 

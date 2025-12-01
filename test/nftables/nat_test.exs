@@ -29,7 +29,7 @@ defmodule NFTables.NATTest do
       chain: "postrouting",
       family: :inet
     )
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     on_exit(fn ->
       if Process.alive?(pid) do
@@ -142,7 +142,7 @@ defmodule NFTables.NATTest do
     try do
       Builder.new()
       |> Builder.delete(table: "nftables_test_nat", family: :inet)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
     rescue
       _ -> :ok
     catch
