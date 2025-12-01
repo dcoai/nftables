@@ -86,11 +86,11 @@ json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
 {:ok, json_response} = NFTables.Port.call(pid, json_cmd)
 ```
 
-### NFTables_Port
+### NFTables
 
 NFTables is an elixir library, which builds expressions (as Elixir Maps), which can be converted to JSON and passed to the NFTables_Port for processing by libnftables.  This library allows for constructing Tables, Chains, Sets, Rules, etc... in a composable elixer way
 
-# Generate JSON using NFTables library
+**Generate JSON using NFTables library**
 
 ```elixir
 json =
@@ -101,7 +101,7 @@ json =
   |> Builder.to_json()
 ```
 
-Putting these together:
+**Putting these together**
 
 ```elixir
 {:ok, pid} = NFTables.Port.start_link()
