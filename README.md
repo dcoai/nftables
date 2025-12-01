@@ -1,26 +1,21 @@
 # NFTables - Elixir Interface to nftables
 
-High-performance Elixir bindings for Linux nftables via the official libnftables JSON API. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with familiar nft syntax.
+Elixir bindings for Linux nftables via the official libnftables JSON API. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with familiar nft syntax.
 
 ## Features
 
 - **Official API** - Uses libnftables JSON API (no manual netlink messages)
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
-- **Pure Functional Match API** - 🆕 Clean, composable expression builder with no side effects
+- **Pure Functional Rule API** - Clean, composable expression builder with no side effects
 - **Sysctl Management** - Safe read/write access to network kernel parameters
-- **Hybrid Approach** - JSON for data operations, nft syntax for complex rules
-- **Distributed Firewall Support** - Build commands centrally, execute on multiple nodes
 - **Command/Execution Separation** - Build JSON/nft commands without executing
 - **Batch Operations** - Atomic multi-command execution
-- **Dynamic Firewall Management** - Modify firewall rules from your Elixir application
 - **IP Blocklist Management** - Add/remove IPs from blocklists with one function call
 - **Query Operations** - List tables, chains, rules, sets, and elements
 - **Fluent Builder/Executor** - Clear separation between building and executing commands
 - **Policy Module** - Pre-built firewall policies (SSH, HTTP, rate limiting, etc.)
 - **Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
 - **Secure** - Port runs with minimal privileges (CAP_NET_ADMIN only)
-- **Zero Dependencies** - Direct bindings to libnftables, no external processes
-- **Fast** - JSON-based communication proven 41-5000% faster than ETF in benchmarks
 
 ## Advanced Features ✨
 
@@ -44,6 +39,12 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 
 See [ADVANCED_FEATURES_COMPLETE.md](ADVANCED_FEATURES_COMPLETE.md) for comprehensive documentation of all advanced features.
 
+## Potential Use Cases
+
+- ** Dynamic Firewall Management ** - Modify firewall rules from your Elixir application
+- ** Local Firewall ** - powered by Elixir
+- ** Distributed Firewall ** - manage many firewalls centrally
+
 ## Architecture
 
 ```
@@ -52,15 +53,12 @@ See [ADVANCED_FEATURES_COMPLETE.md](ADVANCED_FEATURES_COMPLETE.md) for comprehen
 │  (Builder, Match, Query, Policy)    │
 └────────────┬────────────────────────┘
              │
-             ├─ Builder → Executor
-             │  └─> JSON format
-             │      └─> Port.call(json_string)
-             │
-             └─ Match (Pure expressions)
-                └─> Builder.add(rule: expr)
-                    └─> Executor.execute()
-                        │
-                        ▼
+             └─ Builder
+                |> Rule/Match Builder
+                |> JSON format
+                |> Executor.execute()
+                    │
+                    ▼
         ┌───────────────────────────────────┐
         │  Zig Port (port.zig)              │
         │  libnftables.nft_run_cmd_from_buf │
@@ -76,37 +74,51 @@ See [ADVANCED_FEATURES_COMPLETE.md](ADVANCED_FEATURES_COMPLETE.md) for comprehen
         └───────────────────────────┘
 ```
 
-### Hybrid Approach
+### NFTables_Port 
 
-NFTables uses a **hybrid approach** for optimal simplicity:
-
-- **JSON format** for structured data (tables, chains, sets)
-- **nft syntax** for complex rules (simpler than JSON expressions)
-
-Both formats are processed by the same `libnftables.nft_run_cmd_from_buffer()` function.
-
-### JSON-Only Port
-
-NFTables uses a unified JSON-based port for all communication:
+NFTables.Port is an elixir wrapper, and a program written in Zig which accepts json structures and sends them to NFTables using the libnftables (C library).  The Elixir part manages the Zig program as a Port.
 
 ```elixir
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 
 # Send JSON commands (for structured operations)
 json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
 {:ok, json_response} = NFTables.Port.call(pid, json_cmd)
-
-# Or use high-level APIs that handle JSON internally
-Builder.new()
-|> Builder.add(table: "filter", family: :inet)
-|> Builder.execute(pid)
 ```
 
-**Benefits:**
-- ✅ Simple, text-based protocol
-- ✅ JSON proven faster in benchmarks (41-5000% vs ETF)
-- ✅ Direct compatibility with libnftables
-- ✅ Easy to debug and inspect
+### NFTables_Port
+
+NFTables is an elixir library, which builds expressions (as Elixir Maps), which can be converted to JSON and passed to the NFTables_Port for processing by libnftables.  This library allows for constructing Tables, Chains, Sets, Rules, etc... in a composable elixer way
+
+# Generate JSON using NFTables library
+
+```elixir
+json =
+  Builder.new()
+  |> Builder.add(table: "filter", family: :inet)
+  |> Builder.add(chain: "INPUT", hook: :input, policy: :drop)
+  |> Builder.add(rule: tcp() |> dport(22) |> accept())
+  |> Builder.to_json()
+```
+
+Putting these together:
+
+```elixir
+{:ok, pid} = NFTables.Port.start_link()
+
+json_cmd =
+  Builder.new()
+  |> Builder.add(table: "filter", family: :inet)
+  |> Builder.add(chain: "INPUT", hook: :input, policy: :drop)
+  |> Builder.add(rule: tcp() |> dport(22) |> accept())
+  |> Builder.to_json()
+
+{:ok, json_response} = NFTables.Port.call(pid, json_cmd)
+```
+
+Using this we can manage a local firewall from Elixir.
+
+It would be possible to put the NFTables.Port portion on another node or multiple nodes, and use erlang's ssh module to build a secure communication layer to manage firewalls remotely, or to set up a distributed firewall.
 
 ## System Requirements
 
@@ -186,6 +198,45 @@ Verify:
 getcap priv/port_nftables
 # Should show: priv/port_nftables = cap_net_admin+ep
 ```
+
+### Security considerations
+
+Once port_nftables has CAP_NET_ADMIN capability set, it can be used to
+set network related parameters (like enable ip_forwarding) and
+configure nftables (create/delete/update tables, chains, rules,
+etc...).  Considering this it would be wise to protect this
+executable.
+
+the `nftables_port` executable should fail to run if it is executable by all.  if this is the case you will see a message similar to:
+
+```
+    \\
+    \\SECURITY ERROR: Executable has world permissions enabled!
+    \\
+    \\Current permissions: 777
+    \\
+    \\This executable has CAP_NET_ADMIN capability and MUST NOT be
+    \\world-readable, world-writable, or world-executable.
+    \\
+    \\To fix, run:
+    \\  chmod 750 {s}
+    \\  # or
+    \\  chmod 700 {s}
+    \\
+    \\The mode must end in 0 (no permissions for "other").
+    \\Access should be controlled via user/group ownership.
+    \\
+    \\Refusing to start for security reasons.
+    \\
+```
+
+minimally, do the following:
+
+1. create a special user that the nftables_port will run as such as `exfw`.  Feel free to be more creative.
+2. `chown exfw nftables_port`  # make the executable belong to the new user `exfw`
+3. `chmod 700 nftables_port`   # make the executable only runnable by the user `exfw`
+
+other options would be to use groups.
 
 ## Quick Start
 
