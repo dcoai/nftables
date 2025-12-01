@@ -94,6 +94,7 @@ defmodule NFTables.Builder do
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   @type t :: %__MODULE__{
           family: family(),
+          requestor: module() | nil,
           table: String.t() | nil,
           chain: String.t() | nil,
           collection: String.t() | nil,
@@ -103,6 +104,7 @@ defmodule NFTables.Builder do
         }
 
   defstruct family: :inet,
+            requestor: nil,
             table: nil,
             chain: nil,
             collection: nil,
@@ -118,16 +120,19 @@ defmodule NFTables.Builder do
   ## Options
 
   - `:family` - Address family (default: `:inet`)
+  - `:requestor` - Module implementing NFTables.Requestor behaviour (default: `nil`)
 
   ## Examples
 
       Builder.new()
       Builder.new(family: :ip6)
+      Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
   """
   @spec new(keyword()) :: t()
   def new(opts \\ []) do
     %__MODULE__{
-      family: Keyword.get(opts, :family, :inet)
+      family: Keyword.get(opts, :family, :inet),
+      requestor: Keyword.get(opts, :requestor)
     }
   end
 
@@ -142,6 +147,43 @@ defmodule NFTables.Builder do
   def set_family(%__MODULE__{} = builder, family)
       when family in [:inet, :ip, :ip6, :arp, :bridge, :netdev] do
     %{builder | family: family}
+  end
+
+  @doc """
+  Set the requestor module for this builder.
+
+  The requestor module must implement the `NFTables.Requestor` behaviour.
+  This allows custom submission handlers for use cases like remote execution,
+  audit logging, testing, or conditional execution.
+
+  ## Parameters
+
+  - `builder` - The builder instance
+  - `requestor` - Module implementing NFTables.Requestor behaviour (or `nil` to clear)
+
+  ## Examples
+
+      builder |> Builder.set_requestor(MyApp.RemoteRequestor)
+
+      # Clear requestor
+      builder |> Builder.set_requestor(nil)
+
+      # Chain with other builder operations
+      Builder.new()
+      |> Builder.add(table: "filter")
+      |> Builder.set_requestor(MyApp.AuditRequestor)
+      |> Builder.add(chain: "INPUT")
+      |> Builder.submit(audit_id: "12345")
+
+  ## See Also
+
+  - `NFTables.Requestor` - Behaviour definition and examples
+  - `submit/1` - Submit with builder's requestor
+  - `submit/2` - Submit with options/override requestor
+  """
+  @spec set_requestor(t(), module() | nil) :: t()
+  def set_requestor(%__MODULE__{} = builder, requestor) when is_atom(requestor) do
+    %{builder | requestor: requestor}
   end
 
 
@@ -1256,6 +1298,160 @@ defmodule NFTables.Builder do
 
       {:ok, builder}
     end
+  end
+
+  ## Submission via Requestor
+
+  @doc """
+  Submit the builder configuration using the configured requestor.
+
+  Uses the requestor module specified in the builder's `requestor` field.
+  The requestor must implement the `NFTables.Requestor` behaviour.
+
+  This function is useful when you want to use custom submission handlers
+  for scenarios like remote execution, audit logging, testing, or conditional
+  execution strategies.
+
+  ## Parameters
+
+  - `builder` - The builder with accumulated commands and configured requestor
+
+  ## Returns
+
+  - `:ok` - Successful submission
+  - `{:ok, result}` - Successful submission with result
+  - `{:error, reason}` - Failed submission
+
+  ## Raises
+
+  - `ArgumentError` - If no requestor is configured in the builder
+
+  ## Examples
+
+      # Configure requestor when creating builder
+      builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT")
+      |> Builder.submit()  # Uses MyApp.RemoteRequestor
+
+      # Or set requestor later
+      builder = Builder.new()
+      |> Builder.add(table: "filter")
+      |> Builder.set_requestor(MyApp.AuditRequestor)
+      |> Builder.submit()
+
+  ## See Also
+
+  - `NFTables.Requestor` - Behaviour definition and examples
+  - `submit/2` - Submit with options or override requestor
+  - `set_requestor/2` - Set requestor module
+  - `execute/2` - Direct local execution (alternative to submit)
+  """
+  @spec submit(t()) :: :ok | {:ok, term()} | {:error, term()}
+  def submit(%__MODULE__{requestor: nil}) do
+    raise ArgumentError, """
+    No requestor module configured for this builder.
+
+    You must either:
+    1. Set requestor when creating builder: Builder.new(requestor: MyRequestor)
+    2. Set requestor later: builder |> Builder.set_requestor(MyRequestor)
+    3. Pass requestor to submit/2: builder |> Builder.submit(requestor: MyRequestor)
+
+    See NFTables.Requestor documentation for implementing custom requestors.
+    """
+  end
+
+  def submit(%__MODULE__{requestor: requestor} = builder) when is_atom(requestor) do
+    submit(builder, [])
+  end
+
+  @doc """
+  Submit the builder configuration with options or override requestor.
+
+  This function allows you to:
+  - Pass options to the requestor's submit callback
+  - Override the builder's requestor for this submission only
+
+  ## Parameters
+
+  - `builder` - The builder with accumulated commands
+  - `opts` - Keyword list options:
+    - `:requestor` - Override the builder's requestor module (optional)
+    - Other options are passed to the requestor's submit callback
+
+  ## Returns
+
+  - `:ok` - Successful submission
+  - `{:ok, result}` - Successful submission with result
+  - `{:error, reason}` - Failed submission
+
+  ## Raises
+
+  - `ArgumentError` - If no requestor is available (neither in builder nor opts)
+  - `UndefinedFunctionError` - If requestor doesn't implement submit/2
+
+  ## Examples
+
+      # Pass options to requestor
+      builder
+      |> Builder.submit(node: :firewall@server, timeout: 10_000)
+
+      # Override requestor for this submission only
+      builder = Builder.new(requestor: MyApp.DefaultRequestor)
+      |> Builder.add(table: "filter")
+      |> Builder.submit(requestor: MyApp.SpecialRequestor, priority: :high)
+
+      # Use without pre-configured requestor
+      builder = Builder.new()
+      |> Builder.add(table: "filter")
+      |> Builder.submit(requestor: MyApp.RemoteRequestor, node: :remote_host)
+
+  ## See Also
+
+  - `NFTables.Requestor` - Behaviour definition
+  - `submit/1` - Submit using builder's requestor
+  - `set_requestor/2` - Set requestor on builder
+  """
+  @spec submit(t(), keyword()) :: :ok | {:ok, term()} | {:error, term()}
+  def submit(%__MODULE__{} = builder, opts) when is_list(opts) do
+    # Determine requestor: opts override, then builder field
+    requestor = Keyword.get(opts, :requestor, builder.requestor)
+
+    unless requestor do
+      raise ArgumentError, """
+      No requestor module available for submission.
+
+      You must either:
+      1. Set requestor in builder: Builder.new(requestor: MyRequestor)
+      2. Pass requestor in options: Builder.submit(builder, requestor: MyRequestor)
+
+      See NFTables.Requestor documentation for implementing custom requestors.
+      """
+    end
+
+    # Validate that the requestor module exists and exports submit/2
+    unless function_exported?(requestor, :submit, 2) do
+      raise ArgumentError, """
+      Module #{inspect(requestor)} does not implement NFTables.Requestor behaviour.
+
+      The requestor must export submit/2 function. Example:
+
+          defmodule #{inspect(requestor)} do
+            @behaviour NFTables.Requestor
+
+            @impl true
+            def submit(builder, opts) do
+              # Your submission logic here
+              :ok
+            end
+          end
+
+      See NFTables.Requestor documentation for more examples.
+      """
+    end
+
+    # Call the requestor's submit callback
+    apply(requestor, :submit, [builder, opts])
   end
 
   ## Execution
