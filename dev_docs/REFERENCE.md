@@ -4,7 +4,7 @@ Complete reference guide for the NFTables library.
 
 ## Advanced Features
 
-NFTables now includes comprehensive support for advanced nftables capabilities:
+NFTables includes comprehensive support for advanced nftables capabilities:
 
 - **Flowtables** - Hardware-accelerated packet forwarding
 - **Meters/Dynamic Sets** - Per-key rate limiting with composite keys
@@ -14,30 +14,22 @@ NFTables now includes comprehensive support for advanced nftables capabilities:
 - **OSF (OS Fingerprinting)** - Passive OS detection
 
 **Documentation:**
-- [ADVANCED_FEATURES_COMPLETE.md](../ADVANCED_FEATURES_COMPLETE.md) - Complete feature documentation
-- [METERS_IMPLEMENTATION_PROGRESS.md](../METERS_IMPLEMENTATION_PROGRESS.md) - Meters details
-- [PHASE2_IMPLEMENTATION_SUMMARY.md](../PHASE2_IMPLEMENTATION_SUMMARY.md) - Raw payload & TPROXY
-- [PHASE3_IMPLEMENTATION_SUMMARY.md](../PHASE3_IMPLEMENTATION_SUMMARY.md) - Protocols & OSF
-
-See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced features.
+- [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) - Complete feature documentation with examples
+- [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick examples of all features
 
 ---
 
 ## Table of Contents
 
 1. [nftables Documentation & Mapping](#nftables-documentation--mapping)
-2. [NFTables.Port - Port Management](#nftexport---port-management)
-3. [NFTables.Table - Table Operations](#nftextable---table-operations)
-4. [NFTables.Chain - Chain Operations](#nftexchain---chain-operations)
-5. [NFTables.Rule - Rule Operations](#nftexrule---rule-operations)
-6. [NFTables.Match - Fluent Rule Construction](#nftexrulebuilder---fluent-rule-construction)
-7. [NFTables.Set - Set Operations](#nftexset---set-operations)
-8. [NFTables.Policy - Pre-built Policies](#nftexpolicy---pre-built-policies)
-9. [NFTables.Sysctl - Kernel Parameter Management](#nftexsysctl---kernel-parameter-management)
-10. [NFTables.Sysctl.Network - Network Helpers](#nftexsysctlnetwork---network-helpers)
-11. [NFTables.Query - Query Operations](#nftexquery---query-operations)
-12. [NFTables.NAT - NAT Operations](#nftexnat---nat-operations)
-13. [NFTables.JSONBuilder - JSON Command Builder](#nftexjsonbuilder---json-command-builder)
+2. [NFTables - Main Module](#nftables---main-module)
+3. [NFTables.Builder - Unified Configuration Builder](#nftablesbuilder---unified-configuration-builder)
+4. [NFTables.Match - Pure Functional Rule Builder](#nftablesmatch---pure-functional-rule-builder)
+5. [NFTables.Policy - Pre-built Policies](#nftablespolicy---pre-built-policies)
+6. [NFTables.NAT - NAT Operations](#nftablesnat---nat-operations)
+7. [NFTables.Sysctl - Kernel Parameter Management](#nftablessysctl---kernel-parameter-management)
+8. [NFTables.Query - Query Operations](#nftablesquery---query-operations)
+9. [NFTables.Executor - Command Execution](#nftablesexecutor---command-execution)
 
 ---
 
@@ -57,40 +49,40 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 
 ### Mapping nftables Concepts to NFTables
 
-#### Command Line → NFTables API
+#### Command Line → NFTables Builder API
 
 | nftables Command | NFTables Equivalent |
 |-----------------|------------------|
-| `nft add table inet filter` | `NFTables.Table.add(pid, %{name: "filter", family: :inet})` |
-| `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `NFTables.Chain.add(pid, %{table: "filter", name: "input", family: :inet, type: :filter, hook: :input, priority: 0, policy: :drop})` |
-| `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `NFTables.Rule.block_ip(pid, "filter", "input", "192.168.1.1")` |
-| `nft add set inet filter blocklist { type ipv4_addr; }` | `NFTables.Set.add(pid, %{table: "filter", name: "blocklist", family: :inet, type: "ipv4_addr"})` |
-| `nft add element inet filter blocklist { 192.168.1.1 }` | `NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])` |
-| `nft list ruleset` | `NFTables.Query.list_rules(pid)` |
-| `nft list tables` | `NFTables.Query.list_tables(pid)` |
+| `nft add table inet filter` | `Builder.new(family: :inet) \|> Builder.add(table: "filter") \|> Builder.execute(pid)` |
+| `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `Builder.add(chain: "input", type: :filter, hook: :input, priority: 0, policy: :drop)` |
+| `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `Builder.add(rule: rule() \|> source_ip("192.168.1.1") \|> drop())` |
+| `nft add set inet filter blocklist { type ipv4_addr; }` | `Builder.add(set: "blocklist", type: :ipv4_addr)` |
+| `nft add element inet filter blocklist { 192.168.1.1 }` | `Builder.add(element: ["192.168.1.1"], set: "blocklist")` |
+| `nft list ruleset` | `Query.list_ruleset() \|> Executor.execute(pid: pid) \|> Decoder.decode()` |
+| `nft list tables` | `Query.list_tables(family: :inet) \|> Executor.execute(pid: pid)` |
 
-#### nftables Syntax → Match
+#### nftables Syntax → Match API
 
 | nftables Rule Syntax | NFTables Match |
 |---------------------|-------------------|
-| `ip saddr 192.168.1.1` | `Match.source_ip("192.168.1.1")` |
-| `tcp dport 22` | `Match.tcp() \|> Match.dport(22)` |
-| `ct state established,related` | `Match.ct_state([:established, :related])` |
-| `iifname "eth0"` | `Match.iif("eth0")` |
-| `limit rate 10/minute` | `Match.rate_limit(10, :minute)` |
-| `counter` | `Match.counter()` |
-| `log prefix "DROPPED: "` | `Match.log("DROPPED: ")` |
-| `drop` | `Match.drop()` |
-| `accept` | `Match.accept()` |
-| `reject` | `Match.reject()` |
+| `ip saddr 192.168.1.1` | `rule() \|> source_ip("192.168.1.1")` |
+| `tcp dport 22` | `rule() \|> tcp() \|> dport(22)` |
+| `ct state established,related` | `rule() \|> ct_state([:established, :related])` |
+| `iifname "eth0"` | `rule() \|> iif("eth0")` |
+| `limit rate 10/minute` | `rule() \|> limit(10, :minute)` |
+| `counter` | `rule() \|> counter()` |
+| `log prefix "DROPPED: "` | `rule() \|> log("DROPPED: ")` |
+| `drop` | `rule() \|> drop()` |
+| `accept` | `rule() \|> accept()` |
+| `reject` | `rule() \|> reject()` |
 
 #### Protocol Families
 
 | nftables Family | NFTables Atom |
 |----------------|-----------|
 | `inet` | `:inet` |
-| `ip` | `:inet` or `:ip` |
-| `ip6` | `:inet6` or `:ip6` |
+| `ip` | `:ip` |
+| `ip6` | `:ip6` |
 | `arp` | `:arp` |
 | `bridge` | `:bridge` |
 | `netdev` | `:netdev` |
@@ -113,37 +105,17 @@ See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for examples of all advanced featur
 | `invalid` | `:invalid` |
 | `untracked` | `:untracked` |
 
-### JSON Format vs nft Syntax
-
-NFTables uses a **hybrid approach**:
-
-1. **JSON format** for structured operations (tables, chains, sets):
-   ```elixir
-   NFTables.Table.add(pid, %{name: "filter", family: :inet})
-   # Generates: {"nftables": [{"add": {"table": {"family": "inet", "name": "filter"}}}]}
-   ```
-
-2. **nft syntax strings** for complex rules:
-   ```elixir
-   Match.new(pid, "filter", "INPUT")
-   |> Match.source_ip("192.168.1.1")
-   |> Match.drop()
-   # Generates: "add rule inet filter INPUT ip saddr 192.168.1.1 drop"
-   ```
-
-Both formats are processed by the same `libnftables.nft_run_cmd_from_buffer()` function.
-
 ---
 
-## NFTables.Port - Port Management
+## NFTables - Main Module
 
-Start and manage the NFTables port process.
+The main entry point for starting the NFTables service.
 
 ### Functions
 
 #### `start_link/1`
 
-Start the NFTables port process.
+Start the NFTables service.
 
 ```elixir
 # Start with default options
@@ -158,361 +130,409 @@ Start the NFTables port process.
 
 **Returns:** `{:ok, pid}` or `{:error, reason}`
 
-#### `stop/1`
-
-Stop the NFTables port process.
-
-```elixir
-:ok = NFTables.Port.stop(pid)
-```
-
-#### `call/2`
-
-Send a raw command to the port.
-
-```elixir
-# JSON command
-json = ~s({"nftables": [{"list": {"tables": {}}}]})
-{:ok, response} = NFTables.Port.call(pid, json)
-
-# nft syntax command
-{:ok, response} = NFTables.Port.call(pid, "list tables")
-```
-
-**Note:** Most users should use higher-level APIs instead of calling this directly.
-
 ---
 
-## NFTables.Table - Table Operations
+## NFTables.Builder - Unified Configuration Builder
 
-Manage nftables tables.
+The Builder module provides a unified, functional API for constructing nftables configurations.
 
-### Functions
+### Design Philosophy
 
-#### `create/2`
-
-Create a new table.
-
-```elixir
-# Create inet table
-:ok = NFTables.Table.add(pid, %{
-  name: "filter",
-  family: :inet
-})
-
-# Create ip6 table
-:ok = NFTables.Table.add(pid, %{
-  name: "filter6",
-  family: :inet6
-})
-```
-
-**Parameters:**
-- `name` - Table name (string, required)
-- `family` - Protocol family (atom, required)
-
-#### `delete/3`
-
-Delete a table.
-
-```elixir
-:ok = NFTables.Table.delete(pid, "filter", :inet)
-```
-
-#### `list/2`
-
-List all tables.
-
-```elixir
-{:ok, tables} = NFTables.Table.list(pid, family: :inet)
-
-for table <- tables do
-  IO.puts("Table: #{table.name}")
-end
-```
-
-#### `exists?/3`
-
-Check if a table exists.
-
-```elixir
-if NFTables.Table.exists?(pid, "filter", :inet) do
-  IO.puts("Table exists")
-end
-```
-
----
-
-## NFTables.Chain - Chain Operations
-
-Manage nftables chains.
-
-### Functions
-
-#### `create/2`
-
-Create a new chain.
-
-```elixir
-# Create base chain (with hook)
-:ok = NFTables.Chain.add(pid, %{
-  table: "filter",
-  name: "INPUT",
-  family: :inet,
-  type: :filter,
-  hook: :input,
-  priority: 0,
-  policy: :drop
-})
-
-# Create regular chain (no hook)
-:ok = NFTables.Chain.add(pid, %{
-  table: "filter",
-  name: "custom_rules",
-  family: :inet
-})
-```
-
-**Base Chain Parameters:**
-- `table` - Table name (string, required)
-- `name` - Chain name (string, required)
-- `family` - Protocol family (atom, required)
-- `type` - Chain type (`:filter`, `:nat`, `:route`)
-- `hook` - Hook point (`:prerouting`, `:input`, `:forward`, `:output`, `:postrouting`)
-- `priority` - Chain priority (integer)
-- `policy` - Default policy (`:accept` or `:drop`)
-
-**Regular Chain Parameters:**
-- `table` - Table name (string, required)
-- `name` - Chain name (string, required)
-- `family` - Protocol family (atom, required)
-
-#### `delete/4`
-
-Delete a chain.
-
-```elixir
-:ok = NFTables.Chain.delete(pid, "filter", "INPUT", :inet)
-```
-
-#### `list/2`
-
-List all chains.
-
-```elixir
-{:ok, chains} = NFTables.Chain.list(pid, family: :inet)
-
-for chain <- chains do
-  IO.puts("Chain: #{chain.name} (table: #{chain.table})")
-end
-```
-
-#### `exists?/4`
-
-Check if a chain exists.
-
-```elixir
-if NFTables.Chain.exists?(pid, "filter", "INPUT", :inet) do
-  IO.puts("Chain exists")
-end
-```
-
-#### `set_policy/5`
-
-Set chain policy.
-
-```elixir
-:ok = NFTables.Chain.set_policy(pid, "filter", "INPUT", :inet, :drop)
-```
-
----
-
-## NFTables.Rule - Rule Operations
-
-Manage firewall rules.
-
-### Functions
-
-#### `block_ip/4`
-
-Block an IP address.
-
-```elixir
-:ok = NFTables.Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
-```
-
-#### `accept_ip/4`
-
-Accept an IP address.
-
-```elixir
-:ok = NFTables.Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
-```
-
-#### `add/5`
-
-Add a rule with custom nft syntax.
-
-```elixir
-:ok = NFTables.Rule.add(pid, "filter", "INPUT", :inet, "tcp dport 80 accept")
-```
-
-#### `list/3`
-
-List rules in a chain.
-
-```elixir
-{:ok, rules} = NFTables.Rule.list(pid, "filter", "INPUT", family: :inet)
-
-for rule <- rules do
-  IO.inspect(rule)
-end
-```
-
-#### `delete/5`
-
-Delete a rule by handle.
-
-```elixir
-:ok = NFTables.Rule.delete(pid, "filter", "INPUT", :inet, 42)
-```
-
----
-
-## NFTables.Match - Fluent Rule Construction
-
-Build complex rules using a chainable API.
+- **Pure Building** - Builder is immutable, no side effects during construction
+- **Explicit Execution** - Commands execute only when `execute/2` is called
+- **Context Tracking** - Automatically tracks table/chain context
+- **Unified API** - Single set of functions for all object types
+- **Auto-conversion** - Automatically converts Rule/Match structs to expression lists
 
 ### Basic Usage
 
 ```elixir
-alias NFTables.Match
+alias NFTables.Builder
+import NFTables.Match
 
-Match.new(pid, "filter", "INPUT")
-|> Match.source_ip("192.168.1.1")
-|> Match.drop()
-|> Match.commit()
+{:ok, pid} = NFTables.start_link()
+
+# Build and execute configuration
+Builder.new(family: :inet)
+|> Builder.add(table: "filter")
+|> Builder.add(
+  chain: "INPUT",
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+)
+|> Builder.add(rule: rule() |> tcp() |> dport(22) |> accept())
+|> Builder.execute(pid)
 ```
 
-### Match Functions
+### Core Functions
 
-#### `match_source_ip/2`
+#### `new/1`
 
-Match source IP address.
+Create a new builder.
 
 ```elixir
-Match.source_ip(builder, "192.168.1.1")
-Match.source_ip(builder, "10.0.0.0/8")
+builder = Builder.new()
+builder = Builder.new(family: :inet)
+builder = Builder.new(family: :ip6)
 ```
 
-#### `match_dest_ip/2`
+#### `add/2`
 
-Match destination IP address.
+Add an object (table, chain, rule, set, flowtable, etc.). The object type is automatically detected.
+
+**Table:**
+```elixir
+Builder.add(builder, table: "filter")
+Builder.add(builder, table: "nat", family: :inet)
+```
+
+**Chain:**
+```elixir
+# Base chain with hook
+Builder.add(builder,
+  chain: "INPUT",
+  type: :filter,
+  hook: :input,
+  priority: 0,
+  policy: :drop
+)
+
+# Regular chain (no hook)
+Builder.add(builder, chain: "custom_rules")
+```
+
+**Rule:**
+```elixir
+import NFTables.Match
+
+ssh_rule = rule() |> tcp() |> dport(22) |> accept()
+
+Builder.add(builder, rule: ssh_rule)
+Builder.add(builder, rule: ssh_rule, table: "filter", chain: "INPUT")
+```
+
+**Set:**
+```elixir
+# Simple set
+Builder.add(builder,
+  set: "blocklist",
+  type: :ipv4_addr
+)
+
+# Dynamic set (for meters)
+Builder.add(builder,
+  set: "ratelimit",
+  type: :ipv4_addr,
+  flags: [:dynamic],
+  timeout: 60,
+  size: 10000
+)
+```
+
+**Flowtable:**
+```elixir
+Builder.add(builder,
+  flowtable: "fastpath",
+  hook: :ingress,
+  priority: 0,
+  devices: ["eth0", "eth1"]
+)
+```
+
+**Element:**
+```elixir
+Builder.add(builder,
+  element: ["192.168.1.1", "192.168.1.2"],
+  set: "blocklist"
+)
+```
+
+#### `delete/2`
+
+Delete an object.
 
 ```elixir
-Match.dest_ip(builder, "8.8.8.8")
+Builder.delete(builder, table: "filter")
+Builder.delete(builder, chain: "INPUT")
+Builder.delete(builder, set: "blocklist")
 ```
 
-#### `sport/2`
+#### `flush/2`
 
-Match source port. Requires protocol context (tcp() or udp()).
+Flush contents of an object.
 
 ```elixir
-Match.tcp() |> Match.sport(1024)
-Match.udp() |> Match.sport(5353)
+Builder.flush(builder, table: "filter")
+Builder.flush(builder, chain: "INPUT")
+Builder.flush(builder, [:all])  # Flush entire ruleset
 ```
 
-#### `dport/2`
+#### `execute/2`
 
-Match destination port. Requires protocol context (tcp() or udp()).
-Supports both single ports and ranges.
+Execute the accumulated commands.
+
+```elixir
+result = Builder.execute(builder, pid)
+# Returns: :ok or {:error, reason}
+```
+
+#### `to_json/1`
+
+Convert builder to JSON for inspection.
+
+```elixir
+json = Builder.to_json(builder)
+IO.puts(json)
+```
+
+### Context Chaining
+
+The builder automatically tracks context so you don't need to repeat table/chain names:
+
+```elixir
+Builder.new(family: :inet)
+|> Builder.add(table: "filter", chain: "INPUT")
+|> Builder.add(rule: rule() |> accept())  # Uses filter/INPUT
+|> Builder.add(rule: rule() |> drop())    # Still uses filter/INPUT
+```
+
+---
+
+## NFTables.Match - Pure Functional Rule Builder
+
+Build rule expressions using a pure functional, chainable API.
+
+### Design Philosophy
+
+- **Pure Functional** - No side effects, returns immutable structs
+- **Chainable** - All functions return updated Match struct
+- **Composable** - Build reusable rule fragments
+- **Automatic Conversion** - Builder handles `.to_expr()` automatically
+
+### Basic Usage
+
+```elixir
+import NFTables.Match
+
+# Build a rule
+ssh_rule = rule()
+|> tcp()
+|> dport(22)
+|> ct_state([:new])
+|> limit(10, :minute)
+|> accept()
+
+# Pass directly to Builder (no need for to_expr!)
+Builder.add(builder, rule: ssh_rule)
+```
+
+### Core Functions
+
+#### `rule/1`
+
+Initialize a new rule.
+
+```elixir
+rule()
+rule(family: :inet)
+rule(family: :ip6)
+```
+
+### Protocol Matching
+
+#### `tcp/1`
+
+Match TCP protocol.
+
+```elixir
+rule() |> tcp() |> dport(80)
+```
+
+#### `udp/1`
+
+Match UDP protocol.
+
+```elixir
+rule() |> udp() |> dport(53)
+```
+
+#### `icmp/1`, `icmpv6/1`
+
+Match ICMP/ICMPv6.
+
+```elixir
+rule() |> icmp()
+rule() |> icmpv6()
+```
+
+#### `sctp/1`, `dccp/1`, `gre/1`
+
+Match specialized protocols.
+
+```elixir
+rule() |> sctp() |> dport(9899)
+rule() |> dccp()
+rule() |> gre()
+```
+
+### Address Matching
+
+#### `source_ip/2`, `dest_ip/2`
+
+Match IP addresses.
+
+```elixir
+rule() |> source_ip("192.168.1.1")
+rule() |> source_ip("10.0.0.0/8")
+rule() |> dest_ip("8.8.8.8")
+```
+
+#### `source_ip_set/2`, `dest_ip_set/2`
+
+Match against IP sets.
+
+```elixir
+rule() |> source_ip_set("@blocklist")
+rule() |> dest_ip_set("@allowlist")
+```
+
+### Port Matching
+
+#### `sport/2`, `dport/2`
+
+Match source/destination ports.
 
 ```elixir
 # Single port
-Match.tcp() |> Match.dport(22)
-Match.udp() |> Match.dport(53)
+rule() |> tcp() |> dport(22)
 
 # Port range
-Match.tcp() |> Match.dport(8000..9000)
+rule() |> tcp() |> dport(8000..9000)
+
+# Multiple ports
+rule() |> tcp() |> dport([22, 80, 443])
 ```
 
-#### `match_protocol/2`
+### Connection Tracking
 
-Match protocol.
-
-```elixir
-Match.protocol(builder, :tcp)
-Match.protocol(builder, :udp)
-Match.protocol(builder, :icmp)
-```
-
-#### `match_ct_state/2`
+#### `ct_state/2`
 
 Match connection tracking state.
 
 ```elixir
-Match.ct_state(builder, [:established, :related])
-Match.ct_state(builder, [:new])
-Match.ct_state(builder, [:invalid])
+rule() |> ct_state([:established, :related])
+rule() |> ct_state([:new])
+rule() |> ct_state([:invalid])
 ```
 
-#### `match_iif/2`
+### Interface Matching
 
-Match input interface.
+#### `iif/2`, `oif/2`
+
+Match input/output interface.
 
 ```elixir
-Match.iif(builder, "eth0")
+rule() |> iif("eth0")
+rule() |> oif("eth1")
 ```
 
-#### `match_oif/2`
+### Rate Limiting
 
-Match output interface.
+#### `limit/3`, `limit/4`
+
+Global rate limiting.
 
 ```elixir
-Match.oif(builder, "eth1")
+rule() |> limit(10, :minute)
+rule() |> limit(100, :second, burst: 200)
 ```
 
-### Action Functions
+Units: `:second`, `:minute`, `:hour`, `:day`
+
+### Meters (Per-Key Rate Limiting)
+
+#### `meter_update/5`
+
+Per-key rate limiting using dynamic sets.
+
+```elixir
+import NFTables.Match.Meter
+
+rule()
+|> tcp()
+|> dport(22)
+|> meter_update(
+  Meter.payload(:ip, :saddr),  # Track by source IP
+  "ssh_limits",                 # Set name
+  10,                           # Rate
+  :minute,                      # Unit
+  burst: 20                     # Optional burst
+)
+|> accept()
+```
+
+### Raw Payload Matching
+
+#### `payload_raw/5`
+
+Match packet data at specific offset.
+
+```elixir
+# Match DNS port at transport header offset 16
+rule()
+|> udp()
+|> payload_raw(:th, 16, 16, 53)
+
+# Match HTTP GET in inner header
+rule()
+|> tcp()
+|> payload_raw(:ih, 0, 32, "GET ")
+```
+
+Bases: `:ll` (link layer), `:nh` (network header), `:th` (transport header), `:ih` (inner header)
+
+#### `payload_raw_masked/6`
+
+Match with bitmask.
+
+```elixir
+# Match TCP SYN flag
+rule()
+|> tcp()
+|> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
+```
+
+### Logging
+
+#### `log/2`, `log/3`
+
+Log matching packets.
+
+```elixir
+rule() |> log("Dropped: ")
+rule() |> log("SSH: ", level: "info")
+```
+
+### Counters
 
 #### `counter/1`
 
 Add packet/byte counter.
 
 ```elixir
-Match.counter(builder)
+rule() |> counter()
 ```
 
-#### `log/2`
-
-Log packets with prefix.
-
-```elixir
-Match.log(builder, "DROPPED: ")
-Match.log(builder, "ACCEPTED SSH: ")
-```
-
-#### `rate_limit/3` or `rate_limit/4`
-
-Rate limit packets.
-
-```elixir
-# Simple rate limit
-Match.rate_limit(builder, 10, :minute)
-
-# With burst
-Match.rate_limit(builder, 10, :minute, burst: 20)
-```
-
-**Units:** `:second`, `:minute`, `:hour`, `:day`
-
-### Verdict Functions
+### Verdicts
 
 #### `accept/1`
 
 Accept packets.
 
 ```elixir
-Match.accept(builder)
+rule() |> accept()
 ```
 
 #### `drop/1`
@@ -520,205 +540,111 @@ Match.accept(builder)
 Drop packets silently.
 
 ```elixir
-Match.drop(builder)
+rule() |> drop()
 ```
 
-#### `reject/1` or `reject/2`
+#### `reject/1`, `reject/2`
 
-Reject packets with ICMP error.
+Reject with ICMP error.
 
 ```elixir
-# Default reject
-Match.reject(builder)
+rule() |> reject()
+rule() |> reject(:tcp_reset)
+rule() |> reject(:icmp_port_unreachable)
+```
 
-# With specific rejection type
-Match.reject(builder, :icmp_port_unreachable)
-Match.reject(builder, :tcp_reset)
+### NAT Actions
+
+#### `snat/2`, `dnat/2`, `masquerade/1`
+
+Network address translation.
+
+```elixir
+rule() |> snat("203.0.113.1")
+rule() |> dnat("192.168.1.10:8080")
+rule() |> masquerade()
+```
+
+### Advanced Features
+
+#### `osf_name/2`, `osf_name/3`
+
+OS fingerprinting.
+
+```elixir
+rule() |> osf_name("Linux")
+rule() |> osf_name("Windows", ttl: :strict)
+```
+
+#### `socket_uid/2`, `socket_gid/2`
+
+Match by socket owner.
+
+```elixir
+rule() |> socket_uid(1000)
+rule() |> socket_gid(100)
 ```
 
 ### Complete Examples
 
 ```elixir
-# Rate-limited SSH
-Match.new(pid, "filter", "INPUT")
-|> Match.tcp()
-|> Match.dport(22)
-|> Match.rate_limit(10, :minute, burst: 20)
-|> Match.log("SSH: ")
-|> Match.counter()
-|> Match.accept()
-|> Match.commit()
+import NFTables.Match
+alias NFTables.Builder
 
-# Block specific IP with logging
-Match.new(pid, "filter", "INPUT")
-|> Match.source_ip("192.168.1.100")
-|> Match.log("BLOCKED IP: ")
-|> Match.drop()
-|> Match.commit()
+# SSH with rate limiting
+ssh_rule = rule()
+|> tcp()
+|> dport(22)
+|> ct_state([:new])
+|> limit(10, :minute, burst: 20)
+|> log("SSH: ")
+|> accept()
 
-# Allow established connections
-Match.new(pid, "filter", "INPUT")
-|> Match.ct_state([:established, :related])
-|> Match.accept()
-|> Match.commit()
+# Established connections
+established_rule = rule()
+|> ct_state([:established, :related])
+|> accept()
 
-# Interface-based rule
-Match.new(pid, "filter", "FORWARD")
-|> Match.iif("eth0")
-|> Match.oif("eth1")
-|> Match.ct_state([:established, :related])
-|> Match.accept()
-|> Match.commit()
-```
+# Block specific IP
+block_rule = rule()
+|> source_ip("192.168.1.100")
+|> log("Blocked: ")
+|> drop()
 
----
-
-## NFTables.Set - Set Operations
-
-Manage nftables sets for efficient IP/port matching.
-
-### Functions
-
-#### `create/2`
-
-Create a new set.
-
-```elixir
-:ok = NFTables.Set.add(pid, %{
-  table: "filter",
-  name: "blocklist",
-  family: :inet,
-  type: "ipv4_addr"
-})
-
-# With flags
-:ok = NFTables.Set.add(pid, %{
-  table: "filter",
-  name: "interval_set",
-  family: :inet,
-  type: "ipv4_addr",
-  flags: ["interval"]
-})
-
-# With timeout
-:ok = NFTables.Set.add(pid, %{
-  table: "filter",
-  name: "temp_block",
-  family: :inet,
-  type: "ipv4_addr",
-  timeout: 3600  # 1 hour
-})
-```
-
-**Set Types:**
-- `"ipv4_addr"` - IPv4 addresses
-- `"ipv6_addr"` - IPv6 addresses
-- `"ether_addr"` - Ethernet addresses
-- `"inet_proto"` - Internet protocols
-- `"inet_service"` - Internet services (ports)
-- `"mark"` - Packet marks
-
-**Flags:**
-- `"constant"` - Set is constant (immutable)
-- `"interval"` - Set contains intervals (ranges)
-- `"timeout"` - Elements can have timeouts
-
-#### `delete/4`
-
-Delete a set.
-
-```elixir
-:ok = NFTables.Set.delete(pid, "filter", "blocklist", :inet)
-```
-
-#### `add_elements/5`
-
-Add elements to a set.
-
-```elixir
-# Add single IP
-:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])
-
-# Add multiple IPs
-:ok = NFTables.Set.add_elements(pid, "filter", "blocklist", :inet, [
-  "192.168.1.1",
-  "192.168.1.2",
-  "10.0.0.50"
-])
-```
-
-#### `delete_elements/5`
-
-Delete elements from a set.
-
-```elixir
-:ok = NFTables.Set.delete_elements(pid, "filter", "blocklist", :inet, ["192.168.1.1"])
-```
-
-#### `list_elements/3`
-
-List elements in a set.
-
-```elixir
-{:ok, elements} = NFTables.Set.list_elements(pid, "filter", "blocklist")
-
-for elem <- elements do
-  IO.puts("IP: #{elem.key_ip}")
-end
-```
-
-#### `exists?/4`
-
-Check if a set exists.
-
-```elixir
-if NFTables.Set.exists?(pid, "filter", "blocklist", :inet) do
-  IO.puts("Set exists")
-end
-```
-
-#### `list/2`
-
-List all sets.
-
-```elixir
-{:ok, sets} = NFTables.Set.list(pid, family: :inet)
-
-for set <- sets do
-  IO.puts("Set: #{set.name} (type: #{set.type})")
-end
+# Build and execute
+Builder.new(family: :inet)
+|> Builder.add(table: "filter", chain: "INPUT")
+|> Builder.add(rule: established_rule)
+|> Builder.add(rule: ssh_rule)
+|> Builder.add(rule: block_rule)
+|> Builder.execute(pid)
 ```
 
 ---
 
 ## NFTables.Policy - Pre-built Policies
 
-High-level firewall policy functions.
+High-level firewall policy functions for common scenarios.
 
 ### Functions
 
 #### `setup_basic_firewall/2`
 
-Set up a complete basic firewall in one call.
+Set up complete basic firewall.
 
 ```elixir
-:ok = NFTables.Policy.setup_basic_firewall(pid,
+NFTables.Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
   ssh_rate_limit: 10
 )
 ```
-
-**Options:**
-- `:allow_services` - List of services to allow (`:ssh`, `:http`, `:https`, `:dns`)
-- `:ssh_rate_limit` - SSH connections per minute (default: 10)
-- `:http_rate_limit` - HTTP connections per minute (default: 100)
 
 #### `accept_loopback/1`
 
 Accept all loopback traffic.
 
 ```elixir
-:ok = NFTables.Policy.accept_loopback(pid)
+NFTables.Policy.accept_loopback(pid)
 ```
 
 #### `accept_established/1`
@@ -726,7 +652,7 @@ Accept all loopback traffic.
 Accept established and related connections.
 
 ```elixir
-:ok = NFTables.Policy.accept_established(pid)
+NFTables.Policy.accept_established(pid)
 ```
 
 #### `drop_invalid/1`
@@ -734,7 +660,7 @@ Accept established and related connections.
 Drop invalid packets.
 
 ```elixir
-:ok = NFTables.Policy.drop_invalid(pid)
+NFTables.Policy.drop_invalid(pid)
 ```
 
 #### `allow_ssh/2`
@@ -742,38 +668,50 @@ Drop invalid packets.
 Allow SSH with optional rate limiting.
 
 ```elixir
-# Basic SSH allow
-:ok = NFTables.Policy.allow_ssh(pid)
-
-# With rate limiting
-:ok = NFTables.Policy.allow_ssh(pid, rate_limit: 10, log: true)
+NFTables.Policy.allow_ssh(pid)
+NFTables.Policy.allow_ssh(pid, rate_limit: 10, log: true)
 ```
 
-#### `allow_http/2`
+#### `allow_http/2`, `allow_https/1`, `allow_dns/1`
 
-Allow HTTP traffic.
+Allow web and DNS services.
 
 ```elixir
-:ok = NFTables.Policy.allow_http(pid)
-
-# With rate limiting
-:ok = NFTables.Policy.allow_http(pid, rate_limit: 100)
+NFTables.Policy.allow_http(pid)
+NFTables.Policy.allow_https(pid)
+NFTables.Policy.allow_dns(pid)
 ```
 
-#### `allow_https/1`
+---
 
-Allow HTTPS traffic.
+## NFTables.NAT - NAT Operations
+
+Network address translation helpers.
+
+### Functions
+
+#### `setup_masquerade/2`
+
+Set up NAT with masquerading.
 
 ```elixir
-:ok = NFTables.Policy.allow_https(pid)
+NFTables.NAT.setup_masquerade(pid,
+  out_interface: "eth0",
+  source_network: "10.0.0.0/24"
+)
 ```
 
-#### `allow_dns/1`
+#### `add_port_forward/2`
 
-Allow DNS traffic (TCP and UDP).
+Add port forwarding rule.
 
 ```elixir
-:ok = NFTables.Policy.allow_dns(pid)
+NFTables.NAT.add_port_forward(pid,
+  protocol: :tcp,
+  external_port: 8080,
+  internal_ip: "10.0.0.10",
+  internal_port: 80
+)
 ```
 
 ---
@@ -784,488 +722,85 @@ Safely read and write kernel network parameters.
 
 ### Functions
 
-#### `get/2`
+#### `get/2`, `set/3`
 
-Get a sysctl parameter value.
+Get/set sysctl parameters.
 
 ```elixir
 {:ok, "0"} = NFTables.Sysctl.get(pid, "net.ipv4.ip_forward")
-{:ok, "1"} = NFTables.Sysctl.get(pid, "net.ipv4.tcp_syncookies")
-```
-
-#### `set/3`
-
-Set a sysctl parameter value.
-
-```elixir
 :ok = NFTables.Sysctl.set(pid, "net.ipv4.ip_forward", "1")
-:ok = NFTables.Sysctl.set(pid, "net.ipv4.tcp_syncookies", "1")
 ```
 
-#### `get!/2`
+#### `get!/2`, `set!/3`
 
-Get a sysctl parameter value, raising on error.
+Bang versions that raise on error.
 
 ```elixir
 value = NFTables.Sysctl.get!(pid, "net.ipv4.ip_forward")
-```
-
-#### `set!/3`
-
-Set a sysctl parameter value, raising on error.
-
-```elixir
 :ok = NFTables.Sysctl.set!(pid, "net.ipv4.ip_forward", "1")
 ```
 
-### Supported Parameters
+### Common Parameters
 
-**IPv4 Core:**
-- `net.ipv4.ip_forward`
-- `net.ipv4.conf.all.forwarding`
-- `net.ipv4.conf.default.forwarding`
-
-**IPv4 TCP:**
-- `net.ipv4.tcp_syncookies`
-- `net.ipv4.tcp_timestamps`
-- `net.ipv4.tcp_tw_reuse`
-- `net.ipv4.tcp_fin_timeout`
-- `net.ipv4.tcp_keepalive_time`
-- `net.ipv4.tcp_keepalive_probes`
-- `net.ipv4.tcp_keepalive_intvl`
-- `net.ipv4.ip_local_port_range` (format: "min max")
+**IPv4:**
+- `net.ipv4.ip_forward` - Enable IP forwarding
+- `net.ipv4.tcp_syncookies` - SYN cookie protection
+- `net.ipv4.conf.all.rp_filter` - Reverse path filtering
 
 **IPv6:**
-- `net.ipv6.conf.all.forwarding`
-- `net.ipv6.conf.default.forwarding`
+- `net.ipv6.conf.all.forwarding` - Enable IPv6 forwarding
 
 **Connection Tracking:**
-- `net.netfilter.nf_conntrack_max`
-- `net.netfilter.nf_conntrack_tcp_timeout_established`
-- `net.netfilter.nf_conntrack_tcp_timeout_time_wait`
-- `net.netfilter.nf_conntrack_tcp_timeout_close_wait`
-- `net.netfilter.nf_conntrack_tcp_timeout_fin_wait`
+- `net.netfilter.nf_conntrack_max` - Maximum tracked connections
 
-**ICMP:**
-- `net.ipv4.icmp_echo_ignore_all`
-- `net.ipv4.icmp_echo_ignore_broadcasts`
-- `net.ipv4.icmp_ratelimit`
-
-**Security:**
-- `net.ipv4.conf.all.rp_filter`
-- `net.ipv4.conf.default.rp_filter`
-- `net.ipv4.conf.all.accept_source_route`
-- `net.ipv4.conf.default.accept_source_route`
-- `net.ipv4.conf.all.send_redirects`
-- `net.ipv4.conf.default.send_redirects`
-- `net.ipv4.conf.all.accept_redirects`
-- `net.ipv4.conf.default.accept_redirects`
-- `net.ipv6.conf.all.accept_redirects`
-- `net.ipv6.conf.default.accept_redirects`
-- `net.ipv6.conf.all.accept_source_route`
-- `net.ipv6.conf.default.accept_source_route`
-
----
-
-## NFTables.Sysctl.Network - Network Helpers
-
-High-level helpers for common sysctl operations.
-
-### Functions
-
-#### `enable_ipv4_forwarding/1`
-
-Enable IPv4 forwarding.
-
-```elixir
-:ok = NFTables.Sysctl.Network.enable_ipv4_forwarding(pid)
-```
-
-#### `disable_ipv4_forwarding/1`
-
-Disable IPv4 forwarding.
-
-```elixir
-:ok = NFTables.Sysctl.Network.disable_ipv4_forwarding(pid)
-```
-
-#### `ipv4_forwarding_enabled?/1`
-
-Check if IPv4 forwarding is enabled.
-
-```elixir
-{:ok, true} = NFTables.Sysctl.Network.ipv4_forwarding_enabled?(pid)
-```
-
-#### `enable_ipv6_forwarding/1`
-
-Enable IPv6 forwarding.
-
-```elixir
-:ok = NFTables.Sysctl.Network.enable_ipv6_forwarding(pid)
-```
-
-#### `disable_ipv6_forwarding/1`
-
-Disable IPv6 forwarding.
-
-```elixir
-:ok = NFTables.Sysctl.Network.disable_ipv6_forwarding(pid)
-```
-
-#### `enable_syncookies/1`
-
-Enable TCP SYN cookies (DDoS protection).
-
-```elixir
-:ok = NFTables.Sysctl.Network.enable_syncookies(pid)
-```
-
-#### `disable_syncookies/1`
-
-Disable TCP SYN cookies.
-
-```elixir
-:ok = NFTables.Sysctl.Network.disable_syncookies(pid)
-```
-
-#### `set_conntrack_max/2`
-
-Set maximum connection tracking entries.
-
-```elixir
-:ok = NFTables.Sysctl.Network.set_conntrack_max(pid, 131072)
-```
-
-#### `get_conntrack_max/1`
-
-Get current connection tracking maximum.
-
-```elixir
-{:ok, 65536} = NFTables.Sysctl.Network.get_conntrack_max(pid)
-```
-
-#### `ignore_ping/1`
-
-Ignore all ICMP ping requests (stealth mode).
-
-```elixir
-:ok = NFTables.Sysctl.Network.ignore_ping(pid)
-```
-
-#### `allow_ping/1`
-
-Allow ICMP ping requests.
-
-```elixir
-:ok = NFTables.Sysctl.Network.allow_ping(pid)
-```
-
-#### `configure_router/2`
-
-Configure common router settings.
-
-```elixir
-:ok = NFTables.Sysctl.Network.configure_router(pid,
-  ipv4_forwarding: true,
-  ipv6_forwarding: true,
-  syncookies: true,
-  send_redirects: false
-)
-```
-
-**Options:**
-- `:ipv4_forwarding` - Enable IPv4 forwarding (boolean)
-- `:ipv6_forwarding` - Enable IPv6 forwarding (boolean)
-- `:syncookies` - Enable SYN cookies (boolean)
-- `:send_redirects` - Enable ICMP redirects (boolean)
-
-#### `harden_security/1`
-
-Apply security hardening settings.
-
-```elixir
-:ok = NFTables.Sysctl.Network.harden_security(pid)
-```
-
-**Settings Applied:**
-- Enable reverse path filtering (anti-spoofing)
-- Disable source routing
-- Disable ICMP redirects
-- Enable SYN cookies
+See [lib/nftables/sysctl.ex](../lib/nftables/sysctl.ex) for complete list.
 
 ---
 
 ## NFTables.Query - Query Operations
 
-Query nftables configuration.
+Query current nftables configuration.
 
 ### Functions
 
-#### `list_tables/2`
+#### `list_tables/1`, `list_chains/1`, `list_sets/1`, `list_rules/1`
 
-List all tables.
-
-```elixir
-{:ok, tables} = NFTables.Query.list_tables(pid, family: :inet)
-
-for table <- tables do
-  IO.puts("Table: #{table.name} (family: #{table.family})")
-end
-```
-
-#### `list_chains/2`
-
-List all chains.
+List objects. All return query builders that need to be executed.
 
 ```elixir
-{:ok, chains} = NFTables.Query.list_chains(pid, family: :inet)
+alias NFTables.{Query, Executor, Decoder}
 
-for chain <- chains do
-  IO.puts("Chain: #{chain.name} (table: #{chain.table})")
-  if hook = Map.get(chain, :hook) do
-    IO.puts("  Hook: #{hook}, Priority: #{chain.priority}, Policy: #{chain.policy}")
-  end
-end
-```
+# List tables
+{:ok, tables} = Query.list_tables(family: :inet)
+  |> Executor.execute(pid: pid)
+  |> Decoder.decode()
 
-#### `list_sets/2`
+# List chains
+{:ok, chains} = Query.list_chains(family: :inet)
+  |> Executor.execute(pid: pid)
+  |> Decoder.decode()
 
-List all sets.
-
-```elixir
-{:ok, sets} = NFTables.Query.list_sets(pid, family: :inet)
-
-for set <- sets do
-  IO.puts("Set: #{set.name} (type: #{set.type})")
-end
-```
-
-#### `list_rules/2`
-
-List all rules.
-
-```elixir
-{:ok, rules} = NFTables.Query.list_rules(pid, family: :inet)
-
-for rule <- rules do
-  IO.inspect(rule)
-end
-```
-
-#### `list_set_elements/3`
-
-List elements in a specific set.
-
-```elixir
-{:ok, elements} = NFTables.Query.list_set_elements(pid, "filter", "blocklist")
-
-for elem <- elements do
-  IO.puts("Element: #{elem.key_ip}")
-end
+# List all rules
+{:ok, rules} = Query.list_ruleset(family: :inet)
+  |> Executor.execute(pid: pid)
+  |> Decoder.decode()
 ```
 
 ---
 
-## NFTables.NAT - NAT Operations
+## NFTables.Executor - Command Execution
 
-Network Address Translation operations.
-
-### Functions
-
-#### `setup_masquerade/2`
-
-Set up NAT with masquerading.
-
-```elixir
-:ok = NFTables.NAT.setup_masquerade(pid, %{
-  table: "nat",
-  out_interface: "eth0",
-  masquerade_source: "10.0.0.0/24"
-})
-```
-
-#### `add_port_forward/2`
-
-Add port forwarding rule.
-
-```elixir
-:ok = NFTables.NAT.add_port_forward(pid, %{
-  table: "nat",
-  protocol: :tcp,
-  external_port: 8080,
-  internal_ip: "10.0.0.10",
-  internal_port: 80
-})
-```
-
-#### `add_dnat_rule/2`
-
-Add destination NAT rule.
-
-```elixir
-:ok = NFTables.NAT.add_dnat_rule(pid, %{
-  table: "nat",
-  chain: "PREROUTING",
-  protocol: :tcp,
-  dest_port: 80,
-  new_dest: "192.168.1.10:8080"
-})
-```
-
-#### `add_snat_rule/2`
-
-Add source NAT rule.
-
-```elixir
-:ok = NFTables.NAT.add_snat_rule(pid, %{
-  table: "nat",
-  chain: "POSTROUTING",
-  source: "10.0.0.0/24",
-  new_source: "203.0.113.1"
-})
-```
-
----
-
-## NFTables.JSONBuilder - JSON Command Builder
-
-Low-level JSON command construction (rarely needed by most users).
+Low-level command execution (most users won't need this directly).
 
 ### Functions
 
-#### `add_table/2`
+#### `execute/2`
 
-Build add table JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.add_table("inet", "filter")
-json = Jason.encode!(cmd)
-```
-
-#### `delete_table/2`
-
-Build delete table JSON.
+Execute a command map or query.
 
 ```elixir
-cmd = NFTables.JSONBuilder.delete_table("inet", "filter")
-```
-
-#### `list_tables/1`
-
-Build list tables JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.list_tables(family: :inet)
-```
-
-#### `add_chain/4`
-
-Build add chain JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.add_chain("inet", "filter", "INPUT",
-  type: :filter,
-  hook: :input,
-  priority: 0,
-  policy: :drop
-)
-```
-
-#### `delete_chain/3`
-
-Build delete chain JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.delete_chain("inet", "filter", "INPUT")
-```
-
-#### `add_set/4`
-
-Build add set JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.add_set("inet", "filter", "blocklist",
-  type: "ipv4_addr"
-)
-```
-
-#### `delete_set/3`
-
-Build delete set JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.delete_set("inet", "filter", "blocklist")
-```
-
-#### `add_element/4`
-
-Build add element JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.add_element("inet", "filter", "blocklist",
-  ["192.168.1.1", "192.168.1.2"]
-)
-```
-
-#### `delete_element/4`
-
-Build delete element JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.delete_element("inet", "filter", "blocklist",
-  ["192.168.1.1"]
-)
-```
-
-#### `add_rule/4`
-
-Build add rule JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.add_rule("inet", "filter", "INPUT",
-  "ip saddr 192.168.1.1 drop"
-)
-```
-
-#### `delete_rule/4`
-
-Build delete rule JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.delete_rule("inet", "filter", "INPUT", 42)
-```
-
-#### `list_ruleset/1`
-
-Build list ruleset JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.list_ruleset(family: :inet)
-```
-
-#### `flush_ruleset/1`
-
-Build flush ruleset JSON.
-
-```elixir
-cmd = NFTables.JSONBuilder.flush_ruleset(family: :inet)
-```
-
-#### `sysctl_get/1`
-
-Build sysctl get JSON.
-
-```elixir
-json = NFTables.JSONBuilder.sysctl_get("net.ipv4.ip_forward")
-```
-
-#### `sysctl_set/2`
-
-Build sysctl set JSON.
-
-```elixir
-json = NFTables.JSONBuilder.sysctl_set("net.ipv4.ip_forward", "1")
+command = %{nftables: [%{add: %{table: %{family: "inet", name: "filter"}}}]}
+{:ok, response} = NFTables.Executor.execute(command, pid: pid)
 ```
 
 ---
@@ -1280,9 +815,9 @@ All NFTables functions return either:
 **Example:**
 
 ```elixir
-case NFTables.Table.add(pid, %{name: "filter", family: :inet}) do
+case Builder.execute(builder, pid) do
   :ok ->
-    IO.puts("Table created")
+    IO.puts("Configuration applied")
 
   {:error, reason} ->
     IO.puts("Failed: #{reason}")
@@ -1300,7 +835,7 @@ value = NFTables.Sysctl.get!(pid, "net.ipv4.ip_forward")
 
 ## See Also
 
-- [Examples Directory](../examples/) - Complete working examples
+- [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick reference guide
+- [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) - Advanced features documentation
 - [Main README](../README.md) - Overview and quick start
-- [Security Documentation](SECURITY.md) - Security considerations
-- [Capabilities Documentation](CAPABILITIES.md) - Capability management
+- [Examples Directory](../examples/) - Complete working examples
