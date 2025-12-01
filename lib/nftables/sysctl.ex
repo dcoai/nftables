@@ -82,7 +82,7 @@ defmodule NFTables.Sysctl do
   - Port validates all parameters and values before applying changes
   """
 
-  alias NFTables.Executor
+  alias NFTables.Local
 
   @doc """
   Get a sysctl parameter value.
@@ -106,7 +106,7 @@ defmodule NFTables.Sysctl do
   def get(pid_or_opts, parameter) when is_binary(parameter) do
     command_map = build_sysctl_get(parameter)
 
-    case Executor.execute(command_map, normalize_opts(pid_or_opts)) do
+    case Local.submit(command_map, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
         parse_get_response(response, parameter)
       {:error, reason} ->
@@ -138,7 +138,7 @@ defmodule NFTables.Sysctl do
   def set(pid_or_opts, parameter, value) when is_binary(parameter) and is_binary(value) do
     command_map = build_sysctl_set(parameter, value)
 
-    case Executor.execute(command_map, normalize_opts(pid_or_opts)) do
+    case Local.submit(command_map, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
         parse_set_response(response)
       {:error, reason} ->

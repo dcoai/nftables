@@ -7,7 +7,7 @@ defmodule NFTables.Expr do
   without manually constructing nested maps.
 
   **NOTE**: All functions return maps with **atom keys** (not string keys).
-  The JSON encoding happens later in the Builder/Executor pipeline.
+  The JSON encoding happens later in the Builder/Local pipeline.
 
   ## Expression Format
 

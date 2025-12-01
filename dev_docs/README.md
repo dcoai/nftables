@@ -10,14 +10,14 @@ This directory contains comprehensive documentation about NFTables internals and
    - Complete explanation of how Match works
    - Pure functional expression builder pattern
    - Module organization and delegation
-   - Execution flow from builder to kernel via Executor
+   - Execution flow from builder to kernel via Local
    - Benefits and design philosophy
    - Extension points for adding features
 
 2. **[NFT_SYNTAX_VS_JSON.md](NFT_SYNTAX_VS_JSON.md)**
    - Explanation of JSON expression building
    - How Match generates nftables JSON expressions
-   - Builder/Executor separation pattern
+   - Builder Pattern separation pattern
    - Why pure functional is better than execution-coupled design
 
 3. **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)**
@@ -78,7 +78,7 @@ Match is now a **pure expression builder** with no side effects:
 
 ```elixir
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.{Builder, Local, Requestor}
 
 # Build pure expression
 expr = rule()
@@ -89,15 +89,15 @@ expr = rule()
 # Execute separately
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
-### Builder/Executor Separation
+### Builder Pattern Separation
 
 Clear separation between building and executing:
 - **Match** - Builds pure expression data
 - **Builder** - Constructs complete nftables configurations
-- **Executor** - Sends configurations to kernel
+- **Local, Requestor** - Handle configuration submission to kernel or custom handlers
 
 ### JSON Expression Building
 
@@ -117,7 +117,7 @@ expr = rule()
 **Code:**
 ```elixir
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.{Builder, Local, Requestor}
 
 expr = rule()
   |> tcp()
@@ -129,7 +129,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 **Generated JSON:**
@@ -164,7 +164,7 @@ Pure Expression Building (JSON expressions)
     ↓
 Builder (Constructs configuration)
     ↓
-Executor (JSON encoding/decoding)
+Local (JSON encoding/decoding)
     ↓
 NFTables.Port (GenServer)
     ↓

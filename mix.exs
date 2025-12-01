@@ -1,7 +1,7 @@
 defmodule NFTables.MixProject do
   use Mix.Project
 
-  @version "0.4.2"
+  @version "0.5.0"
   @source_url "https://github.com/yourusername/nftables"
 
   def project do
@@ -88,7 +88,8 @@ defmodule NFTables.MixProject do
           NFTables.Rule
         ],
         "Execution": [
-          NFTables.Executor,
+          NFTables.Local,
+          NFTables.Requestor,
           NFTables.Decoder
         ],
         "Internal API": [

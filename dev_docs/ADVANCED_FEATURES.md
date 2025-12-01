@@ -52,7 +52,7 @@ Builder.new(family: :inet)
   priority: 0,
   devices: ["eth0", "eth1"]  # Interfaces to accelerate
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 #### Using Flowtables in Rules
@@ -69,7 +69,7 @@ Builder.new(family: :inet)
   priority: 0,
   policy: :drop
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Add rule to use flowtable for established connections
 fastpath_rule = rule()
@@ -83,7 +83,7 @@ Builder.new()
   chain: "forward",
   family: :inet
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 #### Hardware Offload
@@ -100,7 +100,7 @@ Builder.new(family: :inet)
   devices: ["eth0"],
   flags: [:offload]  # Enable hardware acceleration
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 **Note:** Hardware offload requires:
@@ -151,7 +151,7 @@ Builder.new(family: :inet)
   timeout: 60,    # Expire entries after 60s inactivity
   size: 10000     # Max 10,000 tracked IPs
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Step 2: Create rule with meter
 ssh_rule = rule()
@@ -174,7 +174,7 @@ Builder.new()
   chain: "INPUT",
   family: :inet
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 #### Composite Key Tracking
@@ -193,7 +193,7 @@ Builder.new(family: :inet)
   timeout: 120,
   size: 50000
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Use composite key in meter
 limit_rule = rule()
@@ -568,7 +568,7 @@ Enum.each(tunnel_endpoints, fn endpoint ->
 
   Builder.new()
   |> Builder.add(rule: gre_rule, table: "filter", chain: "INPUT")
-  |> Builder.execute(pid)
+  |> Builder.submit(pid: pid)
 end)
 ```
 
@@ -659,7 +659,7 @@ os_qos_rules = [
 Enum.each(os_qos_rules, fn qos_rule ->
   Builder.new()
   |> Builder.add(rule: qos_rule, table: "filter", chain: "FORWARD")
-  |> Builder.execute(pid)
+  |> Builder.submit(pid: pid)
 end)
 ```
 

@@ -27,7 +27,7 @@ defmodule NFTables.Rule do
       |> Builder.add(table: "filter")
       |> Builder.add(chain: "input")
       |> Builder.add(rule: ssh_rule)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
   ## Common Patterns
 

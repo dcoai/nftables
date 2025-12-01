@@ -15,20 +15,20 @@ defmodule NFTables.Match do
       rule() |> state([:established, :related]) |> accept()
       rule() |> iif("lo") |> accept()
 
-  ## Usage with Builder and Executor
+  ## Usage with Builder
 
       import NFTables.Match
-      alias NFTables.{Builder, Executor}
+      alias NFTables.Builder
 
       # Build rule expressions - Builder automatically converts to expression lists
       ssh_rule = rule() |> tcp() |> dport(22) |> limit(10, :minute) |> accept()
       established_rule = rule() |> state([:established, :related]) |> accept()
 
-      # Use with Builder/Executor
+      # Use with Builder
       Builder.new()
       |> Builder.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
       |> Builder.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> Executor.execute(pid)
+      |> Builder.submit(pid: pid)
 
   ## Import for Concise Syntax
 
@@ -43,7 +43,7 @@ defmodule NFTables.Match do
   ## See Also
 
   - `NFTables` - Main builder module
-  - `NFTables.Executor` - Execute configurations
+  - `NFTables.Local` - Execute configurations
   - `NFTables.Policy` - Pre-built common policies
   """
 

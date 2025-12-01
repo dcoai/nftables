@@ -19,7 +19,7 @@ defmodule NFTables.Supervisor do
 
       Builder.new()
       |> Builder.add(table: "filter", family: :inet)
-      |> Builder.execute(NFTables)
+      |> Builder.submit(pid: NFTables)
   """
 
   use Supervisor

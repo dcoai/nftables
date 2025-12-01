@@ -27,7 +27,7 @@ The NFTables library is built on a layered architecture that separates concerns 
 │  Builder API (tables, chains, sets, flowtables)         │
 │  Match/Rule API (rule expressions)                      │
 ├─────────────────────────────────────────────────────────┤
-│  Core Layer (Query, Executor, Decoder, Expr)            │
+│  Core Layer (Query, Local, Requestor, Decoder, Expr)    │
 ├─────────────────────────────────────────────────────────┤
 │  NFTables.Port (GenServer managing Zig port process)    │
 ├─────────────────────────────────────────────────────────┤
@@ -112,13 +112,15 @@ The separation enables alternative execution backends:
 ```elixir
 # Local execution via port
 {:ok, pid} = NFTables.start_link()
-Builder.new() |> Builder.add(table: "filter") |> Builder.execute(pid)
+Builder.new() |> Builder.add(table: "filter") |> Builder.submit(pid: pid)
 
 # Could implement remote execution without port
-defmodule MyApp.RemoteExecutor do
-  def execute(command, opts) do
+defmodule MyApp.RemoteRequestor do
+  @behaviour NFTables.Requestor
+
+  def submit(command, opts) do
     node = Keyword.fetch!(opts, :node)
-    :rpc.call(node, NFTables.Executor, :execute, [command, opts])
+    :rpc.call(node, NFTables.Local, :submit, [command, opts])
   end
 end
 ```
@@ -153,7 +155,7 @@ Response: [4-byte length][JSON string]
 # 1. Builder creates Elixir data structures
 builder = Builder.new() |> Builder.add(table: "filter", family: :inet)
 
-# 2. Executor converts to JSON and sends to port
+# 2. Local requestor converts to JSON and sends to port
 json = Jason.encode!(%{nftables: [%{add: %{table: %{family: :inet, name: "filter"}}}]})
 {:ok, response_json} = NFTables.Port.commit(pid, json, 5000)
 
@@ -161,7 +163,7 @@ json = Jason.encode!(%{nftables: [%{add: %{table: %{family: :inet, name: "filter
 # [Zig port] → [libnftables] → [kernel netlink] → [nftables subsystem]
 
 # 4. Response flows back
-# [kernel] → [libnftables JSON] → [Zig port] → [GenServer] → [Executor]
+# [kernel] → [libnftables JSON] → [Zig port] → [GenServer] → [Local]
 ```
 
 ---
@@ -188,23 +190,48 @@ defmodule NFTables do
 end
 ```
 
-### 2. NFTables.Executor
+### 2. NFTables.Requestor (Behaviour)
 
-**Responsibility:** The **only** place where JSON encoding/decoding happens.
+**Responsibility:** Define the interface for submission handlers.
 
 ```elixir
-defmodule NFTables.Executor do
+defmodule NFTables.Requestor do
+  @callback submit(builder :: term(), opts :: keyword()) ::
+    :ok | {:ok, term()} | {:error, term()}
+end
+```
+
+The Requestor behaviour allows you to define custom handlers for submitting Builder configurations. This enables use cases beyond local execution:
+
+- **Remote execution**: Submit configurations to remote nodes
+- **Audit logging**: Log all firewall changes before applying
+- **Testing**: Capture configurations without applying
+- **Batching**: Accumulate multiple configs before submission
+
+### 3. NFTables.Local (Default Requestor)
+
+**Responsibility:** Local execution requestor - the **only** place where JSON encoding/decoding happens for local execution.
+
+```elixir
+defmodule NFTables.Local do
+  @behaviour NFTables.Requestor
+
   @doc """
-  Execute command (Builder or map) by:
+  Submit command (Builder or map) for local execution by:
   1. Converting to JSON (ONLY place encoding happens)
   2. Sending to Port
   3. Receiving response JSON
   4. Decoding JSON (ONLY place decoding happens)
   5. Returning Elixir structures
   """
-  def execute(%Builder{} = builder, opts) do
-    builder
-    |> Builder.to_map()          # Elixir map
+  @impl true
+  def submit(builder_or_command, opts) do
+    command = case builder_or_command do
+      %{__struct__: Builder} -> Builder.to_map(builder_or_command)
+      map when is_map(map) -> map
+    end
+
+    command
     |> Jason.encode!()            # → JSON string
     |> send_to_port(opts)         # → Port
     |> receive_response()         # ← JSON string
@@ -214,9 +241,9 @@ defmodule NFTables.Executor do
 end
 ```
 
-**Key principle:** All other modules work with pure Elixir data structures (maps, lists, atoms, strings). JSON is an implementation detail of the executor.
+**Key principle:** All other modules work with pure Elixir data structures (maps, lists, atoms, strings). JSON is an implementation detail of Local.
 
-### 3. NFTables.Query
+### 4. NFTables.Query
 
 **Responsibility:** Build read-operation command maps (pure functions).
 
@@ -241,11 +268,11 @@ end
 
 ```elixir
 {:ok, data} = Query.list_tables(family: :inet)
-  |> Executor.execute(pid: pid)
+  |> Local.submit(pid: pid)
   |> Decoder.decode()
 ```
 
-### 4. NFTables.Decoder
+### 5. NFTables.Decoder
 
 **Responsibility:** Transform nftables JSON responses into idiomatic Elixir structures.
 
@@ -267,7 +294,7 @@ defmodule NFTables.Decoder do
 end
 ```
 
-### 5. NFTables.Expr
+### 6. NFTables.Expr
 
 **Responsibility:** Low-level expression builders for nftables JSON structures.
 
@@ -457,12 +484,12 @@ builder = Builder.new(family: :inet)
   |> Builder.add(rule: accept_established)
 
 # Execute all at once (side effect)
-Builder.execute(builder, pid)
+Builder.submit(builder, pid: pid)
 
 # Internally:
 # 1. Wraps commands: %{nftables: builder.commands}
-# 2. Calls Executor.execute/2
-# 3. Executor handles JSON encoding and Port communication
+# 2. Calls Local.submit/2
+# 3. Local handles JSON encoding and Port communication
 ```
 
 ---
@@ -649,7 +676,7 @@ Builder.new()
   |> Builder.add(table: "filter")
   |> Builder.add(chain: "INPUT")
   |> Builder.add(rule: ssh_rule)
-  |> Builder.execute(pid)
+  |> Builder.submit(pid: pid)
 ```
 
 ### 2. Functional Transformation
@@ -771,9 +798,9 @@ Builder.new() |> Builder.add(table: "filter")
     ↓ (accumulates Elixir maps)
 Builder{commands: [%{add: %{table: %{...}}}]}
     ↓
-Builder.execute(pid)
+Builder.submit(pid: pid)
     ↓
-Executor.execute(builder, pid)
+Local.submit(builder, pid)
     ↓ (converts to JSON)
 Jason.encode!(%{nftables: [...]})
     ↓
@@ -787,7 +814,7 @@ Linux Kernel Netlink
     ↓ (applies changes)
 nftables Subsystem
     ↓ (response flows back)
-Executor.execute/2
+Local.submit/2
     ↓ (decodes JSON)
 {:ok, response_map}
     ↓ (returns to user)
@@ -803,11 +830,11 @@ Query.list_tables(family: :inet)
     ↓ (pure function returns map)
 %{nftables: [%{list: %{tables: %{family: :inet}}}]}
     ↓
-|> Executor.execute(pid: pid)
+|> Local.submit(pid: pid)
     ↓ (encodes JSON, sends to port)
 Port → libnftables → Kernel
     ↓ (kernel returns data)
-Port → Executor
+Port → Local
     ↓ (decodes JSON)
 {:ok, %{nftables: [%{table: %{...}}, ...]}}
     ↓
@@ -844,20 +871,20 @@ config = Builder.new(family: :inet)
 
 # 2. Execute (side effect - applies to kernel)
 {:ok, pid} = NFTables.start_link()
-Builder.execute(config, pid)
+Builder.submit(config, pid: pid)
 
 # Internally:
-# 1. Executor.execute(%{nftables: config.commands}, pid)
+# 1. Local.submit(%{nftables: config.commands}, pid)
 # 2. Jason.encode!(...) → JSON string
 # 3. NFTables.Port.commit(pid, json, 5000)
 # 4. Port sends to libnftables
 # 5. libnftables applies via netlink
 # 6. Response flows back
-# 7. Executor returns :ok or {:error, reason}
+# 7. Local returns :ok or {:error, reason}
 
 # 3. Query state (read operation)
 {:ok, rules} = Query.list_rules("filter", "INPUT")
-  |> Executor.execute(pid: pid)
+  |> Local.submit(pid: pid)
   |> Decoder.decode()
 
 # rules = %{rules: [
@@ -874,13 +901,13 @@ The Requestor pattern provides a flexible, behaviour-based mechanism for submitt
 
 ### Overview
 
-Instead of always executing locally via `Builder.execute(builder, pid)`, you can define custom "requestors" that handle submission in different ways:
+Instead of always executing locally via `Builder.submit(builder, pid: pid)`, you can define custom "requestors" that handle submission in different ways:
 
 ```elixir
 # Traditional local execution
 Builder.new()
 |> Builder.add(table: "filter")
-|> Builder.execute(pid)  # Goes to NFTables.Port
+|> Builder.submit(pid: pid)  # Goes to NFTables.Port
 
 # Custom requestor submission
 Builder.new(requestor: MyApp.RemoteRequestor)
@@ -912,7 +939,7 @@ defmodule MyApp.RemoteRequestor do
     node = Keyword.fetch!(opts, :node)
     commands = Builder.to_map(builder)
 
-    case :rpc.call(node, NFTables.Executor, :execute, [commands, opts]) do
+    case :rpc.call(node, NFTables.Local, :execute, [commands, opts]) do
       {:ok, result} -> {:ok, result}
       {:error, reason} -> {:error, {:remote_failure, reason}}
       {:badrpc, reason} -> {:error, {:rpc_error, reason}}
@@ -949,7 +976,7 @@ defmodule MyApp.AuditRequestor do
 
     # Then execute locally
     pid = Keyword.get(opts, :pid) || Process.whereis(NFTables.Port)
-    NFTables.Executor.execute(Builder.to_map(builder), pid: pid)
+    NFTables.Local.submit(Builder.to_map(builder), pid: pid)
   end
 end
 
@@ -1025,7 +1052,7 @@ defmodule MyApp.SmartRequestor do
 
   defp execute_locally(builder, opts) do
     pid = Keyword.get(opts, :pid) || Process.whereis(NFTables.Port)
-    NFTables.Executor.execute(Builder.to_map(builder), pid: pid)
+    NFTables.Local.submit(Builder.to_map(builder), pid: pid)
   end
 end
 ```
@@ -1125,7 +1152,7 @@ Both approaches can coexist in the same codebase:
 # Local execution for immediate changes
 Builder.new()
 |> Builder.add(table: "filter")
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Remote execution for distributed deployments
 Builder.new(requestor: MyApp.RemoteRequestor)
@@ -1163,7 +1190,7 @@ defmodule MyApp.ClusterRequestor do
     commands = Builder.to_map(builder)
 
     results = Task.async_stream(nodes, fn node ->
-      :rpc.call(node, NFTables.Executor, :execute, [commands, []])
+      :rpc.call(node, NFTables.Local, :execute, [commands, []])
     end)
     |> Enum.to_list()
 
@@ -1194,7 +1221,7 @@ Each module has a single, well-defined responsibility:
 
 - **Builder**: Accumulate configuration commands
 - **Match/Rule**: Build rule expressions
-- **Executor**: Handle JSON and Port communication
+- **Local, Requestor**: Handle JSON and Port communication
 - **Query**: Build read commands
 - **Decoder**: Transform responses
 - **Expr**: Low-level expression builders
@@ -1215,7 +1242,7 @@ rule() |> tcp() |> dport(22)
 Query.list_tables(family: :inet)
 
 # Side effect - only when explicitly called
-Builder.execute(builder, pid)
+Builder.submit(builder, pid: pid)
 ```
 
 ### 3. **Composition Over Inheritance**
@@ -1239,7 +1266,7 @@ Behavior is explicit and predictable:
 
 ```elixir
 # Explicit execution
-Builder.execute(builder, pid)  # Clear when side effects occur
+Builder.submit(builder, pid: pid)  # Clear when side effects occur
 
 # Explicit conversion (though now automatic)
 to_expr(rule)  # Clear when format changes
@@ -1266,7 +1293,7 @@ json = Builder.to_json(config)
 assert length(config.commands) == 1
 
 # Only becomes "real" when executed
-Builder.execute(config, pid)
+Builder.submit(config, pid: pid)
 ```
 
 ### 6. **Progressive Disclosure**
@@ -1280,7 +1307,7 @@ NFTables.setup_basic_firewall(pid)
 
 # Level 2: Builder + Match (flexible)
 ssh_rule = rule() |> tcp() |> dport(22) |> accept()
-Builder.new() |> Builder.add(rule: ssh_rule) |> Builder.execute(pid)
+Builder.new() |> Builder.add(rule: ssh_rule) |> Builder.submit(pid: pid)
 
 # Level 3: Direct expression building (full control)
 expr = Expr.payload_match("tcp", "dport", 22)
@@ -1288,7 +1315,7 @@ Builder.add(builder, rule: [expr, Expr.verdict("accept")])
 
 # Level 4: Raw JSON (maximum control)
 json = ~s({"nftables":[{"add":{"rule":{...}}}]})
-Executor.execute(Jason.decode!(json), pid: pid)
+Local.submit(Jason.decode!(json), pid: pid)
 ```
 
 ### 7. **Fail Fast, Fail Clearly**

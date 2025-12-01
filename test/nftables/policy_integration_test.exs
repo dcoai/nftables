@@ -19,7 +19,7 @@ defmodule NFTables.PolicyIntegrationTest do
     # Clean up and create test table and chain WITHOUT hook (safe)
     Builder.new()
     |> Builder.delete(table: test_table, family: :inet)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     Builder.new()
     |> Builder.add(table: test_table, family: :inet)
@@ -28,13 +28,13 @@ defmodule NFTables.PolicyIntegrationTest do
       chain: "INPUT",
       family: :inet
     )
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     on_exit(fn ->
       if Process.alive?(pid) do
         Builder.new()
         |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
         NFTables.stop(pid)
       end
@@ -78,7 +78,7 @@ defmodule NFTables.PolicyIntegrationTest do
       filter_test = "nftables_test_filter_setup"
       Builder.new()
       |> Builder.delete(table: filter_test, family: :inet)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
 
       result = Policy.setup_basic_firewall(pid, table: filter_test, test_mode: true)
 
@@ -89,7 +89,7 @@ defmodule NFTables.PolicyIntegrationTest do
       # Cleanup
       Builder.new()
       |> Builder.delete(table: filter_test, family: :inet)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
     end
   end
 

@@ -15,14 +15,14 @@ defmodule NFTables.MeterIntegrationTest do
     # Create test table
     Builder.new(family: :inet)
     |> Builder.add(table: test_table)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
         Builder.new()
         |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
       end
     end)
 
@@ -42,7 +42,7 @@ defmodule NFTables.MeterIntegrationTest do
           timeout: 120,
           size: 5000
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -54,7 +54,7 @@ defmodule NFTables.MeterIntegrationTest do
       :ok =
         Builder.new()
         |> Builder.add(chain: "input", table: table, family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       # Step 2: Create dynamic set
       :ok =
@@ -68,7 +68,7 @@ defmodule NFTables.MeterIntegrationTest do
           timeout: 60,
           size: 10000
         )
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       # Step 3: Create rule using meter
       ssh_rule =
@@ -82,7 +82,7 @@ defmodule NFTables.MeterIntegrationTest do
       result =
         Builder.new()
         |> Builder.add(rule: ssh_rule, table: table, chain: "input", family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -109,14 +109,14 @@ defmodule NFTables.MeterIntegrationTest do
           size: 100000
         )
         |> Builder.add(rule: meter_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
 
       # Cleanup
       Builder.new()
       |> Builder.delete(table: batch_table, family: :inet)
-      |> Builder.execute(pid)
+      |> Builder.submit(pid: pid)
     end
   end
 end

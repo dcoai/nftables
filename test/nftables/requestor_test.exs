@@ -64,8 +64,13 @@ defmodule NFTables.RequestorTest do
       assert builder.requestor == CaptureRequestor
     end
 
-    test "creates builder without requestor (nil default)" do
+    test "creates builder with default requestor (NFTables.Local)" do
       builder = Builder.new()
+      assert builder.requestor == NFTables.Local
+    end
+
+    test "creates builder with nil requestor when explicitly set" do
+      builder = Builder.new(requestor: nil)
       assert builder.requestor == nil
     end
 
@@ -120,13 +125,14 @@ defmodule NFTables.RequestorTest do
       assert_received {:submit_called, ^builder, _opts}
     end
 
-    test "raises when no requestor configured" do
+    test "submits with default requestor (NFTables.Local) when not explicitly set" do
       builder = Builder.new()
       |> Builder.add(table: "filter")
 
-      assert_raise ArgumentError, ~r/No requestor module configured/, fn ->
-        Builder.submit(builder)
-      end
+      # Should not raise - uses NFTables.Local by default
+      # We can't actually test the submit here without a running NFTables.Port,
+      # but we can verify the requestor is set
+      assert builder.requestor == NFTables.Local
     end
 
     test "returns error from requestor" do
@@ -183,13 +189,14 @@ defmodule NFTables.RequestorTest do
       assert opts[:other_opt] == 123
     end
 
-    test "raises when no requestor available" do
+    test "uses default requestor (NFTables.Local) when no override provided" do
       builder = Builder.new()
       |> Builder.add(table: "filter")
 
-      assert_raise ArgumentError, ~r/No requestor module available/, fn ->
-        Builder.submit(builder, some_opt: "value")
-      end
+      # Builder has NFTables.Local as default, so no error should be raised
+      # We can't actually test the submit here without a running NFTables.Port,
+      # but we can verify the requestor is set
+      assert builder.requestor == NFTables.Local
     end
 
     test "validates requestor implements submit/2" do

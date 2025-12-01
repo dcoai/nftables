@@ -14,14 +14,14 @@ defmodule NFTables.PayloadRawIntegrationTest do
     # Create test table
     Builder.new()
     |> Builder.add(table: test_table)
-    |> Builder.execute(pid)
+    |> Builder.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
         Builder.new()
         |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
       end
     end)
 
@@ -45,7 +45,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> Builder.add(table: table)
         |> Builder.add(chain: "test_chain")
         |> Builder.add(rule: dns_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -66,7 +66,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> Builder.add(table: table)
         |> Builder.add(chain: "test_chain")
         |> Builder.add(rule: http_get_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -88,7 +88,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> Builder.add(table: table)
         |> Builder.add(chain: "test_chain")
         |> Builder.add(rule: syn_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -107,7 +107,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> Builder.add(table: table)
         |> Builder.add(chain: "test_chain")
         |> Builder.add(rule: ip_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -128,7 +128,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> Builder.add(table: table)
         |> Builder.add(chain: "test_chain")
         |> Builder.add(rule: df_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end
@@ -156,7 +156,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> Builder.add(chain: "test_chain")
         |> Builder.add(rule: dns_rule)
         |> Builder.add(rule: http_rule)
-        |> Builder.execute(pid)
+        |> Builder.submit(pid: pid)
 
       assert :ok == result
     end

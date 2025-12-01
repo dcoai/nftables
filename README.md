@@ -12,7 +12,7 @@ Elixir bindings for Linux nftables via the official libnftables JSON API. NFTabl
 - **Batch Operations** - Atomic multi-command execution
 - **IP Blocklist Management** - Add/remove IPs from blocklists with one function call
 - **Query Operations** - List tables, chains, rules, sets, and elements
-- **Fluent Builder/Executor** - Clear separation between building and executing commands
+- **Fluent Builder Pattern** - Clear separation between building and executing commands
 - **Policy Module** - Pre-built firewall policies (SSH, HTTP, rate limiting, etc.)
 - **Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
 - **Secure** - Port runs with minimal privileges (CAP_NET_ADMIN only)
@@ -57,7 +57,7 @@ See [dev_docs/ADVANCED_FEATURES.md](dev_docs/ADVANCED_FEATURES.md) for comprehen
         │    Builder.new()                  │
         │    |> Rule/Match Builder          │
         │    |> JSON format                 │
-        │    |> Executor.execute()          │
+        │    |> Builder.submit()            │
         └───────────┬───────────────────────┘
                     │
                     ▼
@@ -259,7 +259,7 @@ Builder.new(family: :inet)
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # That's it! The rule is now active in the kernel.
 ```
@@ -275,12 +275,12 @@ malicious_ips = ["192.168.1.100", "10.0.0.99", "172.16.5.50"]
 
 Builder.new()
 |> Builder.add(element: malicious_ips, set: "blocklist", table: "filter", family: :inet)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Remove a false positive
 Builder.new()
 |> Builder.delete(element: ["192.168.1.100"], set: "blocklist", table: "filter", family: :inet)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # List all blocked IPs
 {:ok, %{set_elements: elements}} = NFTables.Query.list_set_elements(pid, "filter", "blocklist", family: :inet)
@@ -306,7 +306,7 @@ alias NFTables.{Builder, Rule}
     |> Rule.counter()
     |> Rule.accept()
   )
-  |> Builder.execute(pid)
+  |> Builder.submit(pid)
 
 # Or build multiple rules in a batch
 :ok = Builder.new(family: :inet)
@@ -320,7 +320,7 @@ alias NFTables.{Builder, Rule}
   |> Builder.add(rule: 
     Rule.new() |> Rule.state([:established, :related]) |> Rule.accept()
   )
-  |> Builder.execute(pid)
+  |> Builder.submit(pid)
 ```
 
 ### Setup Basic Firewall
@@ -362,7 +362,7 @@ builder = Builder.new(family: :inet)
 |> Builder.add(chain: "INPUT")
 
 # Execute when ready
-:ok = Builder.execute(builder, pid)
+:ok = Builder.submit(builder, pid)
 
 # Or inspect the JSON that would be sent
 json = Builder.to_json(builder)
@@ -394,7 +394,7 @@ Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: ssh_rule)          # Automatically converted to expression list
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Available Rule Matchers
@@ -431,7 +431,7 @@ Builder.new()
   {443, "accept"},
   {8080, "drop"}
 ])
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Use the map in a rule
 Builder.new()
@@ -442,7 +442,7 @@ Builder.new()
   |> Rule.protocol(:tcp)
   |> Rule.dport_map("port_verdict")  # Map lookup
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 #### Named Counters
@@ -454,7 +454,7 @@ Named counters can be shared across multiple rules and queried independently:
 Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(counter: "http_traffic")
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Reference it in rules
 Builder.new()
@@ -467,7 +467,7 @@ Builder.new()
   |> Rule.counter_ref("http_traffic")  # Reference named counter
   |> Rule.accept()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 #### Quotas
@@ -479,7 +479,7 @@ Quotas limit the total amount of traffic (in bytes) that can pass through:
 Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(quota: "monthly_limit", 1_000_000_000)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Use in a rule - traffic stops when quota exceeded
 Builder.new()
@@ -490,7 +490,7 @@ Builder.new()
   |> Rule.quota_ref("monthly_limit")
   |> Rule.accept()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 #### Named Limits
@@ -502,7 +502,7 @@ Named limits provide reusable rate limiting across multiple rules:
 Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(limit: "ssh_limit", 10, :minute, burst: 5)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Use in multiple rules
 Builder.new()
@@ -515,7 +515,7 @@ Builder.new()
   |> Rule.limit_ref("ssh_limit")  # Reference named limit
   |> Rule.accept()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 **Benefits of Named Objects:**
@@ -543,7 +543,7 @@ builder
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 #### Import Specific Elements
@@ -574,7 +574,7 @@ builder = Enum.reduce(sets, builder, fn set, b ->
 end)
 
 # Execute modified configuration
-Builder.execute(builder, pid)
+Builder.submit(builder, pid)
 ```
 
 #### Use Cases
@@ -628,7 +628,7 @@ builder
   |> Rule.source("10.0.0.0/8")
   |> Rule.accept()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 **Benefits:**
@@ -659,7 +659,7 @@ Builder.new(family: :inet)
   |> Rule.source("192.168.1.100")
   |> Rule.drop()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Accepting an IP Address
@@ -679,7 +679,7 @@ Builder.new(family: :inet)
   |> Rule.source("10.0.0.1")
   |> Rule.accept()
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Rate Limiting
@@ -699,7 +699,7 @@ Builder.new(family: :inet)
   |> Rule.limit(10, :minute, burst: 5)
   |> Rule.drop()  # or accept() depending on your use case
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Deleting Rules
@@ -721,7 +721,7 @@ Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.delete(rule: rule.handle)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Benefits of the New API
@@ -782,7 +782,7 @@ Builder.new(family: :inet)
   set: "blocklist",
   table: "filter"
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Query operations
 {:ok, tables} = NFTables.Query.list_tables(pid, family: :inet)
@@ -807,7 +807,7 @@ alias NFTables.{Builder, Rule}
     |> Rule.dport(80)
     |> Rule.drop()
   )
-  |> Builder.execute(pid)
+  |> Builder.submit(pid)
 
 # List rules using Query module
 {:ok, rules} = NFTables.Query.list_rules(pid, "filter", "INPUT", family: :inet)
@@ -821,7 +821,7 @@ The Match module provides a streamlined, pure functional API for building rule e
 
 ```elixir
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.Builder
 
 # Build rule expressions with clean, chainable API
 expr = rule()
@@ -832,10 +832,10 @@ expr = rule()
   |> counter()
   |> drop()
 
-# Execute via Builder/Executor pattern
+# Execute via Builder pattern
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Or use convenience aliases for more concise code
 :ok = rule()
@@ -848,7 +848,7 @@ Builder.new()
   |> then(fn expr ->
     Builder.new()
     |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-    |> Executor.execute(pid)
+    |> Builder.submit(pid: pid)
   end)
 ```
 
@@ -993,7 +993,7 @@ alias NFTables.NAT
 
 ```elixir
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.Builder
 
 # Track connection state
 expr = rule()
@@ -1002,7 +1002,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Or using Policy helpers for common patterns
 :ok = NFTables.Policy.accept_established(pid)
@@ -1017,7 +1017,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Track connection bytes
 expr = rule()
@@ -1027,7 +1027,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "FORWARD", family: :inet)
-|> Executor.execute(pid)
+|> Builder.submit(pid: pid)
 ```
 
 ### Hardware Acceleration with Flowtables
@@ -1046,7 +1046,7 @@ Builder.new(family: :inet)
   priority: 0,
   devices: ["eth0", "eth1"]
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Add rule to offload established connections
 import NFTables.Match
@@ -1057,7 +1057,7 @@ offload_rule = rule()
 
 Builder.new()
 |> Builder.add(rule: offload_rule, table: "filter", chain: "forward", family: :inet)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Per-Key Rate Limiting with Meters
@@ -1142,7 +1142,7 @@ Builder.new(family: :ip)
   priority: -150,
   policy: :accept
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 
 # Mark existing transparent sockets
 mark_existing = rule()
@@ -1160,7 +1160,7 @@ tproxy_http = rule()
 Builder.new()
 |> Builder.add(rule: mark_existing, table: "tproxy", chain: "prerouting", family: :ip)
 |> Builder.add(rule: tproxy_http, table: "tproxy", chain: "prerouting", family: :ip)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Specialized Protocols
@@ -1329,7 +1329,7 @@ builder = Builder.new(family: :inet)
 json_cmd = Builder.to_json(builder)
 
 # Execute when ready
-Builder.execute(builder, pid)
+Builder.submit(builder, pid)
 ```
 
 ### Atomic Multi-Command Operations
@@ -1355,7 +1355,7 @@ builder = Builder.new()
 |> Builder.add(element: ["1.2.3.4", "5.6.7.8"], set: "blocklist", table: "filter")
 
 # Execute locally (all operations succeed or all fail - atomic)
-Builder.execute(builder, pid)
+Builder.submit(builder, pid)
 
 # Or convert to JSON for remote execution
 json = Builder.to_json(builder)
@@ -1364,13 +1364,13 @@ MyTransport.send_to_node("firewall-1", json)
 
 ### Execution Abstraction
 
-The `NFTables.Executor` module provides clean command execution (typically used via Builder):
+The Builder pattern supports flexible execution via requestors:
 
 ```elixir
-# Builder handles execution internally
+# Builder uses NFTables.Local requestor by default
 builder = Builder.new()
 |> Builder.add(table: "filter", family: :inet)
-|> Builder.execute(pid)  # Calls Executor internally
+|> Builder.submit(pid: pid)  # Executes locally via NFTables.Local
 
 # Or convert to JSON for inspection/remote execution
 json = Builder.to_json(builder)
@@ -1407,7 +1407,7 @@ MyTransport.send_to_node("firewall-2", json_cmd)
 MyTransport.send_to_node("firewall-3", json_cmd)
 
 # On remote nodes, execute received command
-NFTables.Executor.execute(Jason.decode!(json_cmd), pid: pid)
+NFTables.NFTables.Local.submit(Jason.decode!(json_cmd), pid: pid)
 ```
 
 ### Builder Operations Reference
@@ -1449,14 +1449,14 @@ rate_limit_expr = rule() |> tcp() |> dport(22) |> limit(10, :second) |> accept()
 
 Builder.new()
 |> Builder.add(rule: block_ip_expr, table: "filter", chain: "INPUT", family: :inet)
-|> Builder.execute(pid)
+|> Builder.submit(pid)
 ```
 
 ### Complete Distributed Firewall Example
 
 ```elixir
 defmodule MyApp.DistributedFirewall do
-  alias NFTables.{Builder, Executor, Match}
+  alias NFTables.{Builder, Match}
   import Match
 
   # On C&C node - build firewall configuration
@@ -1515,7 +1515,7 @@ defmodule MyApp.DistributedFirewall do
   # On firewall nodes - minimal shim
   def execute_received_command(json_cmd) do
     {:ok, pid} = NFTables.start_link()
-    Executor.execute(json_cmd, pid: pid)
+    NFTables.Local.submit(json_cmd, pid: pid)
   end
 end
 

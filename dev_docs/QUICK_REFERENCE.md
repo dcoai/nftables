@@ -16,13 +16,13 @@ The Match uses a **pure functional pattern** to build JSON expressions:
 
 1. **Initialize** - Create empty expression builder
 2. **Accumulate** - Each function adds JSON expression to list
-3. **Execute** - Send via Builder/Executor (automatically extracts expression list)
+3. **Execute** - Send via Builder Pattern (automatically extracts expression list)
 
 ### Visual Example
 
 ```elixir
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.{Builder, Local, Requestor}
 
 # Step 1: Initialize
 builder = rule()
@@ -50,7 +50,7 @@ builder
 |> then(fn rule ->
   Builder.new()
   |> Builder.add(rule: rule, table: "filter", chain: "INPUT", family: :inet)
-  |> Executor.execute(pid)
+  |> Local.submit(pid)
 end)
 ```
 
@@ -63,7 +63,7 @@ Pure expression building (no side effects)
     ↓
 Builder.add(rule: ) - Automatically extracts expression list and adds to configuration
     ↓
-Executor.execute() - Send to kernel
+Local.submit() - Send to kernel
     ↓
 JSON encoding
     ↓
@@ -88,7 +88,7 @@ Kernel
 **New API:**
 ```elixir
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.{Builder, Local, Requestor}
 
 expr = rule()
   |> tcp()
@@ -100,7 +100,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 **Convenience aliases:**
@@ -132,7 +132,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "nat", chain: "prerouting", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 ### Example 3: IP Blocklist
@@ -153,7 +153,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 ### Example 4: SYN Proxy (DDoS Protection)
@@ -178,7 +178,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 ## Key Concepts
@@ -214,7 +214,7 @@ Builder.new(family: :inet)
   priority: 0,
   devices: ["eth0", "eth1"]
 )
-|> Builder.execute(pid)
+|> Builder.submit(pid: pid)
 
 # Offload established connections
 rule()
@@ -451,7 +451,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 ### Rate Limit Service
@@ -479,7 +479,7 @@ expr = rule()
 
 Builder.new()
 |> Builder.add(rule: expr, table: "nat", chain: "postrouting", family: :inet)
-|> Executor.execute(pid)
+|> Local.submit(pid)
 ```
 
 ### Connection Limit
@@ -512,7 +512,7 @@ alias NFTables.Policy
 
 ```
 import NFTables.Match
-alias NFTables.{Builder, Executor}
+alias NFTables.{Builder, Local, Requestor}
     ↓
 rule() - Initialize pure builder
     ↓
@@ -520,7 +520,7 @@ rule() - Initialize pure builder
     ↓
 Builder.add(rule: rule_struct, ...) - Automatically extract and add to configuration
     ↓
-Executor.execute(pid) - Send to kernel
+Local.submit(pid) - Send to kernel
     ↓
 JSON encoding
     ↓

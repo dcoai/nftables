@@ -4,7 +4,7 @@ defmodule NFTables.QueryTest do
   use ExUnit.Case
   require Logger
 
-  alias NFTables.{Query, Executor, Decoder}
+  alias NFTables.{Query, Decoder, Local}
 
   @moduletag :integration
   @moduletag :slow
@@ -24,7 +24,7 @@ defmodule NFTables.QueryTest do
 
     test "lists tables for inet family", %{pid: pid} do
       {:ok, decoded} = Query.list_tables(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
@@ -39,7 +39,7 @@ defmodule NFTables.QueryTest do
 
     test "lists tables for ip6 family", %{pid: pid} do
       result = Query.list_tables(family: :ip6)
-               |> Executor.execute(pid: pid)
+               |> Local.submit(pid: pid)
                |> Decoder.decode()
 
       case result do
@@ -55,7 +55,7 @@ defmodule NFTables.QueryTest do
 
     test "accepts timeout option", %{pid: pid} do
       {:ok, decoded} = Query.list_tables(family: :inet)
-                       |> Executor.execute(pid: pid, timeout: 10_000)
+                       |> Local.submit(pid: pid, timeout: 10_000)
                        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
@@ -65,7 +65,7 @@ defmodule NFTables.QueryTest do
     test "parse: false option is no longer supported - decoder always transforms", %{pid: pid} do
       # The new architecture always decodes responses
       {:ok, decoded} = Query.list_tables(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
@@ -84,7 +84,7 @@ defmodule NFTables.QueryTest do
 
     test "lists chains for inet family", %{pid: pid} do
       {:ok, decoded} = Query.list_chains(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       chains = Map.get(decoded, :chains, [])
@@ -99,7 +99,7 @@ defmodule NFTables.QueryTest do
 
     test "chain has expected fields", %{pid: pid} do
       {:ok, decoded} = Query.list_chains(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       chains = Map.get(decoded, :chains, [])
@@ -131,7 +131,7 @@ defmodule NFTables.QueryTest do
 
     test "lists rules for inet family", %{pid: pid} do
       {:ok, decoded} = Query.list_rules(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       rules = Map.get(decoded, :rules, [])
@@ -146,7 +146,7 @@ defmodule NFTables.QueryTest do
 
     test "rule has expected fields", %{pid: pid} do
       {:ok, decoded} = Query.list_rules(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       rules = Map.get(decoded, :rules, [])
@@ -162,7 +162,7 @@ defmodule NFTables.QueryTest do
 
     test "accepts timeout option", %{pid: pid} do
       {:ok, decoded} = Query.list_rules(family: :inet)
-                       |> Executor.execute(pid: pid, timeout: 10_000)
+                       |> Local.submit(pid: pid, timeout: 10_000)
                        |> Decoder.decode()
 
       rules = Map.get(decoded, :rules, [])
@@ -181,7 +181,7 @@ defmodule NFTables.QueryTest do
 
     test "lists sets for inet family", %{pid: pid} do
       {:ok, decoded} = Query.list_sets(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       sets = Map.get(decoded, :sets, [])
@@ -196,7 +196,7 @@ defmodule NFTables.QueryTest do
 
     test "set has expected fields", %{pid: pid} do
       {:ok, decoded} = Query.list_sets(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       sets = Map.get(decoded, :sets, [])
@@ -229,7 +229,7 @@ defmodule NFTables.QueryTest do
 
       # Try to list elements (will succeed even if set doesn't exist, returning empty or error)
       result = Query.list_set_elements("filter", "test_set")
-               |> Executor.execute(pid: pid)
+               |> Local.submit(pid: pid)
                |> Decoder.decode()
 
       case result do
@@ -245,7 +245,7 @@ defmodule NFTables.QueryTest do
 
     test "returns error for non-existent set", %{pid: pid} do
       result = Query.list_set_elements("nonexistent_table", "nonexistent_set")
-               |> Executor.execute(pid: pid)
+               |> Local.submit(pid: pid)
                |> Decoder.decode()
 
       # Should return error for non-existent set
@@ -265,7 +265,7 @@ defmodule NFTables.QueryTest do
     test "can query multiple resource types", %{pid: pid} do
       # Query all major resource types using list_ruleset
       {:ok, decoded} = Query.list_ruleset(family: :inet)
-                       |> Executor.execute(pid: pid)
+                       |> Local.submit(pid: pid)
                        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
