@@ -309,7 +309,6 @@ Build rule expressions using a pure functional, chainable API.
 - **Pure Functional** - No side effects, returns immutable structs
 - **Chainable** - All functions return updated Match struct
 - **Composable** - Build reusable rule fragments
-- **Automatic Conversion** - Builder handles `.to_expr()` automatically
 
 ### Basic Usage
 
@@ -624,7 +623,10 @@ Builder.new(family: :inet)
 
 ## NFTables.Policy - Pre-built Policies
 
-High-level firewall policy functions for common scenarios.
+High-level firewall policy functions for common scenarios.  This is
+primarily an example which shows how primitives can be used to build
+more complex operations.  This can be used to help ensure there are
+more consistent implementation of rules across a number of scenarios.
 
 ### Functions
 
