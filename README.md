@@ -207,13 +207,13 @@ configure nftables (create/delete/update tables, chains, rules,
 etc...).  Considering this it would be wise to protect this
 executable.
 
-the `nftables_port` executable should fail to run if it is executable by all.  if this is the case you will see a message similar to:
+the `nftables_port` executable should fail to run if it has any `rwx` permissions for `other`.  if this is the case you will see a message similar to:
 
 ```
     \\
     \\SECURITY ERROR: Executable has world permissions enabled!
     \\
-    \\Current permissions: 777
+    \\Current permissions: 755
     \\
     \\This executable has CAP_NET_ADMIN capability and MUST NOT be
     \\world-readable, world-writable, or world-executable.
