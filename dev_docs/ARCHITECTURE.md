@@ -11,6 +11,7 @@ This document provides a deep dive into the architecture of the NFTables library
 - [Match and Rule Building](#match-and-rule-building)
 - [Composition Patterns](#composition-patterns)
 - [Data Flow and Execution Pipeline](#data-flow-and-execution-pipeline)
+- [Requestor Pattern](#requestor-pattern)
 - [Design Principles](#design-principles)
 
 ---
@@ -863,6 +864,324 @@ Builder.execute(config, pid)
 #   %{table: "filter", chain: "INPUT", handle: 1, expr: [...]},
 #   %{table: "filter", chain: "INPUT", handle: 2, expr: [...]}
 # ]}
+```
+
+---
+
+## Requestor Pattern
+
+The Requestor pattern provides a flexible, behaviour-based mechanism for submitting Builder configurations to custom handlers. This enables use cases beyond local execution via NFTables.Port.
+
+### Overview
+
+Instead of always executing locally via `Builder.execute(builder, pid)`, you can define custom "requestors" that handle submission in different ways:
+
+```elixir
+# Traditional local execution
+Builder.new()
+|> Builder.add(table: "filter")
+|> Builder.execute(pid)  # Goes to NFTables.Port
+
+# Custom requestor submission
+Builder.new(requestor: MyApp.RemoteRequestor)
+|> Builder.add(table: "filter")
+|> Builder.submit(node: :firewall@server)  # Goes to custom handler
+```
+
+### The NFTables.Requestor Behaviour
+
+Requestors implement a simple behaviour with one callback:
+
+```elixir
+@callback submit(builder :: Builder.t(), opts :: keyword()) ::
+  :ok | {:ok, term()} | {:error, term()}
+```
+
+### Use Cases
+
+#### 1. Remote Execution
+
+Submit configurations to remote nodes:
+
+```elixir
+defmodule MyApp.RemoteRequestor do
+  @behaviour NFTables.Requestor
+
+  @impl true
+  def submit(builder, opts) do
+    node = Keyword.fetch!(opts, :node)
+    commands = Builder.to_map(builder)
+
+    case :rpc.call(node, NFTables.Executor, :execute, [commands, opts]) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, {:remote_failure, reason}}
+      {:badrpc, reason} -> {:error, {:rpc_error, reason}}
+    end
+  end
+end
+
+# Usage
+builder = Builder.new(requestor: MyApp.RemoteRequestor)
+|> Builder.add(table: "filter")
+|> Builder.submit(node: :firewall01@datacenter)
+```
+
+#### 2. Audit Logging
+
+Log all firewall changes before applying:
+
+```elixir
+defmodule MyApp.AuditRequestor do
+  @behaviour NFTables.Requestor
+
+  @impl true
+  def submit(builder, opts) do
+    audit_id = Keyword.fetch!(opts, :audit_id)
+    user = Keyword.fetch!(opts, :user)
+
+    # Log the change
+    MyApp.AuditLog.record(%{
+      id: audit_id,
+      user: user,
+      commands: Builder.to_map(builder),
+      timestamp: DateTime.utc_now()
+    })
+
+    # Then execute locally
+    pid = Keyword.get(opts, :pid) || Process.whereis(NFTables.Port)
+    NFTables.Executor.execute(Builder.to_map(builder), pid: pid)
+  end
+end
+
+# Usage
+builder = Builder.new(requestor: MyApp.AuditRequestor)
+|> Builder.add(table: "filter")
+|> Builder.submit(audit_id: UUID.generate(), user: "admin")
+```
+
+#### 3. Testing/Capture
+
+Capture configurations without applying:
+
+```elixir
+defmodule MyApp.CaptureRequestor do
+  @behaviour NFTables.Requestor
+
+  @impl true
+  def submit(builder, _opts) do
+    # Send to test process for inspection
+    send(self(), {:nftables_config, builder})
+    :ok
+  end
+end
+
+# In tests
+test "builds correct firewall config" do
+  builder = Builder.new(requestor: MyApp.CaptureRequestor)
+  |> Builder.add(table: "filter")
+  |> Builder.add(chain: "INPUT")
+  |> Builder.submit()
+
+  assert_received {:nftables_config, builder}
+  assert length(builder.commands) == 2
+end
+```
+
+#### 4. Conditional/Environment-Based Execution
+
+Different strategies per environment:
+
+```elixir
+defmodule MyApp.SmartRequestor do
+  @behaviour NFTables.Requestor
+
+  @impl true
+  def submit(builder, opts) do
+    case Application.get_env(:my_app, :env) do
+      :prod -> execute_with_approval(builder, opts)
+      :staging -> execute_with_logging(builder, opts)
+      :dev -> log_only(builder, opts)
+    end
+  end
+
+  defp execute_with_approval(builder, opts) do
+    # Require manual approval in production
+    MyApp.ApprovalSystem.request_approval(builder)
+    |> case do
+      :approved -> execute_locally(builder, opts)
+      :denied -> {:error, :approval_denied}
+    end
+  end
+
+  defp execute_with_logging(builder, opts) do
+    Logger.info("Applying firewall changes: #{inspect(builder)}")
+    execute_locally(builder, opts)
+  end
+
+  defp log_only(builder, _opts) do
+    IO.inspect(builder, label: "Would apply")
+    :ok
+  end
+
+  defp execute_locally(builder, opts) do
+    pid = Keyword.get(opts, :pid) || Process.whereis(NFTables.Port)
+    NFTables.Executor.execute(Builder.to_map(builder), pid: pid)
+  end
+end
+```
+
+### Builder Integration
+
+The requestor field is integrated into the Builder struct:
+
+```elixir
+defstruct family: :inet,
+          requestor: nil,      # New field
+          table: nil,
+          chain: nil,
+          collection: nil,
+          type: nil,
+          spec: nil,
+          commands: []
+```
+
+### Three Ways to Set Requestor
+
+#### 1. At Builder Creation
+
+```elixir
+builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
+```
+
+#### 2. Via set_requestor/2
+
+```elixir
+builder = Builder.new()
+|> Builder.add(table: "filter")
+|> Builder.set_requestor(MyApp.AuditRequestor)
+```
+
+#### 3. Override at Submit Time
+
+```elixir
+builder = Builder.new(requestor: MyApp.DefaultRequestor)
+|> Builder.add(table: "filter")
+|> Builder.submit(requestor: MyApp.SpecialRequestor, priority: :high)
+```
+
+### Submit Functions
+
+#### submit/1 - Use Builder's Requestor
+
+```elixir
+builder = Builder.new(requestor: MyApp.RemoteRequestor)
+|> Builder.add(table: "filter")
+|> Builder.submit()  # Uses MyApp.RemoteRequestor with empty opts
+```
+
+Raises `ArgumentError` if no requestor is configured.
+
+#### submit/2 - With Options or Override
+
+```elixir
+# Pass options to requestor
+builder |> Builder.submit(node: :remote_host, timeout: 10_000)
+
+# Override requestor
+builder |> Builder.submit(requestor: MyApp.SpecialRequestor, opt: "value")
+
+# Use without pre-configured requestor
+Builder.new()
+|> Builder.add(table: "filter")
+|> Builder.submit(requestor: MyApp.TestRequestor)
+```
+
+### Validation
+
+The `submit/2` function validates that the requestor module:
+- Is an atom (module name)
+- Exports `submit/2` function
+
+```elixir
+# This will raise ArgumentError
+Builder.submit(builder, requestor: NonExistentModule)
+# => "Module NonExistentModule does not implement NFTables.Requestor behaviour"
+```
+
+### Comparison: execute/2 vs submit/2
+
+| Feature | execute/2 | submit/2 |
+|---------|-----------|----------|
+| **Target** | Local NFTables.Port (pid required) | Custom requestor module |
+| **Flexibility** | Fixed: always calls libnftables | Fully customizable handler |
+| **Configuration** | Pass pid | Pass requestor module |
+| **Use Cases** | Direct local firewall changes | Remote, testing, audit, conditional |
+| **Options** | `pid:`, `timeout:` | Requestor-specific (any opts) |
+| **Return** | `:ok \| {:error, reason}` | `:ok \| {:ok, result} \| {:error, reason}` |
+
+Both approaches can coexist in the same codebase:
+
+```elixir
+# Local execution for immediate changes
+Builder.new()
+|> Builder.add(table: "filter")
+|> Builder.execute(pid)
+
+# Remote execution for distributed deployments
+Builder.new(requestor: MyApp.RemoteRequestor)
+|> Builder.add(table: "filter")
+|> Builder.submit(node: :firewall@remote)
+```
+
+### Design Rationale
+
+1. **Behaviour-Based**: Uses Elixir behaviours for compile-time contract checking
+2. **Optional**: Requestor field defaults to `nil`, maintaining backward compatibility
+3. **Runtime Validation**: Validates `submit/2` export at runtime for flexibility
+4. **Mirrors execute/2**: Familiar pattern for users
+5. **Options Passthrough**: Opts go directly to requestor for maximum flexibility
+
+### Example: Multi-Node Firewall Deployment
+
+```elixir
+defmodule MyApp.ClusterRequestor do
+  @behaviour NFTables.Requestor
+
+  @impl true
+  def submit(builder, opts) do
+    nodes = Keyword.get(opts, :nodes, [:firewall01, :firewall02, :firewall03])
+    strategy = Keyword.get(opts, :strategy, :parallel)
+
+    case strategy do
+      :parallel -> apply_parallel(builder, nodes)
+      :serial -> apply_serial(builder, nodes)
+      :canary -> apply_canary(builder, nodes)
+    end
+  end
+
+  defp apply_parallel(builder, nodes) do
+    commands = Builder.to_map(builder)
+
+    results = Task.async_stream(nodes, fn node ->
+      :rpc.call(node, NFTables.Executor, :execute, [commands, []])
+    end)
+    |> Enum.to_list()
+
+    case Enum.all?(results, fn {:ok, {:ok, _}} -> true; _ -> false end) do
+      true -> {:ok, :all_nodes_updated}
+      false -> {:error, :some_nodes_failed}
+    end
+  end
+
+  # ... other strategies
+end
+
+# Usage
+builder = Builder.new(requestor: MyApp.ClusterRequestor)
+|> Builder.add(table: "filter")
+|> Builder.add(chain: "INPUT")
+|> Builder.add(rule: block_rule)
+|> Builder.submit(strategy: :canary, nodes: [:fw01, :fw02, :fw03])
 ```
 
 ---
