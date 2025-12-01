@@ -48,15 +48,17 @@ See [dev_docs/ADVANCED_FEATURES.md](dev_docs/ADVANCED_FEATURES.md) for comprehen
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│  Elixir Application                 │
-│  (Builder, Match, Query, Policy)    │
-└────────────┬────────────────────────┘
-             │
-             └─ Builder
-                |> Rule/Match Builder
-                |> JSON format
-                |> Executor.execute()
+        ┌───────────────────────────────────┐
+        │  Elixir Application               │
+        └───────────┬───────────────────────┘
+                    │
+                    ▼
+        ┌───────────────────────────────────┐
+        │    Builder.new()                  │
+        │    |> Rule/Match Builder          │
+        │    |> JSON format                 │
+        │    |> Executor.execute()          │
+        └───────────┬───────────────────────┘
                     │
                     ▼
         ┌───────────────────────────────────┐
@@ -66,12 +68,12 @@ See [dev_docs/ADVANCED_FEATURES.md](dev_docs/ADVANCED_FEATURES.md) for comprehen
         └───────────┬───────────────────────┘
                     │
                     ▼
-        ┌───────────────────────────┐
-        │  libnftables (C library)  │
-        │  - Parses JSON format     │
-        │  - Converts to netlink    │
-        │  - Sends to kernel        │
-        └───────────────────────────┘
+        ┌───────────────────────────────────┐
+        │  libnftables (C library)          │
+        │  - Parses JSON format             │
+        │  - Converts to netlink            │
+        │  - Sends to kernel                │
+        └───────────────────────────────────┘
 ```
 
 ### NFTables_Port 
