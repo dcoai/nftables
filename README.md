@@ -37,7 +37,7 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 ### Security & Intelligence
 - **OSF (OS Fingerprinting)** - Passive operating system detection via TCP SYN analysis
 
-See [ADVANCED_FEATURES_COMPLETE.md](ADVANCED_FEATURES_COMPLETE.md) for comprehensive documentation of all advanced features.
+See [dev_docs/ADVANCED_FEATURES.md](dev_docs/ADVANCED_FEATURES.md) for comprehensive documentation of all advanced features.
 
 ## Potential Use Cases
 
