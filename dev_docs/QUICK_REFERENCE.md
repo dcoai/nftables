@@ -497,15 +497,18 @@ expr = expr()
 Use Policy module for common firewall patterns:
 
 ```elixir
-alias NFTables.Policy
+alias NFTables.{Policy, Builder}
 
-# These use the new Match API internally
-:ok = Policy.accept_loopback(pid)
-:ok = Policy.accept_established(pid)
-:ok = Policy.drop_invalid(pid)
-:ok = Policy.allow_ssh(pid, rate_limit: 10)
-:ok = Policy.allow_http(pid)
-:ok = Policy.allow_https(pid)
+# These use the Expr API internally (composable)
+:ok =
+  Builder.new()
+  |> Policy.accept_loopback()
+  |> Policy.accept_established()
+  |> Policy.drop_invalid()
+  |> Policy.allow_ssh(rate_limit: 10)
+  |> Policy.allow_http()
+  |> Policy.allow_https()
+  |> Builder.submit(pid: pid)
 ```
 
 ## Architecture Summary

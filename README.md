@@ -919,19 +919,24 @@ See the [Match documentation](lib/nftex/match.ex) for the full API.
 ### NFTables.Policy - Pre-built Policies
 
 ```elixir
+alias NFTables.{Policy, Builder}
+
 # Quick firewall setup
 :ok = NFTables.Policy.setup_basic_firewall(pid,
   allow_services: [:ssh, :http, :https],
   ssh_rate_limit: 10
 )
 
-# Individual policy helpers
-:ok = NFTables.Policy.accept_loopback(pid)
-:ok = NFTables.Policy.accept_established(pid)
-:ok = NFTables.Policy.drop_invalid(pid)
-:ok = NFTables.Policy.allow_ssh(pid, rate_limit: 10)
-:ok = NFTables.Policy.allow_http(pid)
-:ok = NFTables.Policy.allow_https(pid)
+# Individual policy helpers (composable - all in one transaction)
+:ok =
+  Builder.new()
+  |> Policy.accept_loopback()
+  |> Policy.accept_established()
+  |> Policy.drop_invalid()
+  |> Policy.allow_ssh(rate_limit: 10)
+  |> Policy.allow_http()
+  |> Policy.allow_https()
+  |> Builder.submit(pid: pid)
 ```
 
 ### NFTables.Sysctl - Network Parameter Management
@@ -992,23 +997,19 @@ See `NFTables.Sysctl` and `NFTables.Sysctl.Network` documentation for the comple
 ### NAT Gateway
 
 ```elixir
-alias NFTables.NAT
+alias NFTables.{Builder, NAT}
 
-# Setup NAT with masquerading
-:ok = NAT.setup_masquerade(pid, %{
-  table: "nat",
-  out_interface: "eth0",
-  masquerade_source: "10.0.0.0/24"
-})
+# Setup NAT with masquerading and port forwarding
+Builder.new()
+|> NAT.setup_masquerade("eth0", table: "nat")
+|> NAT.port_forward(8080, "10.0.0.10", 80, table: "nat")
+|> NAT.source_nat("10.0.0.0/24", "203.0.113.1", table: "nat")
+|> Builder.submit(pid: pid)
 
-# Port forwarding
-:ok = NAT.add_port_forward(pid, %{
-  table: "nat",
-  protocol: :tcp,
-  external_port: 8080,
-  internal_ip: "10.0.0.10",
-  internal_port: 80
-})
+# Static 1:1 NAT
+Builder.new()
+|> NAT.static_nat("203.0.113.100", "192.168.1.100", table: "nat")
+|> Builder.submit(pid: pid)
 ```
 
 ### Connection Tracking
@@ -1027,7 +1028,10 @@ Builder.new()
 |> Builder.submit(pid: pid)
 
 # Or using Policy helpers for common patterns
-:ok = NFTables.Policy.accept_established(pid)
+:ok =
+  Builder.new()
+  |> NFTables.Policy.accept_established()
+  |> Builder.submit(pid: pid)
 
 # Connection limits
 expr = expr()

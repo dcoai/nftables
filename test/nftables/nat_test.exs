@@ -43,7 +43,12 @@ defmodule NFTables.NATTest do
 
   describe "masquerade/2" do
     test "sets up masquerade on interface", %{pid: pid} do
-      assert :ok = NAT.setup_masquerade(pid, "eth0", table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.setup_masquerade("eth0", table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       # Verify rule was created
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "postrouting", family: :inet)
@@ -53,29 +58,42 @@ defmodule NFTables.NATTest do
 
   describe "port_forward/5" do
     test "creates port forwarding rule", %{pid: pid} do
-      assert :ok = NAT.port_forward(pid, 80, "192.168.1.100", 8080, table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.port_forward(80, "192.168.1.100", 8080, table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
 
     test "supports UDP protocol", %{pid: pid} do
-      assert :ok =
-               NAT.port_forward(pid, 53, "192.168.1.1", 53,
-                 protocol: :udp,
-                 table: "nftables_test_nat"
-               )
+      result =
+        Builder.new()
+        |> NAT.port_forward(53, "192.168.1.1", 53,
+          protocol: :udp,
+          table: "nftables_test_nat"
+        )
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
 
     test "supports interface filtering", %{pid: pid} do
-      assert :ok =
-               NAT.port_forward(pid, 22, "192.168.1.10", 22,
-                 interface: "wan0",
-                 table: "nftables_test_nat"
-               )
+      result =
+        Builder.new()
+        |> NAT.port_forward(22, "192.168.1.10", 22,
+          interface: "wan0",
+          table: "nftables_test_nat"
+        )
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
@@ -84,7 +102,12 @@ defmodule NFTables.NATTest do
 
   describe "static_nat/4" do
     test "creates bidirectional NAT", %{pid: pid} do
-      assert :ok = NAT.static_nat(pid, "203.0.113.1", "192.168.1.100", table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.static_nat("203.0.113.1", "192.168.1.100", table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       # Should create rules in both directions
       {:ok, pre_rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
@@ -97,14 +120,24 @@ defmodule NFTables.NATTest do
 
   describe "source_nat/4" do
     test "creates SNAT rule", %{pid: pid} do
-      assert :ok = NAT.source_nat(pid, "192.168.1.0/24", "203.0.113.1", table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.source_nat("192.168.1.0/24", "203.0.113.1", table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "postrouting", family: :inet)
       assert length(rules) > 0
     end
 
     test "supports single IP", %{pid: pid} do
-      assert :ok = NAT.source_nat(pid, "192.168.1.100", "203.0.113.1", table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.source_nat("192.168.1.100", "203.0.113.1", table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "postrouting", family: :inet)
       assert length(rules) > 0
@@ -113,7 +146,12 @@ defmodule NFTables.NATTest do
 
   describe "destination_nat/4" do
     test "creates DNAT rule", %{pid: pid} do
-      assert :ok = NAT.destination_nat(pid, "203.0.113.1", "192.168.1.100", table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.destination_nat("203.0.113.1", "192.168.1.100", table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
@@ -122,14 +160,24 @@ defmodule NFTables.NATTest do
 
   describe "redirect_port/4" do
     test "creates port redirect rule", %{pid: pid} do
-      assert :ok = NAT.redirect_port(pid, 80, 3128, table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.redirect_port(80, 3128, table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0
     end
 
     test "supports UDP protocol", %{pid: pid} do
-      assert :ok = NAT.redirect_port(pid, 53, 5353, protocol: :udp, table: "nftables_test_nat")
+      result =
+        Builder.new()
+        |> NAT.redirect_port(53, 5353, protocol: :udp, table: "nftables_test_nat")
+        |> Builder.submit(pid: pid)
+
+      assert :ok = result
 
       {:ok, rules} = list_rules(pid, "nftables_test_nat", "prerouting", family: :inet)
       assert length(rules) > 0

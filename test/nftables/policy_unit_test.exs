@@ -3,9 +3,9 @@ defmodule NFTables.PolicyUnitTest do
 
   alias NFTables.{Policy, Builder}
 
-  describe "build_accept_loopback/1" do
+  describe "accept_loopback/2" do
     test "generates correct JSON structure with defaults" do
-      builder = Policy.build_accept_loopback()
+      builder = Policy.accept_loopback(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -25,7 +25,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with custom table/chain" do
-      builder = Policy.build_accept_loopback(table: "custom", chain: "FORWARD")
+      builder = Policy.accept_loopback(Builder.new(), table: "custom", chain: "FORWARD")
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -37,7 +37,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with custom family" do
-      builder = Policy.build_accept_loopback(family: :ip6)
+      builder = Policy.accept_loopback(Builder.new(), family: :ip6)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -48,9 +48,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_accept_established/1" do
+  describe "accept_established/2" do
     test "generates correct JSON structure" do
-      builder = Policy.build_accept_established()
+      builder = Policy.accept_established(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -71,7 +71,8 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "works with custom options" do
-      builder = Policy.build_accept_established(
+      builder = Policy.accept_established(
+        Builder.new(),
         table: "test",
         chain: "CUSTOM",
         family: :inet
@@ -88,9 +89,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_drop_invalid/1" do
+  describe "drop_invalid/2" do
     test "generates correct JSON structure" do
-      builder = Policy.build_drop_invalid()
+      builder = Policy.drop_invalid(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -104,7 +105,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "works with custom options" do
-      builder = Policy.build_drop_invalid(table: "test", chain: "INPUT", family: :inet)
+      builder = Policy.drop_invalid(Builder.new(), table: "test", chain: "INPUT", family: :inet)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
@@ -116,9 +117,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_allow_ssh/1" do
+  describe "allow_ssh/2" do
     test "generates correct JSON with defaults" do
-      builder = Policy.build_allow_ssh()
+      builder = Policy.allow_ssh(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -146,7 +147,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with rate limiting" do
-      builder = Policy.build_allow_ssh(rate_limit: 10)
+      builder = Policy.allow_ssh(Builder.new(), rate_limit: 10)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -161,7 +162,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with logging" do
-      builder = Policy.build_allow_ssh(log: true)
+      builder = Policy.allow_ssh(Builder.new(), log: true)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -175,7 +176,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with rate limiting and logging" do
-      builder = Policy.build_allow_ssh(rate_limit: 10, log: true)
+      builder = Policy.allow_ssh(Builder.new(), rate_limit: 10, log: true)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -191,9 +192,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_allow_http/1" do
+  describe "allow_http/2" do
     test "generates correct JSON for HTTP (port 80)" do
-      builder = Policy.build_allow_http()
+      builder = Policy.allow_http(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -208,7 +209,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with rate limiting" do
-      builder = Policy.build_allow_http(rate_limit: 100)
+      builder = Policy.allow_http(Builder.new(), rate_limit: 100)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -221,7 +222,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with logging" do
-      builder = Policy.build_allow_http(log: true)
+      builder = Policy.allow_http(Builder.new(), log: true)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -234,9 +235,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_allow_https/1" do
+  describe "allow_https/2" do
     test "generates correct JSON for HTTPS (port 443)" do
-      builder = Policy.build_allow_https()
+      builder = Policy.allow_https(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -251,7 +252,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with options" do
-      builder = Policy.build_allow_https(rate_limit: 200)
+      builder = Policy.allow_https(Builder.new(), rate_limit: 200)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -264,9 +265,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_allow_dns/1" do
+  describe "allow_dns/2" do
     test "generates correct JSON for DNS (port 53)" do
-      builder = Policy.build_allow_dns()
+      builder = Policy.allow_dns(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -281,9 +282,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_allow_any/1" do
+  describe "allow_any/2" do
     test "generates correct JSON for accept all" do
-      builder = Policy.build_allow_any()
+      builder = Policy.allow_any(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -296,7 +297,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with logging" do
-      builder = Policy.build_allow_any(log: true)
+      builder = Policy.allow_any(Builder.new(), log: true)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -311,9 +312,9 @@ defmodule NFTables.PolicyUnitTest do
     end
   end
 
-  describe "build_deny_all/1" do
+  describe "deny_all/2" do
     test "generates correct JSON for drop all" do
-      builder = Policy.build_deny_all()
+      builder = Policy.deny_all(Builder.new())
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -326,7 +327,7 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "generates correct JSON with logging" do
-      builder = Policy.build_deny_all(log: true)
+      builder = Policy.deny_all(Builder.new(), log: true)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -343,7 +344,7 @@ defmodule NFTables.PolicyUnitTest do
 
   describe "option handling" do
     test "accepts empty options for loopback" do
-      builder = Policy.build_accept_loopback([])
+      builder = Policy.accept_loopback(Builder.new(), [])
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -355,7 +356,8 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "merges default and custom options" do
-      builder = Policy.build_allow_ssh(
+      builder = Policy.allow_ssh(
+        Builder.new(),
         table: "test",
         chain: "INPUT",
         rate_limit: 5,

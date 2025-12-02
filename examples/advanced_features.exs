@@ -155,33 +155,51 @@ defmodule AdvancedFeaturesDemo do
 
     IO.puts("1. Internet Sharing (Masquerade)")
 
-    :ok = NAT.setup_masquerade(pid, "eth0")
+    :ok =
+      Builder.new()
+      |> NAT.setup_masquerade("eth0")
+      |> Builder.submit(pid: pid)
+
     IO.puts("   ✓ Masquerade on eth0 (internet sharing)")
 
     IO.puts("\n2. Port Forwarding (DNAT)")
 
-    :ok = NAT.port_forward(pid, 80, "192.168.1.100", 8080)
+    :ok =
+      Builder.new()
+      |> NAT.port_forward(80, "192.168.1.100", 8080)
+      |> NAT.port_forward(443, "192.168.1.100", 8443)
+      |> NAT.port_forward(53, "192.168.1.1", 53, protocol: :udp)
+      |> Builder.submit(pid: pid)
+
     IO.puts("   ✓ Forward port 80 → 192.168.1.100:8080")
-
-    :ok = NAT.port_forward(pid, 443, "192.168.1.100", 8443)
     IO.puts("   ✓ Forward port 443 → 192.168.1.100:8443")
-
-    :ok = NAT.port_forward(pid, 53, "192.168.1.1", 53, protocol: :udp)
     IO.puts("   ✓ Forward UDP port 53 → 192.168.1.1:53")
 
     IO.puts("\n3. Static 1:1 NAT")
 
-    :ok = NAT.static_nat(pid, "203.0.113.100", "192.168.1.100")
+    :ok =
+      Builder.new()
+      |> NAT.static_nat("203.0.113.100", "192.168.1.100")
+      |> Builder.submit(pid: pid)
+
     IO.puts("   ✓ 1:1 NAT: 203.0.113.100 ↔ 192.168.1.100")
 
     IO.puts("\n4. Source NAT for subnet")
 
-    :ok = NAT.source_nat(pid, "10.0.0.0/24", "203.0.113.1")
+    :ok =
+      Builder.new()
+      |> NAT.source_nat("10.0.0.0/24", "203.0.113.1")
+      |> Builder.submit(pid: pid)
+
     IO.puts("   ✓ SNAT: 10.0.0.0/24 → 203.0.113.1")
 
     IO.puts("\n5. Transparent Proxy (Redirect)")
 
-    :ok = NAT.redirect_port(pid, 80, 3128)
+    :ok =
+      Builder.new()
+      |> NAT.redirect_port(80, 3128)
+      |> Builder.submit(pid: pid)
+
     IO.puts("   ✓ Redirect port 80 → 3128 (transparent proxy)")
 
     IO.puts("")

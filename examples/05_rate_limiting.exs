@@ -25,7 +25,7 @@ defmodule RateLimiting do
   Advanced rate limiting for DDoS protection and resource management.
   """
 
-  alias NFTables.{Table, Chain, RuleBuilder, Policy}
+  alias NFTables.{Table, Chain, RuleBuilder, Policy, Builder}
 
   def run do
     IO.puts("Setting up Rate Limiting Firewall...")
@@ -72,13 +72,16 @@ defmodule RateLimiting do
 
     # Basic security baseline
     IO.puts("\n=== Setting up baseline security ===")
-    :ok = Policy.accept_loopback(pid)
+
+    :ok =
+      Builder.new()
+      |> Policy.accept_loopback()
+      |> Policy.accept_established()
+      |> Policy.drop_invalid()
+      |> Builder.submit(pid: pid)
+
     IO.puts("✓ Accept loopback traffic")
-
-    :ok = Policy.accept_established(pid)
     IO.puts("✓ Accept established/related connections")
-
-    :ok = Policy.drop_invalid(pid)
     IO.puts("✓ Drop invalid packets")
 
     # Rate limiting examples
@@ -101,10 +104,10 @@ defmodule RateLimiting do
     IO.puts("Limit: 10 connections per minute per IP")
 
     # SSH rate limit with logging
-    :ok = Policy.allow_ssh(pid,
-      rate_limit: 10,
-      log: true
-    )
+    :ok =
+      Builder.new()
+      |> Policy.allow_ssh(rate_limit: 10, log: true)
+      |> Builder.submit(pid: pid)
 
     IO.puts("✓ SSH rate limit: 10/minute (with logging)")
   end

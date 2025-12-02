@@ -5,18 +5,25 @@ defmodule NFTables.NAT do
   This module provides convenient functions for common NAT scenarios like
   internet sharing (masquerade), port forwarding (DNAT), and source NAT.
 
+  All functions follow a builder-first pattern, taking a Builder as the first
+  parameter and returning a modified Builder. This allows composing multiple
+  NAT rules before submitting them in a single transaction.
+
   ## Quick Examples
 
       {:ok, pid} = NFTables.start_link()
 
-      # Internet sharing (masquerade)
-      :ok = NFTables.NAT.setup_masquerade(pid, "wan0")
+      # Single rule
+      Builder.new()
+      |> NFTables.NAT.setup_masquerade("wan0")
+      |> Builder.submit(pid: pid)
 
-      # Port forwarding
-      :ok = NFTables.NAT.port_forward(pid, 80, "192.168.1.100", 8080)
-
-      # 1:1 NAT
-      :ok = NFTables.NAT.static_nat(pid, "203.0.113.1", "192.168.1.100")
+      # Compose multiple NAT rules
+      Builder.new()
+      |> NFTables.NAT.setup_masquerade("wan0", table: "nat")
+      |> NFTables.NAT.port_forward(80, "192.168.1.100", 8080, table: "nat")
+      |> NFTables.NAT.static_nat("203.0.113.1", "192.168.1.100", table: "nat")
+      |> Builder.submit(pid: pid)
 
   ## Prerequisites
 
@@ -60,44 +67,38 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTables process
+  - `builder` - Builder to add the rule to (defaults to new builder)
   - `interface` - Outgoing interface name (e.g., "eth0", "wan0")
   - `opts` - Options:
     - `:table` - NAT table name (default: "nat")
     - `:chain` - Chain name (default: "postrouting")
     - `:family` - Protocol family (default: :inet)
 
-  ## Example
+  ## Examples
 
       # Share internet connection via eth0
-      :ok = NFTables.NAT.setup_masquerade(pid, "eth0")
+      Builder.new()
+      |> NFTables.NAT.setup_masquerade("eth0")
+      |> Builder.submit(pid: pid)
 
-      # Now internal hosts (192.168.1.0/24) can access internet
+      # Compose with other rules
+      Builder.new()
+      |> NFTables.NAT.setup_masquerade("wan0", table: "nat")
+      |> NFTables.NAT.source_nat("10.0.0.0/24", "203.0.113.1", table: "nat")
+      |> Builder.submit(pid: pid)
   """
-  @spec setup_masquerade(pid(), String.t(), keyword()) :: :ok | {:error, term()}
-  def setup_masquerade(pid, interface, opts \\ []) when is_binary(interface) do
-    build_masquerade(interface, opts)
-    |> execute_rule(pid)
-  end
-
-  @doc """
-  Build a masquerade rule without executing it.
-
-  Returns a Builder that can be further modified or executed later.
-  """
-  @spec build_masquerade(String.t(), keyword()) :: Builder.t()
-  def build_masquerade(interface, opts \\ []) when is_binary(interface) do
+  @spec setup_masquerade(Builder.t(), String.t(), keyword()) :: Builder.t()
+  def setup_masquerade(builder \\ Builder.new(), interface, opts \\ []) when is_binary(interface) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "postrouting")
     family = Keyword.get(opts, :family, :inet)
 
     expr_list =
       expr(family: family)
-    |> oif(interface)
-    |> masquerade()
-   
+      |> oif(interface)
+      |> masquerade()
 
-    Builder.new()
+    builder
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
@@ -109,7 +110,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTables process
+  - `builder` - Builder to add the rule to (defaults to new builder)
   - `external_port` - Port to listen on
   - `internal_ip` - Destination IP address
   - `internal_port` - Destination port (defaults to external_port)
@@ -123,29 +124,29 @@ defmodule NFTables.NAT do
   ## Examples
 
       # Forward external port 80 to internal web server
-      :ok = NFTables.NAT.port_forward(pid, 80, "192.168.1.100", 8080)
+      Builder.new()
+      |> NFTables.NAT.port_forward(80, "192.168.1.100", 8080)
+      |> Builder.submit(pid: pid)
 
       # Forward SSH to internal host
-      :ok = NFTables.NAT.port_forward(pid, 2222, "192.168.1.10", 22)
+      Builder.new()
+      |> NFTables.NAT.port_forward(2222, "192.168.1.10", 22)
+      |> Builder.submit(pid: pid)
 
       # Forward UDP DNS
-      :ok = NFTables.NAT.port_forward(pid, 53, "192.168.1.1", 53, protocol: :udp)
-  """
-  @spec port_forward(pid(), non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
-          :ok | {:error, term()}
-  def port_forward(pid, external_port, internal_ip, internal_port, opts \\ [])
-      when is_integer(external_port) and is_binary(internal_ip) and
-             is_integer(internal_port) do
-    build_port_forward(external_port, internal_ip, internal_port, opts)
-    |> execute_rule(pid)
-  end
+      Builder.new()
+      |> NFTables.NAT.port_forward(53, "192.168.1.1", 53, protocol: :udp)
+      |> Builder.submit(pid: pid)
 
-  @doc """
-  Build a port forward rule without executing it.
+      # Compose multiple port forwards
+      Builder.new()
+      |> NFTables.NAT.port_forward(80, "192.168.1.100", 8080, table: "nat")
+      |> NFTables.NAT.port_forward(443, "192.168.1.100", 8443, table: "nat")
+      |> Builder.submit(pid: pid)
   """
-  @spec build_port_forward(non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
+  @spec port_forward(Builder.t(), non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
           Builder.t()
-  def build_port_forward(external_port, internal_ip, internal_port, opts \\ [])
+  def port_forward(builder \\ Builder.new(), external_port, internal_ip, internal_port, opts \\ [])
       when is_integer(external_port) and is_binary(internal_ip) and
              is_integer(internal_port) do
     protocol = Keyword.get(opts, :protocol, :tcp)
@@ -154,25 +155,24 @@ defmodule NFTables.NAT do
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = expr(family: family)
+    expr_builder = expr(family: family)
 
-    builder = if interface do
-      iif(builder, interface)
+    expr_builder = if interface do
+      iif(expr_builder, interface)
     else
-      builder
+      expr_builder
     end
 
     expr_list =
-      builder
+      expr_builder
       |> (case protocol do
         :tcp -> &tcp/1
         :udp -> &udp/1
       end).()
       |> dport(external_port)
       |> dnat_to(internal_ip, port: internal_port)
-     
 
-    Builder.new()
+    builder
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
@@ -180,57 +180,51 @@ defmodule NFTables.NAT do
   Set up static (1:1) NAT between two IP addresses.
 
   Maps all traffic for a public IP to a private IP and vice versa.
+  This function adds both DNAT (prerouting) and SNAT (postrouting) rules.
 
   ## Parameters
 
-  - `pid` - NFTables process
+  - `builder` - Builder to add the rules to (defaults to new builder)
   - `public_ip` - External IP address
   - `private_ip` - Internal IP address
   - `opts` - Options:
     - `:table` - NAT table name (default: "nat")
     - `:family` - Protocol family (default: :inet)
 
-  ## Example
+  ## Examples
 
       # Map public IP to DMZ host
-      :ok = NFTables.NAT.static_nat(pid, "203.0.113.100", "192.168.1.100")
+      Builder.new()
+      |> NFTables.NAT.static_nat("203.0.113.100", "192.168.1.100")
+      |> Builder.submit(pid: pid)
+
+      # Multiple static NAT mappings
+      Builder.new()
+      |> NFTables.NAT.static_nat("203.0.113.100", "192.168.1.100", table: "nat")
+      |> NFTables.NAT.static_nat("203.0.113.101", "192.168.1.101", table: "nat")
+      |> Builder.submit(pid: pid)
   """
-  @spec static_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def static_nat(pid, public_ip, private_ip, opts \\ [])
+  @spec static_nat(Builder.t(), String.t(), String.t(), keyword()) :: Builder.t()
+  def static_nat(builder \\ Builder.new(), public_ip, private_ip, opts \\ [])
       when is_binary(public_ip) and is_binary(private_ip) do
     table = Keyword.get(opts, :table, "nat")
     family = Keyword.get(opts, :family, :inet)
 
-    # DNAT: public -> private (incoming)
-    with :ok <- dnat_rule(pid, table, "prerouting", family, public_ip, private_ip),
-         # SNAT: private -> public (outgoing)
-         :ok <- snat_rule(pid, table, "postrouting", family, private_ip, public_ip) do
-      :ok
-    end
-  end
+    # Build DNAT rule (incoming: public -> private)
+    dnat_expr =
+      expr(family: family)
+      |> dest_ip(public_ip)
+      |> dnat_to(private_ip)
 
-  @doc """
-  Build a static NAT (1:1) configuration without executing it.
+    # Build SNAT rule (outgoing: private -> public)
+    snat_expr =
+      expr(family: family)
+      |> source_ip(private_ip)
+      |> snat_to(public_ip)
 
-  Returns a Builder with both DNAT and SNAT rules.
-  """
-  @spec build_static_nat(String.t(), String.t(), keyword()) :: Builder.t()
-  def build_static_nat(public_ip, private_ip, opts \\ [])
-      when is_binary(public_ip) and is_binary(private_ip) do
-    table = Keyword.get(opts, :table, "nat")
-    family = Keyword.get(opts, :family, :inet)
-
-    # Build DNAT rule (incoming)
-    dnat_builder = build_dnat_rule(table, "prerouting", family, public_ip, private_ip)
-
-    # Build SNAT rule (outgoing)
-    snat_builder = build_snat_rule(table, "postrouting", family, private_ip, public_ip)
-
-    # Combine both rules into one builder
-    %Builder{
-      family: family,
-      commands: dnat_builder.commands ++ snat_builder.commands
-    }
+    builder
+    |> Builder.add(rule: dnat_expr, table: table, chain: "prerouting", family: family)
+    |> Builder.add(rule: snat_expr, table: table, chain: "postrouting", family: family)
   end
 
   @doc """
@@ -238,7 +232,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTables process
+  - `builder` - Builder to add the rule to (defaults to new builder)
   - `source` - Source IP or CIDR (e.g., "192.168.1.0/24")
   - `nat_ip` - IP to NAT to
   - `opts` - Options:
@@ -247,48 +241,46 @@ defmodule NFTables.NAT do
     - `:family` - Protocol family (default: :inet)
     - `:interface` - Limit to specific interface (optional)
 
-  ## Example
+  ## Examples
 
       # NAT internal subnet to public IP
-      :ok = NFTables.NAT.source_nat(pid, "192.168.1.0/24", "203.0.113.1")
+      Builder.new()
+      |> NFTables.NAT.source_nat("192.168.1.0/24", "203.0.113.1")
+      |> Builder.submit(pid: pid)
 
       # NAT specific host
-      :ok = NFTables.NAT.source_nat(pid, "192.168.1.100", "203.0.113.1")
-  """
-  @spec source_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def source_nat(pid, source, nat_ip, opts \\ [])
-      when is_binary(source) and is_binary(nat_ip) do
-    build_source_nat(source, nat_ip, opts)
-    |> execute_rule(pid)
-  end
+      Builder.new()
+      |> NFTables.NAT.source_nat("192.168.1.100", "203.0.113.1")
+      |> Builder.submit(pid: pid)
 
-  @doc """
-  Build a source NAT rule without executing it.
+      # With interface restriction
+      Builder.new()
+      |> NFTables.NAT.source_nat("10.0.0.0/24", "203.0.113.1", interface: "wan0")
+      |> Builder.submit(pid: pid)
   """
-  @spec build_source_nat(String.t(), String.t(), keyword()) :: Builder.t()
-  def build_source_nat(source, nat_ip, opts \\ [])
+  @spec source_nat(Builder.t(), String.t(), String.t(), keyword()) :: Builder.t()
+  def source_nat(builder \\ Builder.new(), source, nat_ip, opts \\ [])
       when is_binary(source) and is_binary(nat_ip) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "postrouting")
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder =
+    expr_builder =
       expr(family: family)
       |> source_ip(source)
 
-    builder = if interface do
-      oif(builder, interface)
+    expr_builder = if interface do
+      oif(expr_builder, interface)
     else
-      builder
+      expr_builder
     end
 
     expr_list =
-      builder
+      expr_builder
       |> snat_to(nat_ip)
-     
 
-    Builder.new()
+    builder
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
@@ -297,7 +289,7 @@ defmodule NFTables.NAT do
 
   ## Parameters
 
-  - `pid` - NFTables process
+  - `builder` - Builder to add the rule to (defaults to new builder)
   - `dest` - Destination IP to match
   - `nat_ip` - IP to NAT to
   - `opts` - Options:
@@ -306,44 +298,40 @@ defmodule NFTables.NAT do
     - `:family` - Protocol family (default: :inet)
     - `:interface` - Limit to specific interface (optional)
 
-  ## Example
+  ## Examples
 
       # Redirect traffic to virtual IP to actual server
-      :ok = NFTables.NAT.destination_nat(pid, "203.0.113.100", "192.168.1.100")
-  """
-  @spec destination_nat(pid(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
-  def destination_nat(pid, dest, nat_ip, opts \\ [])
-      when is_binary(dest) and is_binary(nat_ip) do
-    build_destination_nat(dest, nat_ip, opts)
-    |> execute_rule(pid)
-  end
+      Builder.new()
+      |> NFTables.NAT.destination_nat("203.0.113.100", "192.168.1.100")
+      |> Builder.submit(pid: pid)
 
-  @doc """
-  Build a destination NAT rule without executing it.
+      # With interface restriction
+      Builder.new()
+      |> NFTables.NAT.destination_nat("203.0.113.100", "192.168.1.100", interface: "wan0")
+      |> Builder.submit(pid: pid)
   """
-  @spec build_destination_nat(String.t(), String.t(), keyword()) :: Builder.t()
-  def build_destination_nat(dest, nat_ip, opts \\ [])
+  @spec destination_nat(Builder.t(), String.t(), String.t(), keyword()) :: Builder.t()
+  def destination_nat(builder \\ Builder.new(), dest, nat_ip, opts \\ [])
       when is_binary(dest) and is_binary(nat_ip) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "prerouting")
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = expr(family: family)
+    expr_builder = expr(family: family)
 
-    builder = if interface do
-      iif(builder, interface)
+    expr_builder = if interface do
+      iif(expr_builder, interface)
     else
-      builder
+      expr_builder
     end
 
     expr_list =
-      builder
+      expr_builder
       |> dest_ip(dest)
       |> dnat_to(nat_ip)
-     
 
-    Builder.new()
+    builder
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
@@ -352,24 +340,38 @@ defmodule NFTables.NAT do
 
   Useful for transparent proxying.
 
-  ## Example
+  ## Parameters
+
+  - `builder` - Builder to add the rule to (defaults to new builder)
+  - `from_port` - Port to redirect from
+  - `to_port` - Port to redirect to
+  - `opts` - Options:
+    - `:protocol` - :tcp or :udp (default: :tcp)
+    - `:table` - NAT table name (default: "nat")
+    - `:chain` - Chain name (default: "prerouting")
+    - `:family` - Protocol family (default: :inet)
+
+  ## Examples
 
       # Redirect HTTP to local proxy
-      :ok = NFTables.NAT.redirect_port(pid, 80, 3128)
-  """
-  @spec redirect_port(pid(), non_neg_integer(), non_neg_integer(), keyword()) ::
-          :ok | {:error, term()}
-  def redirect_port(pid, from_port, to_port, opts \\ [])
-      when is_integer(from_port) and is_integer(to_port) do
-    build_redirect_port(from_port, to_port, opts)
-    |> execute_rule(pid)
-  end
+      Builder.new()
+      |> NFTables.NAT.redirect_port(80, 3128)
+      |> Builder.submit(pid: pid)
 
-  @doc """
-  Build a port redirect rule without executing it.
+      # Redirect HTTPS to local proxy
+      Builder.new()
+      |> NFTables.NAT.redirect_port(443, 8443)
+      |> Builder.submit(pid: pid)
+
+      # Multiple redirects
+      Builder.new()
+      |> NFTables.NAT.redirect_port(80, 3128, table: "nat")
+      |> NFTables.NAT.redirect_port(443, 8443, table: "nat")
+      |> Builder.submit(pid: pid)
   """
-  @spec build_redirect_port(non_neg_integer(), non_neg_integer(), keyword()) :: Builder.t()
-  def build_redirect_port(from_port, to_port, opts \\ [])
+  @spec redirect_port(Builder.t(), non_neg_integer(), non_neg_integer(), keyword()) ::
+          Builder.t()
+  def redirect_port(builder \\ Builder.new(), from_port, to_port, opts \\ [])
       when is_integer(from_port) and is_integer(to_port) do
     protocol = Keyword.get(opts, :protocol, :tcp)
     table = Keyword.get(opts, :table, "nat")
@@ -384,52 +386,8 @@ defmodule NFTables.NAT do
       end).()
       |> dport(from_port)
       |> redirect_to(to_port)
-     
 
-    Builder.new()
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-  end
-
-  # Private helpers
-
-  # Execute a Builder and normalize response to :ok for consistent API
-  defp execute_rule(builder, pid) do
-    case Builder.submit(builder, pid: pid) do
-      :ok -> :ok
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp dnat_rule(pid, table, chain, family, dest_ip, nat_ip) do
-    build_dnat_rule(table, chain, family, dest_ip, nat_ip)
-    |> execute_rule(pid)
-  end
-
-  defp build_dnat_rule(table, chain, family, dest_ip, nat_ip) do
-    expr_list =
-      expr(family: family)
-    |> dest_ip(dest_ip)
-    |> dnat_to(nat_ip)
-   
-
-    Builder.new()
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
-  end
-
-  defp snat_rule(pid, table, chain, family, source_ip, nat_ip) do
-    build_snat_rule(table, chain, family, source_ip, nat_ip)
-    |> execute_rule(pid)
-  end
-
-  defp build_snat_rule(table, chain, family, source_ip, nat_ip) do
-    expr_list =
-      expr(family: family)
-    |> source_ip(source_ip)
-    |> snat_to(nat_ip)
-   
-
-    Builder.new()
+    builder
     |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 end
