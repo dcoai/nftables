@@ -1,23 +1,74 @@
 # NFTables - Elixir Interface to nftables
 
-Elixir bindings for Linux nftables via the official libnftables JSON API. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with familiar nft syntax.
+Elixir module for Linux nftables. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with composable functions.
+
+## Quickstart Guide
+
+### Installation
+
+Add `nftables_port` to your dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:nftables, "~> 0.4.0"}
+  ]
+end
+```
+
+Run the commands
+```bash
+mix deps.get
+mix compile
+```
+
+### Setting Capabilities
+
+The port executable requires `CAP_NET_ADMIN` to communicate with the kernel firewall:
+
+```bash
+# After compilation
+sudo setcap cap_net_admin=ep deps/nftables_port/priv/port_nftables
+chmod 700 deps/nftables_port/priv/port_nftables
+```
+
+### Build a Rule
+
+**Note** - before running the following on a remote machine, be aware you are able block your remote access.  You may want to start by experimenting in a VM or local machine.
+
+```elixir
+alias NFTables.Builder
+import NFTables.Rule
+
+{:ok, pid} = NFTables.start_link()
+
+def ssh(rule), do: rule |> tcp() |> dport(22)
+
+response =
+  Builder.new()
+  |> Builder.add(table: "filter", family: :inet)
+  |> Builder.add(chain: "INPUT", hook: :input)
+  |> Builder.add(rule: rule() |> ssh() |> accept())
+  |> Builder.commit(pid: pid)
+
+IO.inspect(response}
+```
 
 ## Features
 
-- **Official API** - Uses libnftables JSON API (no manual netlink messages)
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
 - **Pure Functional Rule API** - Clean, composable expression builder with no side effects
-- **Sysctl Management** - Safe read/write access to network kernel parameters
+- **Sysctl Management** - Read/Write access to network kernel parameters
 - **Command/Execution Separation** - Build JSON/nft commands without executing
 - **Batch Operations** - Atomic multi-command execution
 - **IP Blocklist Management** - Add/remove IPs from blocklists with one function call
 - **Query Operations** - List tables, chains, rules, sets, and elements
-- **Fluent Builder Pattern** - Clear separation between building and executing commands
+- **Builder Pattern** - Clear separation between building and executing commands
 - **Policy Module** - Pre-built firewall policies (SSH, HTTP, rate limiting, etc.)
-- **Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
-- **Secure** - Port runs with minimal privileges (CAP_NET_ADMIN only)
+- **Elixir Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
+- **Security** - Port runs with minimal privileges (CAP_NET_ADMIN only)
 
-## Advanced Features ✨
+## Advanced Features
 
 NFTables includes comprehensive support for advanced nftables capabilities:
 
@@ -39,43 +90,6 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 
 See [dev_docs/ADVANCED_FEATURES.md](dev_docs/ADVANCED_FEATURES.md) for comprehensive documentation of all advanced features.
 
-## Potential Use Cases
-
-- ** Dynamic Firewall Management ** - Modify firewall rules from your Elixir application
-- ** Local Firewall ** - powered by Elixir
-- ** Distributed Firewall ** - manage many firewalls centrally
-
-## Architecture
-
-```
-        ┌───────────────────────────────────┐
-        │  Elixir Application               │
-        └───────────┬───────────────────────┘
-                    │
-                    ▼
-        ┌───────────────────────────────────┐
-        │    Builder.new()                  │
-        │    |> Rule/Match Builder          │
-        │    |> JSON format                 │
-        │    |> Builder.submit()            │
-        └───────────┬───────────────────────┘
-                    │
-                    ▼
-        ┌───────────────────────────────────┐
-        │  Zig Port (port.zig)              │
-        │  libnftables.nft_run_cmd_from_buf │
-        │  (accepts JSON format)            │
-        └───────────┬───────────────────────┘
-                    │
-                    ▼
-        ┌───────────────────────────────────┐
-        │  libnftables (C library)          │
-        │  - Parses JSON format             │
-        │  - Converts to netlink            │
-        │  - Sends to kernel                │
-        └───────────────────────────────────┘
-```
-
 ### NFTables_Port 
 
 NFTables.Port is an elixir wrapper, and a program written in Zig which accepts json structures and sends them to NFTables using the libnftables (C library).  The Elixir part manages the Zig program as a Port.
@@ -88,9 +102,13 @@ json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
 {:ok, json_response} = NFTables.Port.call(pid, json_cmd)
 ```
 
+Visit the [NFTables.Port](https://github.com/dcoai/nftables_port) project page for details.  Take some time to review the [Security](https://github.com/dcoai/nftables_port/dev_docs/security.md) document found there.
+
 ### NFTables
 
-NFTables is an elixir library, which builds expressions (as Elixir Maps), which can be converted to JSON and passed to the NFTables_Port for processing by libnftables.  This library allows for constructing Tables, Chains, Sets, Rules, etc... in a composable elixer way
+NFTables.Port takes JSON requests and passes them on to nftables.  The Elixir NFTables library is a set of tools to query and build rule sets which can be applied via NFTables.Port.
+
+is an Elixir library, which builds expressions (as Elixir Maps), which can be converted to JSON and passed to the NFTables_Port for processing by libnftables.  This library allows for constructing Tables, Chains, Sets, Rules, etc... in a composable elixer way
 
 **Generate JSON using NFTables library**
 
@@ -201,13 +219,16 @@ getcap priv/port_nftables
 # Should show: priv/port_nftables = cap_net_admin+ep
 ```
 
+## Potential Use Cases
+
+- **Dynamic Firewall Management** - Modify firewall rules from your Elixir application
+- **Local Firewall** - powered by Elixir
+- **Distributed Firewall** - manage many firewalls centrally
+
 ### Security considerations
 
-Once port_nftables has CAP_NET_ADMIN capability set, it can be used to
-set network related parameters (like enable ip_forwarding) and
-configure nftables (create/delete/update tables, chains, rules,
-etc...).  Considering this it would be wise to protect this
-executable.
+Once port_nftables has CAP_NET_ADMIN capability set, it can be used to set network related parameters (like enable ip_forwarding) and
+configure nftables (create/delete/update tables, chains, rules, etc...).  Considering this it would be wise to protect this executable.
 
 the `nftables_port` executable should fail to run if it has any `rwx` permissions for `other`.  if this is the case you will see a message similar to:
 
@@ -232,17 +253,15 @@ the `nftables_port` executable should fail to run if it has any `rwx` permission
     \\
 ```
 
-minimally, do the following:
+minimally for production, do the following:
 
-1. create a special user that the nftables_port will run as such as `exfw`.  Feel free to be more creative.
+1. create a special user that the nftables_port will run as such as `exfw`.  Feel free to be more creative with the name.
 2. `chown exfw nftables_port`  # make the executable belong to the new user `exfw`
 3. `chmod 700 nftables_port`   # make the executable only runnable by the user `exfw`
 
-other options would be to use groups.
-
 ## Quick Start
 
-### Block an IP Address (New API)
+### Block an IP Address 
 
 ```elixir
 # Start NFTables
