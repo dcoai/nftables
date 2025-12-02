@@ -76,7 +76,6 @@ defmodule NFTables.Local do
   @behaviour NFTables.Requestor
 
   alias NFTables.Builder
-  alias Jason, as: JSON
 
   @doc """
   Submit a Builder configuration or raw command map for local execution.
@@ -120,11 +119,11 @@ defmodule NFTables.Local do
       map when is_map(map) -> map
     end
 
-    execute_command(command, opts)
+    submit_command(command, opts)
   end
 
   # Private function that does the actual execution
-  defp execute_command(command, opts) when is_map(command) do
+  defp submit_command(command, opts) when is_map(command) do
 
     # Encode Elixir map to JSON (this is the ONLY place JSON encoding happens)
     json_string = JSON.encode!(command)
@@ -133,15 +132,13 @@ defmodule NFTables.Local do
     pid = get_port_pid(opts)
     timeout = Keyword.get(opts, :timeout, 5000)
 
-    # Execute via NFTables.Port
+    # submit to NFTables.Port
     case NFTables.Port.commit(pid, json_string, timeout) do
-      {:ok, ""} ->
-        # Empty response is success (write operations)
-        :ok
+      {:ok, ""} -> :ok     # Empty response is success (write operations)
 
       {:ok, response_json} ->
         # Decode JSON response to Elixir structures (ONLY place JSON decoding happens)
-        case JSON.decode(response_json, keys: :atoms) do
+        case Jason.decode(response_json, keys: :atoms) do
           {:ok, %{nftables: items} = decoded} when is_list(items) ->
             # Check if any item contains an error
             case Enum.find(items, fn item -> Map.has_key?(item, :error) end) do

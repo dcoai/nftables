@@ -1470,9 +1470,6 @@ defmodule NFTables.Builder do
   @doc """
   Convert builder to JSON string for inspection.
 
-  Uses Jason for JSON encoding. NFTables.Local handles JSON encoding/decoding
-  for actual execution.
-
   ## Examples
 
       builder |> Builder.to_json()

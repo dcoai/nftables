@@ -8,7 +8,7 @@ defmodule NFTables.MixProject do
     [
       app: :nftables,
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
 
@@ -37,7 +37,7 @@ defmodule NFTables.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nftables_port, path: "../nftables_port"},
+      {:nftables_port, "~> 0.4"},
       {:jason, "~> 1.4"},
       {:usage_rules, "~> 0.1.25", only: :dev},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
