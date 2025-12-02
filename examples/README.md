@@ -152,6 +152,7 @@ These will be implemented using the current v0.4.0 API (`JSONBuilder` with nft s
 High-level functions for common firewall configurations:
 
 ```elixir
+alias NFTables.{Policy, Builder}
 {:ok, pid} = NFTables.start_link()
 
 # Quick setup: Complete basic firewall in one call
@@ -160,16 +161,22 @@ High-level functions for common firewall configurations:
   ssh_rate_limit: 10
 )
 
-# Individual policies
-:ok = NFTables.Policy.accept_loopback(pid)
-:ok = NFTables.Policy.accept_established(pid)
-:ok = NFTables.Policy.drop_invalid(pid)
+# Individual policies (composable - all in one transaction)
+:ok =
+  Builder.new()
+  |> Policy.accept_loopback()
+  |> Policy.accept_established()
+  |> Policy.drop_invalid()
+  |> Builder.submit(pid: pid)
 
-# Service-specific allows
-:ok = NFTables.Policy.allow_ssh(pid, rate_limit: 10, log: true)
-:ok = NFTables.Policy.allow_http(pid, rate_limit: 100)
-:ok = NFTables.Policy.allow_https(pid)
-:ok = NFTables.Policy.allow_dns(pid)
+# Service-specific allows (composable)
+:ok =
+  Builder.new()
+  |> Policy.allow_ssh(rate_limit: 10, log: true)
+  |> Policy.allow_http(rate_limit: 100)
+  |> Policy.allow_https()
+  |> Policy.allow_dns()
+  |> Builder.submit(pid: pid)
 ```
 
 ### NFTables.Match - Fluent API for Rules

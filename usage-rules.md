@@ -166,17 +166,17 @@ response = Executor.execute!(builder, pid)
 **Purpose:** Common firewall patterns using Match API internally.
 
 **Key Functions:**
-- `Policy.setup_basic_firewall/2` - Complete firewall setup
-- `Policy.accept_loopback/1` - Accept lo interface
-- `Policy.accept_established/1` - Accept established/related
-- `Policy.drop_invalid/1` - Drop invalid packets
-- `Policy.allow_ssh/2` - Allow SSH with rate limiting
-- `Policy.allow_http/1` - Allow HTTP
-- `Policy.allow_https/1` - Allow HTTPS
+- `Policy.setup_basic_firewall/2` - Complete firewall setup (still takes pid)
+- `Policy.accept_loopback/2` - Accept lo interface (builder-first)
+- `Policy.accept_established/2` - Accept established/related (builder-first)
+- `Policy.drop_invalid/2` - Drop invalid packets (builder-first)
+- `Policy.allow_ssh/2` - Allow SSH with rate limiting (builder-first)
+- `Policy.allow_http/2` - Allow HTTP (builder-first)
+- `Policy.allow_https/2` - Allow HTTPS (builder-first)
 
 **Usage:**
 ```elixir
-alias NFTables.Policy
+alias NFTables.{Policy, Builder}
 
 # Quick setup
 :ok = Policy.setup_basic_firewall(pid,
@@ -184,10 +184,13 @@ alias NFTables.Policy
   ssh_rate_limit: 10
 )
 
-# Or individual policies
-:ok = Policy.accept_loopback(pid)
-:ok = Policy.accept_established(pid)
-:ok = Policy.allow_ssh(pid, rate_limit: 10)
+# Or individual policies (composable - all in one transaction)
+:ok =
+  Builder.new()
+  |> Policy.accept_loopback()
+  |> Policy.accept_established()
+  |> Policy.allow_ssh(rate_limit: 10)
+  |> Builder.submit(pid: pid)
 ```
 
 ### NAT Module - Network Address Translation
@@ -195,24 +198,28 @@ alias NFTables.Policy
 **Purpose:** NAT operations (SNAT, DNAT, masquerade, port forwarding).
 
 **Key Functions:**
-- `NAT.source_nat/4` - Source NAT
-- `NAT.destination_nat/4` - Destination NAT
-- `NAT.redirect_port/4` - Port redirection
-- `NAT.port_forward/5` - Port forwarding
-- `NAT.setup_masquerade/2` - Masquerading setup
+- `NAT.source_nat/4` - Source NAT (builder-first)
+- `NAT.destination_nat/4` - Destination NAT (builder-first)
+- `NAT.redirect_port/4` - Port redirection (builder-first)
+- `NAT.port_forward/5` - Port forwarding (builder-first)
+- `NAT.setup_masquerade/3` - Masquerading setup (builder-first)
+- `NAT.static_nat/4` - Static 1:1 NAT (builder-first)
 
 **Usage:**
 ```elixir
-alias NFTables.NAT
+alias NFTables.{Builder, NAT}
 
-# Source NAT
-:ok = NAT.source_nat(pid, "10.0.0.0/24", "203.0.113.1")
+# Compose multiple NAT rules
+Builder.new()
+|> NAT.setup_masquerade("eth0", table: "nat")
+|> NAT.source_nat("10.0.0.0/24", "203.0.113.1", table: "nat")
+|> NAT.port_forward(8080, "10.0.0.10", 80, table: "nat")
+|> Builder.submit(pid: pid)
 
-# Port forwarding
-:ok = NAT.port_forward(pid, 8080, "10.0.0.10", 80)
-
-# Masquerade
-:ok = NAT.setup_masquerade(pid, out_interface: "eth0")
+# Static 1:1 NAT
+Builder.new()
+|> NAT.static_nat("203.0.113.100", "192.168.1.100", table: "nat")
+|> Builder.submit(pid: pid)
 ```
 
 ### Query Module - Firewall Inspection

@@ -3,9 +3,9 @@ defmodule NFTables.NATUnitTest do
 
   alias NFTables.{NAT, Builder}
 
-  describe "build_masquerade/2" do
+  describe "setup_masquerade/3" do
     test "generates correct JSON structure" do
-      builder = NAT.build_masquerade("eth0")
+      builder = NAT.setup_masquerade(Builder.new(), "eth0")
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -23,9 +23,9 @@ defmodule NFTables.NATUnitTest do
     end
   end
 
-  describe "build_port_forward/4" do
+  describe "port_forward/5" do
     test "generates correct JSON for basic port forward" do
-      builder = NAT.build_port_forward(80, "192.168.1.100", 8080)
+      builder = NAT.port_forward(Builder.new(), 80, "192.168.1.100", 8080)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -40,7 +40,7 @@ defmodule NFTables.NATUnitTest do
     end
 
     test "supports UDP protocol" do
-      builder = NAT.build_port_forward(53, "192.168.1.1", 53, protocol: :udp)
+      builder = NAT.port_forward(Builder.new(), 53, "192.168.1.1", 53, protocol: :udp)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -54,9 +54,9 @@ defmodule NFTables.NATUnitTest do
     end
   end
 
-  describe "build_source_nat/3" do
+  describe "source_nat/4" do
     test "generates correct JSON structure" do
-      builder = NAT.build_source_nat("192.168.1.0/24", "203.0.113.1")
+      builder = NAT.source_nat(Builder.new(), "192.168.1.0/24", "203.0.113.1")
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -68,9 +68,9 @@ defmodule NFTables.NATUnitTest do
     end
   end
 
-  describe "build_destination_nat/3" do
+  describe "destination_nat/4" do
     test "generates correct JSON structure" do
-      builder = NAT.build_destination_nat("203.0.113.1", "192.168.1.100")
+      builder = NAT.destination_nat(Builder.new(), "203.0.113.1", "192.168.1.100")
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -82,9 +82,9 @@ defmodule NFTables.NATUnitTest do
     end
   end
 
-  describe "build_redirect_port/3" do
+  describe "redirect_port/4" do
     test "generates correct JSON for port redirect" do
-      builder = NAT.build_redirect_port(80, 3128)
+      builder = NAT.redirect_port(Builder.new(), 80, 3128)
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 
@@ -95,9 +95,9 @@ defmodule NFTables.NATUnitTest do
     end
   end
 
-  describe "build_static_nat/3" do
+  describe "static_nat/4" do
     test "generates correct JSON for 1:1 NAT (both DNAT and SNAT)" do
-      builder = NAT.build_static_nat("203.0.113.1", "192.168.1.100")
+      builder = NAT.static_nat(Builder.new(), "203.0.113.1", "192.168.1.100")
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
 

@@ -27,7 +27,7 @@ defmodule BasicFirewall do
   Complete basic firewall setup with secure defaults.
   """
 
-  alias NFTables.{Table, Chain, Policy}
+  alias NFTables.{Table, Chain, Policy, Builder}
 
   def run do
     IO.puts("Setting up basic firewall...")
@@ -96,21 +96,21 @@ defmodule BasicFirewall do
     #   policy: :drop  # DROP by default
     # })
     #
-    # # 3. Accept loopback traffic
-    # :ok = Policy.accept_loopback(pid)
+    # # 3. Apply policy rules (composable - all in one transaction)
+    # :ok =
+    #   Builder.new()
+    #   |> Policy.accept_loopback()
+    #   |> Policy.accept_established()
+    #   |> Policy.drop_invalid()
+    #   |> Policy.allow_ssh(rate_limit: 10, log: true)
+    #   |> Builder.submit(pid: pid)
     #
-    # # 4. Accept established/related connections
-    # :ok = Policy.accept_established(pid)
-    #
-    # # 5. Drop invalid packets
-    # :ok = Policy.drop_invalid(pid)
-    #
-    # # 6. Allow SSH with rate limiting
-    # :ok = Policy.allow_ssh(pid, rate_limit: 10, log: true)
-    #
-    # # 7. Optionally allow web services
-    # # :ok = Policy.allow_http(pid)
-    # # :ok = Policy.allow_https(pid)
+    # # 4. Optionally allow web services
+    # # :ok =
+    # #   Builder.new()
+    # #   |> Policy.allow_http()
+    # #   |> Policy.allow_https()
+    # #   |> Builder.submit(pid: pid)
     """)
 
     # Display current rules

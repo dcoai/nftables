@@ -101,7 +101,10 @@ defmodule NATGatewayExample do
     IO.puts("  • LAN (#{@lan_network}) → Internet")
     IO.puts("    Interface: #{@wan_interface}")
 
-    :ok = NAT.setup_masquerade(pid, @wan_interface, table: "nat")
+    :ok =
+      Builder.new()
+      |> NAT.setup_masquerade(@wan_interface, table: "nat")
+      |> Builder.submit(pid: pid)
 
     IO.puts("    ✓ Masquerade enabled for LAN clients")
 
@@ -136,7 +139,10 @@ defmodule NATGatewayExample do
     IO.puts("    Public IP: #{@public_ip_web}")
     IO.puts("    Services: HTTP (80), HTTPS (443)")
 
-    :ok = NAT.static_nat(pid, @public_ip_web, @dmz_web_server, table: "nat")
+    :ok =
+      Builder.new()
+      |> NAT.static_nat(@public_ip_web, @dmz_web_server, table: "nat")
+      |> Builder.submit(pid: pid)
 
     IO.puts("    ✓ Bidirectional NAT configured")
     IO.puts("      → Inbound: #{@public_ip_web} → #{@dmz_web_server}")
@@ -147,7 +153,10 @@ defmodule NATGatewayExample do
     IO.puts("    Public IP: #{@public_ip_mail}")
     IO.puts("    Services: SMTP (25), SMTPS (465), IMAPS (993)")
 
-    :ok = NAT.static_nat(pid, @public_ip_mail, @dmz_mail_server, table: "nat")
+    :ok =
+      Builder.new()
+      |> NAT.static_nat(@public_ip_mail, @dmz_mail_server, table: "nat")
+      |> Builder.submit(pid: pid)
 
     IO.puts("    ✓ Bidirectional NAT configured")
 
@@ -173,30 +182,33 @@ defmodule NATGatewayExample do
     IO.puts("  • OpenVPN Server")
     IO.puts("    #{@public_ip_gateway}:11194 → #{@dmz_vpn_server}:1194")
 
-    :ok = NAT.port_forward(pid, 11194, @dmz_vpn_server, 1194,
-      table: "nat",
-      interface: @wan_interface
-    )
+    :ok =
+      Builder.new()
+      |> NAT.port_forward(11194, @dmz_vpn_server, 1194,
+        table: "nat",
+        interface: @wan_interface
+      )
+      |> NAT.port_forward(11194, @dmz_vpn_server, 1194,
+        protocol: :udp,
+        table: "nat",
+        interface: @wan_interface
+      )
+      |> Builder.submit(pid: pid)
 
     IO.puts("    ✓ Port forwarding configured (TCP)")
-
-    # Also forward UDP for OpenVPN
-    :ok = NAT.port_forward(pid, 11194, @dmz_vpn_server, 1194,
-      protocol: :udp,
-      table: "nat",
-      interface: @wan_interface
-    )
-
     IO.puts("    ✓ Port forwarding configured (UDP)")
 
     # SSH to internal file server (non-standard port)
     IO.puts("\n  • SSH to File Server")
     IO.puts("    #{@public_ip_gateway}:2222 → #{@lan_fileserver}:22")
 
-    :ok = NAT.port_forward(pid, 2222, @lan_fileserver, 22,
-      table: "nat",
-      interface: @wan_interface
-    )
+    :ok =
+      Builder.new()
+      |> NAT.port_forward(2222, @lan_fileserver, 22,
+        table: "nat",
+        interface: @wan_interface
+      )
+      |> Builder.submit(pid: pid)
 
     IO.puts("    ✓ SSH port forwarding enabled")
 
@@ -204,10 +216,13 @@ defmodule NATGatewayExample do
     IO.puts("\n  • RDP to Admin Workstation")
     IO.puts("    #{@public_ip_gateway}:3389 → 192.168.1.50:3389")
 
-    :ok = NAT.port_forward(pid, 3389, "192.168.1.50", 3389,
-      table: "nat",
-      interface: @wan_interface
-    )
+    :ok =
+      Builder.new()
+      |> NAT.port_forward(3389, "192.168.1.50", 3389,
+        table: "nat",
+        interface: @wan_interface
+      )
+      |> Builder.submit(pid: pid)
 
     IO.puts("    ✓ RDP forwarding enabled")
 
@@ -215,13 +230,19 @@ defmodule NATGatewayExample do
     IO.puts("\n  • Game Server")
     IO.puts("    #{@public_ip_gateway}:27015 → 192.168.1.200:27015")
 
-    for protocol <- [:tcp, :udp] do
-      :ok = NAT.port_forward(pid, 27015, "192.168.1.200", 27015,
-        protocol: protocol,
-        table: "nat",
-        interface: @wan_interface
-      )
-    end
+    builder = Builder.new()
+
+    builder =
+      for protocol <- [:tcp, :udp], reduce: builder do
+        acc ->
+          NAT.port_forward(acc, 27015, "192.168.1.200", 27015,
+            protocol: protocol,
+            table: "nat",
+            interface: @wan_interface
+          )
+      end
+
+    :ok = Builder.submit(builder, pid: pid)
 
     IO.puts("    ✓ Game server forwarding (TCP+UDP)")
 

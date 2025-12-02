@@ -623,10 +623,12 @@ Builder.new(family: :inet)
 
 ## NFTables.Policy - Pre-built Policies
 
-High-level firewall policy functions for common scenarios.  This is
-primarily an example which shows how primitives can be used to build
-more complex operations.  This can be used to help ensure there are
-more consistent implementation of rules across a number of scenarios.
+High-level firewall policy functions for common scenarios. All functions follow a
+builder-first pattern, taking a Builder as the first parameter and returning a
+modified Builder. This enables composing multiple policies in a single transaction.
+
+**Note**: `setup_basic_firewall/2` is the exception - it still takes `pid` as it
+creates infrastructure (table and chain) before applying policies.
 
 ### Functions
 
@@ -641,28 +643,34 @@ NFTables.Policy.setup_basic_firewall(pid,
 )
 ```
 
-#### `accept_loopback/1`
+#### `accept_loopback/2`
 
 Accept all loopback traffic.
 
 ```elixir
-NFTables.Policy.accept_loopback(pid)
+Builder.new()
+|> NFTables.Policy.accept_loopback()
+|> Builder.submit(pid: pid)
 ```
 
-#### `accept_established/1`
+#### `accept_established/2`
 
 Accept established and related connections.
 
 ```elixir
-NFTables.Policy.accept_established(pid)
+Builder.new()
+|> NFTables.Policy.accept_established()
+|> Builder.submit(pid: pid)
 ```
 
-#### `drop_invalid/1`
+#### `drop_invalid/2`
 
 Drop invalid packets.
 
 ```elixir
-NFTables.Policy.drop_invalid(pid)
+Builder.new()
+|> NFTables.Policy.drop_invalid()
+|> Builder.submit(pid: pid)
 ```
 
 #### `allow_ssh/2`
@@ -670,50 +678,99 @@ NFTables.Policy.drop_invalid(pid)
 Allow SSH with optional rate limiting.
 
 ```elixir
-NFTables.Policy.allow_ssh(pid)
-NFTables.Policy.allow_ssh(pid, rate_limit: 10, log: true)
+Builder.new()
+|> NFTables.Policy.allow_ssh()
+|> Builder.submit(pid: pid)
+
+# With options
+Builder.new()
+|> NFTables.Policy.allow_ssh(rate_limit: 10, log: true)
+|> Builder.submit(pid: pid)
 ```
 
-#### `allow_http/2`, `allow_https/1`, `allow_dns/1`
+#### `allow_http/2`, `allow_https/2`, `allow_dns/2`
 
 Allow web and DNS services.
 
 ```elixir
-NFTables.Policy.allow_http(pid)
-NFTables.Policy.allow_https(pid)
-NFTables.Policy.allow_dns(pid)
+# Compose multiple services in one transaction
+Builder.new()
+|> NFTables.Policy.allow_http()
+|> NFTables.Policy.allow_https()
+|> NFTables.Policy.allow_dns()
+|> Builder.submit(pid: pid)
 ```
 
 ---
 
 ## NFTables.NAT - NAT Operations
 
-Network address translation helpers.
+Network address translation helpers. All functions follow a builder-first pattern,
+taking a Builder as the first parameter and returning a modified Builder.
 
 ### Functions
 
-#### `setup_masquerade/2`
+#### `setup_masquerade/3`
 
-Set up NAT with masquerading.
+Set up NAT with masquerading on an interface.
 
 ```elixir
-NFTables.NAT.setup_masquerade(pid,
-  out_interface: "eth0",
-  source_network: "10.0.0.0/24"
-)
+Builder.new()
+|> NFTables.NAT.setup_masquerade("eth0", table: "nat")
+|> Builder.submit(pid: pid)
 ```
 
-#### `add_port_forward/2`
+#### `port_forward/5`
 
-Add port forwarding rule.
+Add port forwarding rule (DNAT).
 
 ```elixir
-NFTables.NAT.add_port_forward(pid,
+Builder.new()
+|> NFTables.NAT.port_forward(8080, "10.0.0.10", 80,
   protocol: :tcp,
-  external_port: 8080,
-  internal_ip: "10.0.0.10",
-  internal_port: 80
+  table: "nat"
 )
+|> Builder.submit(pid: pid)
+```
+
+#### `static_nat/4`
+
+Set up static 1:1 NAT between two IP addresses.
+
+```elixir
+Builder.new()
+|> NFTables.NAT.static_nat("203.0.113.100", "192.168.1.100", table: "nat")
+|> Builder.submit(pid: pid)
+```
+
+#### `source_nat/4`
+
+Set up source NAT for a specific source IP or subnet.
+
+```elixir
+Builder.new()
+|> NFTables.NAT.source_nat("10.0.0.0/24", "203.0.113.1", table: "nat")
+|> Builder.submit(pid: pid)
+```
+
+#### `destination_nat/4`
+
+Set up destination NAT for incoming traffic.
+
+```elixir
+Builder.new()
+|> NFTables.NAT.destination_nat("203.0.113.100", "192.168.1.100", table: "nat")
+|> Builder.submit(pid: pid)
+```
+
+#### `redirect_port/4`
+
+Redirect a port to a different port on the same host (local port redirect).
+
+```elixir
+Builder.new()
+|> NFTables.NAT.redirect_port(80, 3128, protocol: :tcp, table: "nat")
+|> Builder.submit(pid: pid)
 ```
 
 ---

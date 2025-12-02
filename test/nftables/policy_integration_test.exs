@@ -45,7 +45,10 @@ defmodule NFTables.PolicyIntegrationTest do
 
   describe "policy execution integration" do
     test "accept_loopback executes successfully", %{pid: pid, test_table: test_table} do
-      result = Policy.accept_loopback(pid, table: test_table, chain: "INPUT")
+      result =
+        Builder.new()
+        |> Policy.accept_loopback(table: test_table, chain: "INPUT")
+        |> Builder.submit(pid: pid)
 
       assert result == :ok
 
@@ -55,18 +58,24 @@ defmodule NFTables.PolicyIntegrationTest do
     end
 
     test "accept_established executes successfully", %{pid: pid, test_table: test_table} do
-      result = Policy.accept_established(pid, table: test_table, chain: "INPUT")
+      result =
+        Builder.new()
+        |> Policy.accept_established(table: test_table, chain: "INPUT")
+        |> Builder.submit(pid: pid)
 
       assert result == :ok
     end
 
     test "allow_ssh executes with rate limiting", %{pid: pid, test_table: test_table} do
-      result = Policy.allow_ssh(pid,
-        table: test_table,
-        chain: "INPUT",
-        rate_limit: 10,
-        log: true
-      )
+      result =
+        Builder.new()
+        |> Policy.allow_ssh(
+          table: test_table,
+          chain: "INPUT",
+          rate_limit: 10,
+          log: true
+        )
+        |> Builder.submit(pid: pid)
 
       assert result == :ok
 
@@ -95,19 +104,25 @@ defmodule NFTables.PolicyIntegrationTest do
 
   describe "error handling integration" do
     test "returns error for invalid table", %{pid: pid} do
-      result = Policy.accept_loopback(pid,
-        table: "nonexistent_table",
-        chain: "INPUT"
-      )
+      result =
+        Builder.new()
+        |> Policy.accept_loopback(
+          table: "nonexistent_table",
+          chain: "INPUT"
+        )
+        |> Builder.submit(pid: pid)
 
       assert {:error, _reason} = result
     end
 
     test "returns error for invalid chain", %{pid: pid, test_table: test_table} do
-      result = Policy.accept_established(pid,
-        table: test_table,
-        chain: "NONEXISTENT"
-      )
+      result =
+        Builder.new()
+        |> Policy.accept_established(
+          table: test_table,
+          chain: "NONEXISTENT"
+        )
+        |> Builder.submit(pid: pid)
 
       assert {:error, _reason} = result
     end
