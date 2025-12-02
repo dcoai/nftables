@@ -1,4 +1,4 @@
-defmodule NFTables.Match.Meter do
+defmodule NFTables.Expr.Meter do
   @moduledoc """
   Per-key rate limiting using dynamic sets (meters).
 
@@ -76,7 +76,7 @@ defmodule NFTables.Match.Meter do
   - **SYN flood protection**: Limit SYN packets per source
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   @doc """
   Add meter with update operation.
@@ -113,12 +113,12 @@ defmodule NFTables.Match.Meter do
       builder
       |> meter_update(payload(:tcp, :dport), "port_limits", 50, :second)
   """
-  @spec meter_update(Match.t(), term(), String.t(), non_neg_integer(), atom(), keyword()) ::
-          Match.t()
+  @spec meter_update(Expr.t(), term(), String.t(), non_neg_integer(), atom(), keyword()) ::
+          Expr.t()
   def meter_update(builder, key_expr, set_name, rate, per, opts \\ []) do
     limit_expr = build_limit_expr(rate, per, opts)
-    set_expr = Expr.set_update(key_expr, set_name, [limit_expr])
-    Match.add_expr(builder, set_expr)
+    set_expr = Expr.Structs.set_update(key_expr, set_name, [limit_expr])
+    Expr.add_expr(builder, set_expr)
   end
 
   @doc """
@@ -133,12 +133,12 @@ defmodule NFTables.Match.Meter do
       builder
       |> meter_add(payload(:ip, :saddr), "new_ips", 1, :minute)
   """
-  @spec meter_add(Match.t(), term(), String.t(), non_neg_integer(), atom(), keyword()) ::
-          Match.t()
+  @spec meter_add(Expr.t(), term(), String.t(), non_neg_integer(), atom(), keyword()) ::
+          Expr.t()
   def meter_add(builder, key_expr, set_name, rate, per, opts \\ []) do
     limit_expr = build_limit_expr(rate, per, opts)
-    set_expr = Expr.set_add_operation(key_expr, set_name, [limit_expr])
-    Match.add_expr(builder, set_expr)
+    set_expr = Expr.Structs.set_add_operation(key_expr, set_name, [limit_expr])
+    Expr.add_expr(builder, set_expr)
   end
 
   @doc """

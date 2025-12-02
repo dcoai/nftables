@@ -1,13 +1,13 @@
-defmodule NFTables.Match.Advanced do
+defmodule NFTables.Expr.Advanced do
   @moduledoc """
-  Advanced matching functions for Match.
+  Advanced matching functions for Expr.
 
   Provides functions for ICMP, packet metadata (marks, DSCP, fragmentation),
   packet type classification, cgroup matching, socket owner matching,
   IPsec SPI, ARP operations, and set matching.
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   # Packet metadata matching
 
@@ -20,10 +20,10 @@ defmodule NFTables.Match.Advanced do
 
       builder |> mark(100)
   """
-  @spec mark(Match.t(), non_neg_integer()) :: Match.t()
+  @spec mark(Expr.t(), non_neg_integer()) :: Expr.t()
   def mark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = Expr.meta_match("mark", mark)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("mark", mark)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -37,10 +37,10 @@ defmodule NFTables.Match.Advanced do
       # Match assured forwarding
       builder |> dscp(10)
   """
-  @spec dscp(Match.t(), non_neg_integer()) :: Match.t()
+  @spec dscp(Expr.t(), non_neg_integer()) :: Expr.t()
   def dscp(builder, dscp) when is_integer(dscp) and dscp >= 0 and dscp <= 63 do
-    expr = Expr.payload_match("ip", "dscp", dscp)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("ip", "dscp", dscp)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -54,7 +54,7 @@ defmodule NFTables.Match.Advanced do
       # Match non-fragmented packets
       builder |> fragmented(false)
   """
-  @spec fragmented(Match.t(), boolean()) :: Match.t()
+  @spec fragmented(Expr.t(), boolean()) :: Expr.t()
   def fragmented(builder, true) do
     # ip frag-off & 0x1fff != 0
     expr = %{
@@ -69,7 +69,7 @@ defmodule NFTables.Match.Advanced do
         "op" => "!="
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
   def fragmented(builder, false) do
     # ip frag-off & 0x1fff == 0
@@ -85,7 +85,7 @@ defmodule NFTables.Match.Advanced do
         "op" => "=="
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   # ICMP matching
@@ -111,7 +111,7 @@ defmodule NFTables.Match.Advanced do
       builder |> icmp_type(:echo_request) |> accept()
       builder |> protocol(:icmp) |> drop()
   """
-  @spec icmp_type(Match.t(), atom() | non_neg_integer()) :: Match.t()
+  @spec icmp_type(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def icmp_type(builder, type) do
     type_val = case type do
       :echo_reply -> "echo-reply"
@@ -132,8 +132,8 @@ defmodule NFTables.Match.Advanced do
       num when is_integer(num) -> num
       other -> to_string(other)
     end
-    expr = Expr.payload_match("icmp", "type", type_val)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("icmp", "type", type_val)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -149,10 +149,10 @@ defmodule NFTables.Match.Advanced do
       |> icmp_code(3)
       |> accept()
   """
-  @spec icmp_code(Match.t(), non_neg_integer()) :: Match.t()
+  @spec icmp_code(Expr.t(), non_neg_integer()) :: Expr.t()
   def icmp_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
-    expr = Expr.payload_match("icmp", "code", code)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("icmp", "code", code)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -177,7 +177,7 @@ defmodule NFTables.Match.Advanced do
       builder |> icmpv6_type(:neighbour_solicit) |> accept()
       builder |> icmpv6_type(:neighbour_advert) |> accept()
   """
-  @spec icmpv6_type(Match.t(), atom() | non_neg_integer()) :: Match.t()
+  @spec icmpv6_type(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def icmpv6_type(builder, type) do
     type_val = case type do
       :dest_unreachable -> "destination-unreachable"
@@ -194,8 +194,8 @@ defmodule NFTables.Match.Advanced do
       num when is_integer(num) -> num
       other -> to_string(other)
     end
-    expr = Expr.payload_match("icmpv6", "type", type_val)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("icmpv6", "type", type_val)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -210,10 +210,10 @@ defmodule NFTables.Match.Advanced do
       |> icmpv6_code(4)
       |> drop()
   """
-  @spec icmpv6_code(Match.t(), non_neg_integer()) :: Match.t()
+  @spec icmpv6_code(Expr.t(), non_neg_integer()) :: Expr.t()
   def icmpv6_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
-    expr = Expr.payload_match("icmpv6", "code", code)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("icmpv6", "code", code)
+    Expr.add_expr(builder, expr)
   end
 
   # Packet type and metadata
@@ -239,10 +239,10 @@ defmodule NFTables.Match.Advanced do
       # Allow only unicast
       builder |> pkttype(:unicast) |> accept()
   """
-  @spec pkttype(Match.t(), atom()) :: Match.t()
+  @spec pkttype(Expr.t(), atom()) :: Expr.t()
   def pkttype(builder, pkttype) when pkttype in [:unicast, :broadcast, :multicast, :other] do
-    expr = Expr.meta_match("pkttype", to_string(pkttype))
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("pkttype", to_string(pkttype))
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -256,7 +256,7 @@ defmodule NFTables.Match.Advanced do
       # Match specific priority
       builder |> priority(:eq, 7) |> log("PRIO-7: ")
   """
-  @spec priority(Match.t(), atom(), non_neg_integer()) :: Match.t()
+  @spec priority(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
   def priority(builder, op, priority) when is_integer(priority) and priority >= 0 do
     op_str = case op do
       :eq -> "=="
@@ -266,8 +266,8 @@ defmodule NFTables.Match.Advanced do
       :le -> "<="
       :ge -> ">="
     end
-    expr = Expr.meta_match("priority", priority, op_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("priority", priority, op_str)
+    Expr.add_expr(builder, expr)
   end
 
   # Cgroup and socket matching
@@ -285,10 +285,10 @@ defmodule NFTables.Match.Advanced do
       # Block cgroup
       builder |> cgroup(2000) |> drop()
   """
-  @spec cgroup(Match.t(), non_neg_integer()) :: Match.t()
+  @spec cgroup(Expr.t(), non_neg_integer()) :: Expr.t()
   def cgroup(builder, cgroup_id) when is_integer(cgroup_id) and cgroup_id >= 0 do
-    expr = Expr.meta_match("cgroup", cgroup_id)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("cgroup", cgroup_id)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -312,10 +312,10 @@ defmodule NFTables.Match.Advanced do
       |> dport(9000)
       |> accept()
   """
-  @spec skuid(Match.t(), non_neg_integer()) :: Match.t()
+  @spec skuid(Expr.t(), non_neg_integer()) :: Expr.t()
   def skuid(builder, uid) when is_integer(uid) and uid >= 0 do
-    expr = Expr.meta_match("skuid", uid)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("skuid", uid)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -339,10 +339,10 @@ defmodule NFTables.Match.Advanced do
       |> dport(8443)
       |> accept()
   """
-  @spec skgid(Match.t(), non_neg_integer()) :: Match.t()
+  @spec skgid(Expr.t(), non_neg_integer()) :: Expr.t()
   def skgid(builder, gid) when is_integer(gid) and gid >= 0 do
-    expr = Expr.meta_match("skgid", gid)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("skgid", gid)
+    Expr.add_expr(builder, expr)
   end
 
   # IPsec matching
@@ -358,7 +358,7 @@ defmodule NFTables.Match.Advanced do
       # Log IPsec AH traffic
       builder |> ah_spi(:any) |> log("IPSEC-AH: ")
   """
-  @spec ah_spi(Match.t(), non_neg_integer() | :any) :: Match.t()
+  @spec ah_spi(Expr.t(), non_neg_integer() | :any) :: Expr.t()
   def ah_spi(builder, :any) do
     # Match any AH SPI (just check if AH header exists)
     expr = %{"match" => %{
@@ -366,11 +366,11 @@ defmodule NFTables.Match.Advanced do
       "right" => 0,
       "op" => ">="
     }}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
   def ah_spi(builder, spi) when is_integer(spi) and spi >= 0 do
-    expr = Expr.payload_match("ah", "spi", spi)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("ah", "spi", spi)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -384,7 +384,7 @@ defmodule NFTables.Match.Advanced do
       # Match any ESP traffic
       builder |> esp_spi(:any) |> log("IPSEC-ESP: ")
   """
-  @spec esp_spi(Match.t(), non_neg_integer() | :any) :: Match.t()
+  @spec esp_spi(Expr.t(), non_neg_integer() | :any) :: Expr.t()
   def esp_spi(builder, :any) do
     # Match any ESP SPI (just check if ESP header exists)
     expr = %{"match" => %{
@@ -392,11 +392,11 @@ defmodule NFTables.Match.Advanced do
       "right" => 0,
       "op" => ">="
     }}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
   def esp_spi(builder, spi) when is_integer(spi) and spi >= 0 do
-    expr = Expr.payload_match("esp", "spi", spi)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("esp", "spi", spi)
+    Expr.add_expr(builder, expr)
   end
 
   # ARP matching
@@ -418,7 +418,7 @@ defmodule NFTables.Match.Advanced do
       # Match ARP replies
       builder |> arp_operation(:reply) |> accept()
   """
-  @spec arp_operation(Match.t(), atom() | non_neg_integer()) :: Match.t()
+  @spec arp_operation(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def arp_operation(builder, operation) do
     op_val = case operation do
       :request -> 1
@@ -426,8 +426,8 @@ defmodule NFTables.Match.Advanced do
       num when is_integer(num) -> num
       _ -> raise ArgumentError, "Invalid ARP operation: #{inspect(operation)}"
     end
-    expr = Expr.payload_match("arp", "operation", op_val)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("arp", "operation", op_val)
+    Expr.add_expr(builder, expr)
   end
 
   # Set matching
@@ -474,7 +474,7 @@ defmodule NFTables.Match.Advanced do
   sctp(), or dccp(). IP matching (`:saddr`, `:daddr`) uses the rule's family
   to determine IPv4 ("ip") or IPv6 ("ip6") protocol.
   """
-  @spec set(Match.t(), String.t(), atom()) :: Match.t()
+  @spec set(Expr.t(), String.t(), atom()) :: Expr.t()
   def set(builder, set_name, match_type) when is_binary(set_name) do
     # Ensure set name starts with @
     set_ref = if String.starts_with?(set_name, "@"), do: set_name, else: "@#{set_name}"
@@ -519,7 +519,7 @@ defmodule NFTables.Match.Advanced do
       other -> raise ArgumentError, "Invalid set match type: #{inspect(other)}"
     end
 
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   ## Raw Payload Matching
@@ -584,10 +584,10 @@ defmodule NFTables.Match.Advanced do
   - Example: Byte 12 = Bit 96 (12 * 8)
   - Network byte order (big endian) is assumed
   """
-  @spec payload_raw(Match.t(), atom(), non_neg_integer(), pos_integer(), term()) :: Match.t()
+  @spec payload_raw(Expr.t(), atom(), non_neg_integer(), pos_integer(), term()) :: Expr.t()
   def payload_raw(builder, base, offset, length, value) do
-    expr = Expr.payload_raw_match(base, offset, length, value)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_raw_match(base, offset, length, value)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -638,17 +638,17 @@ defmodule NFTables.Match.Advanced do
   - Selective field matching
   """
   @spec payload_raw_masked(
-          Match.t(),
+          Expr.t(),
           atom(),
           non_neg_integer(),
           pos_integer(),
           integer(),
           integer()
-        ) :: Match.t()
+        ) :: Expr.t()
   def payload_raw_masked(builder, base, offset, length, mask, value) do
-    payload_expr = Expr.payload_raw(base, offset, length)
-    expr = Expr.bitwise_and_match(payload_expr, mask, value)
-    Match.add_expr(builder, expr)
+    payload_expr = Expr.Structs.payload_raw(base, offset, length)
+    expr = Expr.Structs.bitwise_and_match(payload_expr, mask, value)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -668,7 +668,7 @@ defmodule NFTables.Match.Advanced do
   """
   @spec payload_raw_expr(atom(), non_neg_integer(), pos_integer()) :: map()
   def payload_raw_expr(base, offset, length) do
-    Expr.payload_raw(base, offset, length)
+    Expr.Structs.payload_raw(base, offset, length)
   end
 
   ## Socket Matching
@@ -720,10 +720,10 @@ defmodule NFTables.Match.Advanced do
         |> mark(1)
         |> accept()
   """
-  @spec socket_transparent(Match.t()) :: Match.t()
+  @spec socket_transparent(Expr.t()) :: Expr.t()
   def socket_transparent(builder) do
-    expr = Expr.socket_match_value("transparent", 1)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.socket_match_value("transparent", 1)
+    Expr.add_expr(builder, expr)
   end
 
   ## OSF (OS Fingerprinting)
@@ -811,11 +811,11 @@ defmodule NFTables.Match.Advanced do
   - May not detect all systems accurately
   - Can be evaded by OS fingerprint spoofing tools
   """
-  @spec osf_name(Match.t(), String.t(), keyword()) :: Match.t()
+  @spec osf_name(Expr.t(), String.t(), keyword()) :: Expr.t()
   def osf_name(builder, os_name, opts \\ []) when is_binary(os_name) do
     ttl = opts |> Keyword.get(:ttl, :loose) |> ttl_to_string()
-    expr = Expr.osf_match_value("name", os_name, ttl)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.osf_match_value("name", os_name, ttl)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -862,11 +862,11 @@ defmodule NFTables.Match.Advanced do
      |> set_priority(1)
      ```
   """
-  @spec osf_version(Match.t(), String.t(), keyword()) :: Match.t()
+  @spec osf_version(Expr.t(), String.t(), keyword()) :: Expr.t()
   def osf_version(builder, version, opts \\ []) when is_binary(version) do
     ttl = opts |> Keyword.get(:ttl, :loose) |> ttl_to_string()
-    expr = Expr.osf_match_value("version", version, ttl)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.osf_match_value("version", version, ttl)
+    Expr.add_expr(builder, expr)
   end
 
   # Private: Convert TTL atom to string

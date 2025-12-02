@@ -2,17 +2,17 @@ defmodule NFTables.MeterUnitTest do
   use ExUnit.Case, async: true
 
   alias NFTables.Builder
-  alias NFTables.Match.Meter
-  import NFTables.Match
+  alias NFTables.Expr.Meter
+  import NFTables.Expr
 
   describe "meter expression building" do
     test "builds meter_update with single key" do
       expr =
-        rule()
+        expr()
         |> tcp()
         |> dport(22)
         |> meter_update(Meter.payload(:ip, :saddr), "ssh_limits", 3, :minute)
-        |> to_expr()
+        |> to_list()
 
       # Should contain set operation
       assert Enum.any?(expr, fn e -> Map.has_key?(e, :set) end)
@@ -25,11 +25,11 @@ defmodule NFTables.MeterUnitTest do
 
     test "builds meter_update with burst" do
       expr =
-        rule()
+        expr()
         |> tcp()
         |> dport(80)
         |> meter_update(Meter.payload(:ip, :saddr), "http_limits", 100, :second, burst: 200)
-        |> to_expr()
+        |> to_list()
 
       set_expr = Enum.find(expr, fn e -> Map.has_key?(e, :set) end)
       [limit_stmt] = set_expr[:set][:stmt]
@@ -44,9 +44,9 @@ defmodule NFTables.MeterUnitTest do
         ])
 
       expr =
-        rule()
+        expr()
         |> meter_update(key, "flow_limits", 50, :second)
-        |> to_expr()
+        |> to_list()
 
       set_expr = Enum.find(expr, fn e -> Map.has_key?(e, :set) end)
       # Composite keys should be wrapped in concat
@@ -58,9 +58,9 @@ defmodule NFTables.MeterUnitTest do
 
     test "builds meter_add operation" do
       expr =
-        rule()
+        expr()
         |> meter_add(Meter.payload(:ip, :saddr), "new_ips", 1, :hour)
-        |> to_expr()
+        |> to_list()
 
       set_expr = Enum.find(expr, fn e -> Map.has_key?(e, :set) end)
       assert set_expr[:set][:op] == "add"
@@ -70,9 +70,9 @@ defmodule NFTables.MeterUnitTest do
       # Test all supported time units
       for unit <- [:second, :minute, :hour, :day, :week] do
         expr =
-          rule()
+          expr()
           |> meter_update(Meter.payload(:ip, :saddr), "test_set", 10, unit)
-          |> to_expr()
+          |> to_list()
 
         set_expr = Enum.find(expr, fn e -> Map.has_key?(e, :set) end)
         [limit_stmt] = set_expr[:set][:stmt]
@@ -111,7 +111,7 @@ defmodule NFTables.MeterUnitTest do
 
     test "generates correct JSON for meter rule" do
       meter_expr =
-        rule()
+        expr()
         |> tcp()
         |> dport(22)
         |> ct_state([:new])
@@ -197,13 +197,13 @@ defmodule NFTables.MeterUnitTest do
     test "combines meter with counter in rule expression" do
       # This is a unit test - just validates the expression structure
       tracked_rule =
-        rule()
+        expr()
         |> tcp()
         |> dport(443)
         |> meter_update(Meter.payload(:ip, :saddr), "tracked_ips", 50, :second)
         |> counter()
         |> accept()
-        |> to_expr()
+        |> to_list()
 
       # Should have set expression, counter, and accept
       assert Enum.any?(tracked_rule, fn e -> Map.has_key?(e, :set) end)

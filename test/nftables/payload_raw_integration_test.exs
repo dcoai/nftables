@@ -2,7 +2,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
   use ExUnit.Case, async: false
 
   alias NFTables.Builder
-  import NFTables.Match
+  import NFTables.Expr
 
   @moduletag :integration
   @moduletag :slow
@@ -32,7 +32,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
     test "DNS query matching by raw payload", %{pid: pid, table: table} do
       # Match DNS queries (port 53) using raw payload
       dns_rule =
-        rule()
+        expr()
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
         |> counter()
@@ -53,7 +53,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
     test "HTTP GET detection using raw payload", %{pid: pid, table: table} do
       # Match HTTP GET requests by looking at first 4 bytes of payload
       http_get_rule =
-        rule()
+        expr()
         |> tcp()
         |> dport(80)
         |> payload_raw(:ih, 0, 32, "GET ")
@@ -76,7 +76,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
       # TCP flags are at offset 13 bytes (104 bits) in TCP header
       # SYN flag is bit 1 (0x02)
       syn_rule =
-        rule()
+        expr()
         |> tcp()
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> counter()
@@ -97,7 +97,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
       # Match specific source IP using raw payload
       # Source IP is at offset 12 bytes (96 bits) in IPv4 header
       ip_rule =
-        rule()
+        expr()
         |> payload_raw(:nh, 96, 32, <<192, 168, 1, 1>>)
         |> drop()
         
@@ -117,7 +117,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
       # Flags/Fragment offset is at byte 6-7 (bits 48-63)
       # DF flag is 0x4000
       df_rule =
-        rule()
+        expr()
         |> payload_raw_masked(:nh, 48, 16, 0x4000, 0x4000)
         |> counter()
         |> accept()
@@ -137,14 +137,14 @@ defmodule NFTables.PayloadRawIntegrationTest do
   describe "batch operations" do
     test "creates multiple raw payload rules atomically", %{pid: pid, table: table} do
       dns_rule =
-        rule()
+        expr()
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
         
 
       http_rule =
-        rule()
+        expr()
         |> tcp()
         |> payload_raw(:th, 16, 16, 80)
         |> accept()

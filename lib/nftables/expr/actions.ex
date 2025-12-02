@@ -1,20 +1,20 @@
-defmodule NFTables.Match.Actions do
+defmodule NFTables.Expr.Actions do
   @moduledoc """
-  Action and packet modification functions for Match.
+  Action and packet modification functions for Expr.
 
   Provides functions for counter, logging, rate limiting, packet/connection marking,
   CT operations, and packet header modifications (DSCP, TTL, hop limit).
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   # Basic actions
 
   @doc "Add counter expression"
-  @spec counter(Match.t()) :: Match.t()
+  @spec counter(Expr.t()) :: Expr.t()
   def counter(builder) do
-    expr = Expr.counter()
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.counter()
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -41,7 +41,7 @@ defmodule NFTables.Match.Actions do
       builder |> log("AUDIT: ", level: :warning)
       builder |> log("CRITICAL: ", level: :crit)
   """
-  @spec log(Match.t(), String.t(), keyword()) :: Match.t()
+  @spec log(Expr.t(), String.t(), keyword()) :: Expr.t()
   def log(builder, prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
 
@@ -63,8 +63,8 @@ defmodule NFTables.Match.Actions do
       []
     end
 
-    expr = Expr.log(prefix, json_opts)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.log(prefix, json_opts)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -75,7 +75,7 @@ defmodule NFTables.Match.Actions do
       builder |> rate_limit(10, :minute)
       builder |> rate_limit(100, :second)
   """
-  @spec rate_limit(Match.t(), non_neg_integer(), atom(), keyword()) :: Match.t()
+  @spec rate_limit(Expr.t(), non_neg_integer(), atom(), keyword()) :: Expr.t()
   def rate_limit(builder, rate, unit, opts \\ []) do
     unit_str = case unit do
       :second -> "second"
@@ -92,8 +92,8 @@ defmodule NFTables.Match.Actions do
       []
     end
 
-    expr = Expr.limit(rate, unit_str, json_opts)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.limit(rate, unit_str, json_opts)
+    Expr.add_expr(builder, expr)
   end
 
   # Marking actions
@@ -107,10 +107,10 @@ defmodule NFTables.Match.Actions do
 
       builder |> set_mark(100)
   """
-  @spec set_mark(Match.t(), non_neg_integer()) :: Match.t()
+  @spec set_mark(Expr.t(), non_neg_integer()) :: Expr.t()
   def set_mark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = Expr.meta_set("mark", mark)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_set("mark", mark)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -122,10 +122,10 @@ defmodule NFTables.Match.Actions do
 
       builder |> set_connmark(42)
   """
-  @spec set_connmark(Match.t(), non_neg_integer()) :: Match.t()
+  @spec set_connmark(Expr.t(), non_neg_integer()) :: Expr.t()
   def set_connmark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = Expr.ct_set("mark", mark)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_set("mark", mark)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -149,7 +149,7 @@ defmodule NFTables.Match.Actions do
   2. Subsequent packets: restore connmark to mark
   3. All packets in connection use same route/QoS tier
   """
-  @spec restore_mark(Match.t()) :: Match.t()
+  @spec restore_mark(Expr.t()) :: Expr.t()
   def restore_mark(builder) do
     # meta mark set ct mark
     expr = %{
@@ -158,7 +158,7 @@ defmodule NFTables.Match.Actions do
         "value" => %{"ct" => %{"key" => "mark"}}
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -184,7 +184,7 @@ defmodule NFTables.Match.Actions do
   2. Save mark to connmark for persistence
   3. Later packets restore connmark via restore_mark()
   """
-  @spec save_mark(Match.t()) :: Match.t()
+  @spec save_mark(Expr.t()) :: Expr.t()
   def save_mark(builder) do
     # ct mark set meta mark
     expr = %{
@@ -193,7 +193,7 @@ defmodule NFTables.Match.Actions do
         "value" => %{"meta" => %{"key" => "mark"}}
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   # CT actions
@@ -225,10 +225,10 @@ defmodule NFTables.Match.Actions do
   - Connection classification across chains
   - Security event correlation
   """
-  @spec set_ct_label(Match.t(), String.t() | non_neg_integer()) :: Match.t()
+  @spec set_ct_label(Expr.t(), String.t() | non_neg_integer()) :: Expr.t()
   def set_ct_label(builder, label) when is_binary(label) or is_integer(label) do
-    expr = Expr.ct_set("label", label)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_set("label", label)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -261,10 +261,10 @@ defmodule NFTables.Match.Actions do
   - H.323 video conferencing
   - TFTP file transfers
   """
-  @spec set_ct_helper(Match.t(), String.t()) :: Match.t()
+  @spec set_ct_helper(Expr.t(), String.t()) :: Expr.t()
   def set_ct_helper(builder, helper) when is_binary(helper) do
-    expr = Expr.ct_set("helper", helper)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_set("helper", helper)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -294,10 +294,10 @@ defmodule NFTables.Match.Actions do
   - Overlapping IP address spaces
   - Container network isolation
   """
-  @spec set_ct_zone(Match.t(), non_neg_integer()) :: Match.t()
+  @spec set_ct_zone(Expr.t(), non_neg_integer()) :: Expr.t()
   def set_ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
-    expr = Expr.ct_set("zone", zone)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_set("zone", zone)
+    Expr.add_expr(builder, expr)
   end
 
   # Packet modification
@@ -339,7 +339,7 @@ defmodule NFTables.Match.Actions do
       |> set_dscp(:af31)
       |> accept()
   """
-  @spec set_dscp(Match.t(), atom() | non_neg_integer()) :: Match.t()
+  @spec set_dscp(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def set_dscp(builder, dscp) do
     dscp_val = case dscp do
       :ef -> 46
@@ -358,7 +358,7 @@ defmodule NFTables.Match.Actions do
         "value" => dscp_val
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -380,7 +380,7 @@ defmodule NFTables.Match.Actions do
   - Extending TTL for specific traffic
   - Router hop limit enforcement
   """
-  @spec set_ttl(Match.t(), non_neg_integer()) :: Match.t()
+  @spec set_ttl(Expr.t(), non_neg_integer()) :: Expr.t()
   def set_ttl(builder, ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
     expr = %{
       "mangle" => %{
@@ -388,7 +388,7 @@ defmodule NFTables.Match.Actions do
         "value" => ttl
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -404,7 +404,7 @@ defmodule NFTables.Match.Actions do
       # Normalize hop limit
       builder |> set_hoplimit(255) |> accept()
   """
-  @spec set_hoplimit(Match.t(), non_neg_integer()) :: Match.t()
+  @spec set_hoplimit(Expr.t(), non_neg_integer()) :: Expr.t()
   def set_hoplimit(builder, hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
     expr = %{
       "mangle" => %{
@@ -412,7 +412,7 @@ defmodule NFTables.Match.Actions do
         "value" => hoplimit
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -423,7 +423,7 @@ defmodule NFTables.Match.Actions do
       # Extend TTL by 1
       builder |> increment_ttl() |> accept()
   """
-  @spec increment_ttl(Match.t()) :: Match.t()
+  @spec increment_ttl(Expr.t()) :: Expr.t()
   def increment_ttl(builder) do
     expr = %{
       "mangle" => %{
@@ -436,7 +436,7 @@ defmodule NFTables.Match.Actions do
         }
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -447,7 +447,7 @@ defmodule NFTables.Match.Actions do
       # Reduce TTL by 1
       builder |> decrement_ttl() |> accept()
   """
-  @spec decrement_ttl(Match.t()) :: Match.t()
+  @spec decrement_ttl(Expr.t()) :: Expr.t()
   def decrement_ttl(builder) do
     expr = %{
       "mangle" => %{
@@ -460,7 +460,7 @@ defmodule NFTables.Match.Actions do
         }
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -471,7 +471,7 @@ defmodule NFTables.Match.Actions do
       # Extend hop limit by 1
       builder |> increment_hoplimit() |> accept()
   """
-  @spec increment_hoplimit(Match.t()) :: Match.t()
+  @spec increment_hoplimit(Expr.t()) :: Expr.t()
   def increment_hoplimit(builder) do
     expr = %{
       "mangle" => %{
@@ -484,7 +484,7 @@ defmodule NFTables.Match.Actions do
         }
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -495,7 +495,7 @@ defmodule NFTables.Match.Actions do
       # Reduce hop limit by 1
       builder |> decrement_hoplimit() |> accept()
   """
-  @spec decrement_hoplimit(Match.t()) :: Match.t()
+  @spec decrement_hoplimit(Expr.t()) :: Expr.t()
   def decrement_hoplimit(builder) do
     expr = %{
       "mangle" => %{
@@ -508,6 +508,6 @@ defmodule NFTables.Match.Actions do
         }
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 end

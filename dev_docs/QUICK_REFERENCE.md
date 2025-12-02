@@ -21,11 +21,11 @@ The Match uses a **pure functional pattern** to build JSON expressions:
 ### Visual Example
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
 # Step 1: Initialize
-builder = rule()
+builder = expr()
 # %Match{expr_list: [], family: :inet}
 
 # Step 2: Accumulate expressions
@@ -57,7 +57,7 @@ end)
 ### Internal Flow
 
 ```
-rule()
+expr()
     ↓
 Pure expression building (no side effects)
     ↓
@@ -87,10 +87,10 @@ Kernel
 
 **New API:**
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(22)
   |> ct_state([:new])
@@ -106,7 +106,7 @@ Builder.new()
 **Convenience aliases:**
 ```elixir
 # Using shorter function names
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(22)           # alias for dest_port
   |> state([:new])       # alias for ct_state
@@ -124,7 +124,7 @@ expr = rule()
 
 **New API:**
 ```elixir
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(8080)
   |> ct_state([:new])
@@ -145,7 +145,7 @@ Builder.new()
 
 **New API:**
 ```elixir
-expr = rule()
+expr = expr()
   |> set("blocklist", :saddr)
   |> counter()
   |> log("BLOCKED_IP: ", level: :info)
@@ -167,7 +167,7 @@ Builder.new()
 
 **New API:**
 ```elixir
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(443)
   |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
@@ -192,7 +192,7 @@ All Match functions support both starting new rules and continuing existing ones
 tcp() |> dport(22) |> accept()
 
 # Arity-2: Continue existing rule
-builder = rule()
+builder = expr()
 builder = tcp(builder)
 builder = dport(builder, 22)
 builder = accept(builder)
@@ -217,7 +217,7 @@ Builder.new(family: :inet)
 |> Builder.submit(pid: pid)
 
 # Offload established connections
-rule()
+expr()
 |> state([:established, :related])
 |> flow_offload()
 ```
@@ -225,10 +225,10 @@ rule()
 ### Meters (Per-Key Rate Limiting)
 
 ```elixir
-alias NFTables.Match.Meter
+alias NFTables.Expr.Meter
 
 # Per-IP rate limiting
-rule()
+expr()
 |> meter_update(
   Meter.payload(:ip, :saddr),
   "limits",
@@ -238,7 +238,7 @@ rule()
 |> accept()
 
 # Composite key (IP + port)
-rule()
+expr()
 |> meter_add(
   Meter.composite_key([
     Meter.payload(:ip, :saddr),
@@ -255,19 +255,19 @@ rule()
 
 ```elixir
 # Match DNS port via raw payload
-rule()
+expr()
 |> udp()
 |> payload_raw(:th, 16, 16, 53)  # Transport header, offset 16, 16 bits, value 53
 |> drop()
 
 # TCP SYN flag check with mask
-rule()
+expr()
 |> tcp()
 |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
 |> counter()
 
 # HTTP method detection
-rule()
+expr()
 |> tcp()
 |> dport(80)
 |> payload_raw(:ih, 0, 32, "GET ")  # First 4 bytes
@@ -284,19 +284,19 @@ rule()
 
 ```elixir
 # Mark existing transparent sockets
-rule()
+expr()
 |> socket_transparent()
 |> set_mark(1)
 |> accept()
 
 # Redirect to local proxy
-rule()
+expr()
 |> tcp()
 |> dport(80)
 |> tproxy(to: 8080)
 
 # With specific address
-rule()
+expr()
 |> tcp()
 |> dport(443)
 |> tproxy(to: 8443, addr: "127.0.0.1")
@@ -306,27 +306,27 @@ rule()
 
 ```elixir
 # SCTP (WebRTC, telephony) - use generic dport/sport
-rule()
+expr()
 |> sctp()
 |> dport(9899)
 |> accept()
 
 # DCCP (streaming media) - use generic dport/sport
-rule()
+expr()
 |> dccp()
 |> sport(5000)
 |> dport(6000)
 |> counter()
 
 # GRE (VPN tunnels)
-rule()
+expr()
 |> gre()
 |> gre_version(0)
 |> gre_key(12345)
 |> accept()
 
 # Port ranges supported for SCTP/DCCP
-rule()
+expr()
 |> sctp()
 |> dport(9000..9999)
 |> accept()
@@ -336,24 +336,24 @@ rule()
 
 ```elixir
 # Match Linux systems
-rule()
+expr()
 |> osf_name("Linux")
 |> log("Linux detected: ")
 |> accept()
 
 # Match with strict TTL
-rule()
+expr()
 |> osf_name("Windows", ttl: :strict)
 |> set_mark(2)
 
 # Match OS version
-rule()
+expr()
 |> osf_name("Linux")
 |> osf_version("3.x")
 |> counter()
 
 # Security policy
-rule()
+expr()
 |> tcp()
 |> dport(22)
 |> osf_name("Linux")
@@ -445,7 +445,7 @@ Functionality is organized into sub-modules:
 
 ### Accept Established Connections
 ```elixir
-expr = rule()
+expr = expr()
   |> state([:established, :related])
   |> accept()
 
@@ -456,7 +456,7 @@ Builder.new()
 
 ### Rate Limit Service
 ```elixir
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(80)
   |> limit(100, :second, burst: 200)
@@ -465,7 +465,7 @@ expr = rule()
 
 ### Log and Drop
 ```elixir
-expr = rule()
+expr = expr()
   |> source("192.168.1.100")
   |> log("BLOCKED: ", level: :warn)
   |> drop()
@@ -473,7 +473,7 @@ expr = rule()
 
 ### NAT Gateway
 ```elixir
-expr = rule()
+expr = expr()
   |> oif("eth0")
   |> masquerade()
 
@@ -484,7 +484,7 @@ Builder.new()
 
 ### Connection Limit
 ```elixir
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(80)
   |> ct_state([:new])
@@ -511,10 +511,10 @@ alias NFTables.Policy
 ## Architecture Summary
 
 ```
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
     ↓
-rule() - Initialize pure builder
+expr() - Initialize pure builder
     ↓
 |> tcp() |> dport(22) |> accept() - Build expressions
     ↓
