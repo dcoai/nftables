@@ -30,12 +30,12 @@ defmodule NFTables.Policy do
 
   ## See Also
 
-  - `NFTables.Match` - Fluent API for custom rules
+  - `NFTables.Expr` - Fluent API for custom rules
   - `NFTables.Builder` - Configuration builder
   - `NFTables.Local` - Local execution requestor
   """
 
-  import NFTables.Match
+  import NFTables.Expr
   alias NFTables.Builder
 
   @doc """
@@ -73,7 +73,7 @@ defmodule NFTables.Policy do
     family = Keyword.get(opts, :family, :inet)
 
     expr_list =
-      rule(family: family)
+      expr(family: family)
       |> iif("lo")
       |> accept()
      
@@ -108,7 +108,7 @@ defmodule NFTables.Policy do
     family = Keyword.get(opts, :family, :inet)
 
     expr_list =
-      rule(family: family)
+      expr(family: family)
       |> state([:established, :related])
       |> accept()
      
@@ -157,7 +157,7 @@ defmodule NFTables.Policy do
     log_enabled = Keyword.get(opts, :log, false)
 
     builder =
-      rule(family: family)
+      expr(family: family)
       |> tcp()
       |> dport(22)
 
@@ -276,7 +276,7 @@ defmodule NFTables.Policy do
     family = Keyword.get(opts, :family, :inet)
 
     expr_list =
-      rule(family: family)
+      expr(family: family)
       |> ct_state([:invalid])
     |> drop()
    
@@ -348,7 +348,7 @@ defmodule NFTables.Policy do
     family = Keyword.get(opts, :family, :inet)
     log_enabled = Keyword.get(opts, :log, false)
 
-    builder = rule(family: family)
+    builder = expr(family: family)
 
     builder = if log_enabled do
       log(builder, "ALLOW ANY: ")
@@ -399,7 +399,7 @@ defmodule NFTables.Policy do
     family = Keyword.get(opts, :family, :inet)
     log_enabled = Keyword.get(opts, :log, false)
 
-    builder = rule(family: family)
+    builder = expr(family: family)
 
     builder = if log_enabled do
       log(builder, "DENY ALL: ")
@@ -542,7 +542,7 @@ defmodule NFTables.Policy do
     service = Keyword.get(opts, :service, "PORT #{port}")
 
     builder =
-      rule(family: family)
+      expr(family: family)
       |> tcp()
       |> dport(port)
 

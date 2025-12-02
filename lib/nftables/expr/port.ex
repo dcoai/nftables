@@ -1,6 +1,6 @@
-defmodule NFTables.Match.Port do
+defmodule NFTables.Expr.Port do
   @moduledoc """
-  Port matching functions for Match.
+  Port matching functions for Expr.
 
   Provides protocol-agnostic port matching for TCP, UDP, SCTP, and DCCP.
   The protocol context is determined by earlier protocol calls (tcp(), udp(),
@@ -30,7 +30,7 @@ defmodule NFTables.Match.Port do
       rule() |> sctp() |> sport(1024..65535)
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   @doc """
   Match destination port.
@@ -55,12 +55,12 @@ defmodule NFTables.Match.Port do
 
   Raises ArgumentError if called without a protocol context (tcp/udp/sctp/dccp).
   """
-  @spec dport(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  @spec dport(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def dport(builder, port) when is_integer(port) do
     protocol = get_protocol!(builder, "dport")
     validate_port!(port)
-    expr = Expr.payload_match(protocol, "dport", port)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match(protocol, "dport", port)
+    Expr.add_expr(builder, expr)
   end
 
   def dport(builder, first..last//_ = _range) do
@@ -72,8 +72,8 @@ defmodule NFTables.Match.Port do
       raise ArgumentError, "Invalid port range: #{first}..#{last} (first must be <= last)"
     end
 
-    expr = Expr.payload_match_range(protocol, "dport", first, last)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match_range(protocol, "dport", first, last)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -99,12 +99,12 @@ defmodule NFTables.Match.Port do
 
   Raises ArgumentError if called without tcp() or udp() first.
   """
-  @spec sport(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  @spec sport(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def sport(builder, port) when is_integer(port) do
     protocol = get_protocol!(builder, "sport")
     validate_port!(port)
-    expr = Expr.payload_match(protocol, "sport", port)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match(protocol, "sport", port)
+    Expr.add_expr(builder, expr)
   end
 
   def sport(builder, first..last//_ = _range) do
@@ -116,8 +116,8 @@ defmodule NFTables.Match.Port do
       raise ArgumentError, "Invalid port range: #{first}..#{last} (first must be <= last)"
     end
 
-    expr = Expr.payload_match_range(protocol, "sport", first, last)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match_range(protocol, "sport", first, last)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -128,7 +128,7 @@ defmodule NFTables.Match.Port do
       rule() |> tcp() |> dst_port(443)
       rule() |> udp() |> dst_port(53)
   """
-  @spec dst_port(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  @spec dst_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def dst_port(builder, port), do: dport(builder, port)
 
   @doc """
@@ -139,7 +139,7 @@ defmodule NFTables.Match.Port do
       rule() |> tcp() |> src_port(1024)
       rule() |> tcp() |> src_port(1024..65535)
   """
-  @spec src_port(Match.t(), non_neg_integer() | Range.t()) :: Match.t()
+  @spec src_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def src_port(builder, port), do: sport(builder, port)
 
   # Private helpers

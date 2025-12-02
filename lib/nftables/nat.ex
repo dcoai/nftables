@@ -47,7 +47,7 @@ defmodule NFTables.NAT do
 
   """
 
-  import NFTables.Match
+  import NFTables.Expr
   alias NFTables.Builder
 
   @type family :: :inet | :ip | :ip6
@@ -92,7 +92,7 @@ defmodule NFTables.NAT do
     family = Keyword.get(opts, :family, :inet)
 
     expr_list =
-      rule(family: family)
+      expr(family: family)
     |> oif(interface)
     |> masquerade()
    
@@ -154,7 +154,7 @@ defmodule NFTables.NAT do
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = rule(family: family)
+    builder = expr(family: family)
 
     builder = if interface do
       iif(builder, interface)
@@ -274,7 +274,7 @@ defmodule NFTables.NAT do
     interface = Keyword.get(opts, :interface)
 
     builder =
-      rule(family: family)
+      expr(family: family)
       |> source_ip(source)
 
     builder = if interface do
@@ -329,7 +329,7 @@ defmodule NFTables.NAT do
     family = Keyword.get(opts, :family, :inet)
     interface = Keyword.get(opts, :interface)
 
-    builder = rule(family: family)
+    builder = expr(family: family)
 
     builder = if interface do
       iif(builder, interface)
@@ -377,7 +377,7 @@ defmodule NFTables.NAT do
     family = Keyword.get(opts, :family, :inet)
 
     expr_list =
-      rule(family: family)
+      expr(family: family)
       |> (case protocol do
         :tcp -> &tcp/1
         :udp -> &udp/1
@@ -408,7 +408,7 @@ defmodule NFTables.NAT do
 
   defp build_dnat_rule(table, chain, family, dest_ip, nat_ip) do
     expr_list =
-      rule(family: family)
+      expr(family: family)
     |> dest_ip(dest_ip)
     |> dnat_to(nat_ip)
    
@@ -424,7 +424,7 @@ defmodule NFTables.NAT do
 
   defp build_snat_rule(table, chain, family, source_ip, nat_ip) do
     expr_list =
-      rule(family: family)
+      expr(family: family)
     |> source_ip(source_ip)
     |> snat_to(nat_ip)
    

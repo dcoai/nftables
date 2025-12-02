@@ -1,11 +1,11 @@
-defmodule NFTables.Match.TCP do
+defmodule NFTables.Expr.TCP do
   @moduledoc """
-  TCP and protocol matching functions for Match.
+  TCP and protocol matching functions for Expr.
 
   Provides functions for TCP flags, packet length, TTL, hop limit, and protocol matching.
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   @doc """
   Match TCP flags.
@@ -26,7 +26,7 @@ defmodule NFTables.Match.TCP do
       # Match SYN-ACK
       builder |> tcp_flags([:syn, :ack], [:syn, :ack, :rst, :fin])
   """
-  @spec tcp_flags(Match.t(), list(atom()), list(atom())) :: Match.t()
+  @spec tcp_flags(Expr.t(), list(atom()), list(atom())) :: Expr.t()
   def tcp_flags(builder, flags, mask) when is_list(flags) and is_list(mask) do
     flags_list = Enum.map(flags, &to_string/1)
     mask_list = Enum.map(mask, &to_string/1)
@@ -44,7 +44,7 @@ defmodule NFTables.Match.TCP do
         "op" => "=="
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -58,11 +58,11 @@ defmodule NFTables.Match.TCP do
       # Match packets exactly 64 bytes
       builder |> length(:eq, 64)
   """
-  @spec length(Match.t(), atom(), non_neg_integer()) :: Match.t()
+  @spec length(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
   def length(builder, op, length) when is_integer(length) and length >= 0 do
     op_str = atom_to_op(op)
-    expr = Expr.meta_match("length", length, op_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.meta_match("length", length, op_str)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -76,11 +76,11 @@ defmodule NFTables.Match.TCP do
       # Match packets with TTL > 64
       builder |> ttl(:gt, 64)
   """
-  @spec ttl(Match.t(), atom(), non_neg_integer()) :: Match.t()
+  @spec ttl(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
   def ttl(builder, op, ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
     op_str = atom_to_op(op)
-    expr = Expr.payload_match("ip", "ttl", ttl, op_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("ip", "ttl", ttl, op_str)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -102,23 +102,23 @@ defmodule NFTables.Match.TCP do
   - Anti-spoofing (low hop limits)
   - TTL normalization checks
   """
-  @spec hoplimit(Match.t(), atom(), non_neg_integer()) :: Match.t()
+  @spec hoplimit(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
   def hoplimit(builder, op, hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
     op_str = atom_to_op(op)
-    expr = Expr.payload_match("ip6", "hoplimit", hoplimit, op_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.payload_match("ip6", "hoplimit", hoplimit, op_str)
+    Expr.add_expr(builder, expr)
   end
 
   @doc "Match protocol"
-  @spec protocol(Match.t(), atom() | String.t()) :: Match.t()
+  @spec protocol(Expr.t(), atom() | String.t()) :: Expr.t()
   def protocol(builder, protocol) do
     protocol_atom = if is_binary(protocol), do: String.to_atom(protocol), else: protocol
     protocol_str = if is_atom(protocol), do: to_string(protocol), else: protocol
-    expr = Expr.payload_match("ip", "protocol", protocol_str)
+    expr = Expr.Structs.payload_match("ip", "protocol", protocol_str)
 
     builder
-    |> Match.add_expr(expr)
-    |> Match.set_protocol(protocol_atom)
+    |> Expr.add_expr(expr)
+    |> Expr.set_protocol(protocol_atom)
   end
 
   # Helper to convert atom operators to string

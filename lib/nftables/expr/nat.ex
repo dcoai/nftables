@@ -1,11 +1,11 @@
-defmodule NFTables.Match.NAT do
+defmodule NFTables.Expr.NAT do
   @moduledoc """
-  Network Address Translation (NAT) functions for Match.
+  Network Address Translation (NAT) functions for Expr.
 
   Provides functions for SNAT, DNAT, masquerading, and port redirection.
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   @doc """
   Apply source NAT (SNAT) to an IP address.
@@ -18,11 +18,11 @@ defmodule NFTables.Match.NAT do
       # SNAT to IP:port
       builder |> snat_to("203.0.113.1", port: 1024)
   """
-  @spec snat_to(Match.t(), String.t(), keyword()) :: Match.t()
+  @spec snat_to(Expr.t(), String.t(), keyword()) :: Expr.t()
   def snat_to(builder, ip, opts \\ []) when is_binary(ip) do
     port = Keyword.get(opts, :port)
-    expr = Expr.snat(ip, port: port)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.snat(ip, port: port)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -36,11 +36,11 @@ defmodule NFTables.Match.NAT do
       # DNAT to IP:port (port forwarding)
       builder |> dnat_to("192.168.1.100", port: 8080)
   """
-  @spec dnat_to(Match.t(), String.t(), keyword()) :: Match.t()
+  @spec dnat_to(Expr.t(), String.t(), keyword()) :: Expr.t()
   def dnat_to(builder, ip, opts \\ []) when is_binary(ip) do
     port = Keyword.get(opts, :port)
-    expr = Expr.dnat(ip, port: port)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.dnat(ip, port: port)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -56,7 +56,7 @@ defmodule NFTables.Match.NAT do
       # Masquerade with port range
       builder |> masquerade(port_range: "1024-65535")
   """
-  @spec masquerade(Match.t(), keyword()) :: Match.t()
+  @spec masquerade(Expr.t(), keyword()) :: Expr.t()
   def masquerade(builder, opts \\ []) do
     port_range = Keyword.get(opts, :port_range)
 
@@ -66,7 +66,7 @@ defmodule NFTables.Match.NAT do
       %{"masquerade" => nil}
     end
 
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -79,9 +79,9 @@ defmodule NFTables.Match.NAT do
       # Redirect HTTP to local proxy
       builder |> tcp() |> dport(80) |> redirect_to(3128)
   """
-  @spec redirect_to(Match.t(), non_neg_integer()) :: Match.t()
+  @spec redirect_to(Expr.t(), non_neg_integer()) :: Expr.t()
   def redirect_to(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
     expr = %{"redirect" => %{"port" => port}}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 end

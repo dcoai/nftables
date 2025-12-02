@@ -59,10 +59,10 @@ defmodule NFTables.Builder do
 
   ## Automatic Rule Conversion
 
-  Builder automatically converts `NFTables.Rule` and `NFTables.Match` structs to expression lists,
+  Builder automatically converts `NFTables.Expr` structs to expression lists,
   so you don't need to call `to_expr/1` manually:
 
-      import NFTables.Match
+      import NFTables.Expr
 
       # No need to call to_expr() - Builder handles it automatically
       ssh_rule = rule() |> tcp() |> dport(22) |> accept()
@@ -1484,24 +1484,18 @@ defmodule NFTables.Builder do
 
   ## Private Helpers
 
-  # Normalize rule values - automatically convert Rule/Match structs to expression lists
-  defp normalize_rule_value(%NFTables.Rule{} = rule) do
-    NFTables.Rule.to_expr(rule)
-  end
-
-  defp normalize_rule_value(%NFTables.Match{} = rule) do
-    NFTables.Match.to_expr(rule)
+  # Normalize rule values - automatically convert Expr structs to expression lists
+  defp normalize_rule_value(%NFTables.Expr{} = rule) do
+    NFTables.Expr.to_list(rule)
   end
 
   defp normalize_rule_value(rules) when is_list(rules) do
-    # Check if this is a list of Rule/Match structs or already an expression list
+    # Check if this is a list of Expr structs or already an expression list
     case rules do
       # Empty list - return as-is
       [] -> []
       # List of structs - convert each one
-      [%NFTables.Rule{} | _] = rule_list ->
-        Enum.map(rule_list, &normalize_rule_value/1)
-      [%NFTables.Match{} | _] = rule_list ->
+      [%NFTables.Expr{} | _] = rule_list ->
         Enum.map(rule_list, &normalize_rule_value/1)
       # Already an expression list (list of maps) - return as-is
       _ -> rules

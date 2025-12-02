@@ -1,12 +1,13 @@
 defmodule NFTables.PayloadRawUnitTest do
   use ExUnit.Case, async: true
 
-  alias NFTables.{Builder, Expr}
-  import NFTables.Match
+  alias NFTables.Builder
+  alias NFTables.Expr.Structs
+  import NFTables.Expr
 
   describe "raw payload expression building" do
     test "builds payload_raw expression for network header" do
-      expr = Expr.payload_raw(:nh, 96, 32)
+      expr = Structs.payload_raw(:nh, 96, 32)
 
       assert expr == %{
                payload: %{
@@ -18,7 +19,7 @@ defmodule NFTables.PayloadRawUnitTest do
     end
 
     test "builds payload_raw expression for transport header" do
-      expr = Expr.payload_raw(:th, 16, 16)
+      expr = Structs.payload_raw(:th, 16, 16)
 
       assert expr == %{
                payload: %{
@@ -30,7 +31,7 @@ defmodule NFTables.PayloadRawUnitTest do
     end
 
     test "builds payload_raw expression for link layer" do
-      expr = Expr.payload_raw(:ll, 0, 48)
+      expr = Structs.payload_raw(:ll, 0, 48)
 
       assert expr == %{
                payload: %{
@@ -42,7 +43,7 @@ defmodule NFTables.PayloadRawUnitTest do
     end
 
     test "builds payload_raw expression for inner header" do
-      expr = Expr.payload_raw(:ih, 32, 16)
+      expr = Structs.payload_raw(:ih, 32, 16)
 
       assert expr == %{
                payload: %{
@@ -54,7 +55,7 @@ defmodule NFTables.PayloadRawUnitTest do
     end
 
     test "builds payload_raw_match expression" do
-      expr = Expr.payload_raw_match(:th, 16, 16, 53)
+      expr = Structs.payload_raw_match(:th, 16, 16, 53)
 
       assert expr[:match][:left] == %{payload: %{base: "th", offset: 16, len: 16}}
       assert expr[:match][:right] == 53
@@ -62,7 +63,7 @@ defmodule NFTables.PayloadRawUnitTest do
     end
 
     test "builds payload_raw_match with custom operator" do
-      expr = Expr.payload_raw_match(:nh, 96, 32, <<192, 168, 1, 1>>, "!=")
+      expr = Structs.payload_raw_match(:nh, 96, 32, <<192, 168, 1, 1>>, "!=")
 
       assert expr[:match][:op] == "!="
     end
@@ -71,10 +72,10 @@ defmodule NFTables.PayloadRawUnitTest do
   describe "Match API raw payload" do
     test "builds raw payload match in rule" do
       expr =
-        rule()
+        expr()
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
-        |> to_expr()
+        |> to_list()
 
       # Should contain match with raw payload
       raw_match = Enum.find(expr, fn e ->
@@ -93,10 +94,10 @@ defmodule NFTables.PayloadRawUnitTest do
 
     test "builds masked raw payload match in rule" do
       expr =
-        rule()
+        expr()
         |> tcp()
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
-        |> to_expr()
+        |> to_list()
 
       # Should contain match with bitwise AND
       masked_match = Enum.find(expr, fn e ->
@@ -113,9 +114,9 @@ defmodule NFTables.PayloadRawUnitTest do
   describe "all base types" do
     test "supports :ll (link layer) base" do
       expr =
-        rule()
+        expr()
         |> payload_raw(:ll, 96, 32, <<0x00, 0x11, 0x22, 0x33>>)
-        |> to_expr()
+        |> to_list()
 
       raw_match = Enum.find(expr, fn e ->
         Map.has_key?(e, :match) and
@@ -128,9 +129,9 @@ defmodule NFTables.PayloadRawUnitTest do
 
     test "supports :nh (network header) base" do
       expr =
-        rule()
+        expr()
         |> payload_raw(:nh, 96, 32, <<192, 168, 1, 1>>)
-        |> to_expr()
+        |> to_list()
 
       raw_match = Enum.find(expr, fn e ->
         Map.has_key?(e, :match) and
@@ -143,10 +144,10 @@ defmodule NFTables.PayloadRawUnitTest do
 
     test "supports :th (transport header) base" do
       expr =
-        rule()
+        expr()
         |> tcp()
         |> payload_raw(:th, 16, 16, 80)
-        |> to_expr()
+        |> to_list()
 
       raw_match = Enum.find(expr, fn e ->
         Map.has_key?(e, :match) and
@@ -159,9 +160,9 @@ defmodule NFTables.PayloadRawUnitTest do
 
     test "supports :ih (inner header) base" do
       expr =
-        rule()
+        expr()
         |> payload_raw(:ih, 0, 32, "GET ")
-        |> to_expr()
+        |> to_list()
 
       raw_match = Enum.find(expr, fn e ->
         Map.has_key?(e, :match) and
@@ -176,7 +177,7 @@ defmodule NFTables.PayloadRawUnitTest do
   describe "JSON generation" do
     test "generates correct JSON for raw payload rule" do
       dns_rule =
-        rule()
+        expr()
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
@@ -208,7 +209,7 @@ defmodule NFTables.PayloadRawUnitTest do
 
     test "generates correct JSON for masked raw payload" do
       syn_rule =
-        rule()
+        expr()
         |> tcp()
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> accept()

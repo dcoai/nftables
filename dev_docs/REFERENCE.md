@@ -24,7 +24,7 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 1. [nftables Documentation & Mapping](#nftables-documentation--mapping)
 2. [NFTables - Main Module](#nftables---main-module)
 3. [NFTables.Builder - Unified Configuration Builder](#nftablesbuilder---unified-configuration-builder)
-4. [NFTables.Match - Pure Functional Rule Builder](#nftablesmatch---pure-functional-rule-builder)
+4. [NFTables.Expr - Pure Functional Rule Builder](#nftablesmatch---pure-functional-rule-builder)
 5. [NFTables.Policy - Pre-built Policies](#nftablespolicy---pre-built-policies)
 6. [NFTables.NAT - NAT Operations](#nftablesnat---nat-operations)
 7. [NFTables.Sysctl - Kernel Parameter Management](#nftablessysctl---kernel-parameter-management)
@@ -55,7 +55,7 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 |-----------------|------------------|
 | `nft add table inet filter` | `Builder.new(family: :inet) \|> Builder.add(table: "filter") \|> Builder.submit(pid: pid)` |
 | `nft add chain inet filter input { type filter hook input priority 0; policy drop; }` | `Builder.add(chain: "input", type: :filter, hook: :input, priority: 0, policy: :drop)` |
-| `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `Builder.add(rule: rule() \|> source_ip("192.168.1.1") \|> drop())` |
+| `nft add rule inet filter input ip saddr 192.168.1.1 drop` | `Builder.add(rule: expr() \|> source_ip("192.168.1.1") \|> drop())` |
 | `nft add set inet filter blocklist { type ipv4_addr; }` | `Builder.add(set: "blocklist", type: :ipv4_addr)` |
 | `nft add element inet filter blocklist { 192.168.1.1 }` | `Builder.add(element: ["192.168.1.1"], set: "blocklist")` |
 | `nft list ruleset` | `Query.list_ruleset() \|> Local.submit(pid: pid) \|> Decoder.decode()` |
@@ -65,16 +65,16 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 
 | nftables Rule Syntax | NFTables Match |
 |---------------------|-------------------|
-| `ip saddr 192.168.1.1` | `rule() \|> source_ip("192.168.1.1")` |
-| `tcp dport 22` | `rule() \|> tcp() \|> dport(22)` |
-| `ct state established,related` | `rule() \|> ct_state([:established, :related])` |
-| `iifname "eth0"` | `rule() \|> iif("eth0")` |
-| `limit rate 10/minute` | `rule() \|> limit(10, :minute)` |
-| `counter` | `rule() \|> counter()` |
-| `log prefix "DROPPED: "` | `rule() \|> log("DROPPED: ")` |
-| `drop` | `rule() \|> drop()` |
-| `accept` | `rule() \|> accept()` |
-| `reject` | `rule() \|> reject()` |
+| `ip saddr 192.168.1.1` | `expr() \|> source_ip("192.168.1.1")` |
+| `tcp dport 22` | `expr() \|> tcp() \|> dport(22)` |
+| `ct state established,related` | `expr() \|> ct_state([:established, :related])` |
+| `iifname "eth0"` | `expr() \|> iif("eth0")` |
+| `limit rate 10/minute` | `expr() \|> limit(10, :minute)` |
+| `counter` | `expr() \|> counter()` |
+| `log prefix "DROPPED: "` | `expr() \|> log("DROPPED: ")` |
+| `drop` | `expr() \|> drop()` |
+| `accept` | `expr() \|> accept()` |
+| `reject` | `expr() \|> reject()` |
 
 #### Protocol Families
 
@@ -148,7 +148,7 @@ The Builder module provides a unified, functional API for constructing nftables 
 
 ```elixir
 alias NFTables.Builder
-import NFTables.Match
+import NFTables.Expr
 
 {:ok, pid} = NFTables.start_link()
 
@@ -162,7 +162,7 @@ Builder.new(family: :inet)
   priority: 0,
   policy: :drop
 )
-|> Builder.add(rule: rule() |> tcp() |> dport(22) |> accept())
+|> Builder.add(rule: expr() |> tcp() |> dport(22) |> accept())
 |> Builder.submit(pid: pid)
 ```
 
@@ -205,9 +205,9 @@ Builder.add(builder, chain: "custom_rules")
 
 **Rule:**
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
-ssh_rule = rule() |> tcp() |> dport(22) |> accept()
+ssh_rule = expr() |> tcp() |> dport(22) |> accept()
 
 Builder.add(builder, rule: ssh_rule)
 Builder.add(builder, rule: ssh_rule, table: "filter", chain: "INPUT")
@@ -294,13 +294,13 @@ The builder automatically tracks context so you don't need to repeat table/chain
 ```elixir
 Builder.new(family: :inet)
 |> Builder.add(table: "filter", chain: "INPUT")
-|> Builder.add(rule: rule() |> accept())  # Uses filter/INPUT
-|> Builder.add(rule: rule() |> drop())    # Still uses filter/INPUT
+|> Builder.add(rule: expr() |> accept())  # Uses filter/INPUT
+|> Builder.add(rule: expr() |> drop())    # Still uses filter/INPUT
 ```
 
 ---
 
-## NFTables.Match - Pure Functional Rule Builder
+## NFTables.Expr - Pure Functional Rule Builder
 
 Build rule expressions using a pure functional, chainable API.
 
@@ -313,10 +313,10 @@ Build rule expressions using a pure functional, chainable API.
 ### Basic Usage
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Build a rule
-ssh_rule = rule()
+ssh_rule = expr()
 |> tcp()
 |> dport(22)
 |> ct_state([:new])
@@ -334,7 +334,7 @@ Builder.add(builder, rule: ssh_rule)
 Initialize a new rule.
 
 ```elixir
-rule()
+expr()
 rule(family: :inet)
 rule(family: :ip6)
 ```
@@ -346,7 +346,7 @@ rule(family: :ip6)
 Match TCP protocol.
 
 ```elixir
-rule() |> tcp() |> dport(80)
+expr() |> tcp() |> dport(80)
 ```
 
 #### `udp/1`
@@ -354,7 +354,7 @@ rule() |> tcp() |> dport(80)
 Match UDP protocol.
 
 ```elixir
-rule() |> udp() |> dport(53)
+expr() |> udp() |> dport(53)
 ```
 
 #### `icmp/1`, `icmpv6/1`
@@ -362,8 +362,8 @@ rule() |> udp() |> dport(53)
 Match ICMP/ICMPv6.
 
 ```elixir
-rule() |> icmp()
-rule() |> icmpv6()
+expr() |> icmp()
+expr() |> icmpv6()
 ```
 
 #### `sctp/1`, `dccp/1`, `gre/1`
@@ -371,9 +371,9 @@ rule() |> icmpv6()
 Match specialized protocols.
 
 ```elixir
-rule() |> sctp() |> dport(9899)
-rule() |> dccp()
-rule() |> gre()
+expr() |> sctp() |> dport(9899)
+expr() |> dccp()
+expr() |> gre()
 ```
 
 ### Address Matching
@@ -383,9 +383,9 @@ rule() |> gre()
 Match IP addresses.
 
 ```elixir
-rule() |> source_ip("192.168.1.1")
-rule() |> source_ip("10.0.0.0/8")
-rule() |> dest_ip("8.8.8.8")
+expr() |> source_ip("192.168.1.1")
+expr() |> source_ip("10.0.0.0/8")
+expr() |> dest_ip("8.8.8.8")
 ```
 
 #### `source_ip_set/2`, `dest_ip_set/2`
@@ -393,8 +393,8 @@ rule() |> dest_ip("8.8.8.8")
 Match against IP sets.
 
 ```elixir
-rule() |> source_ip_set("@blocklist")
-rule() |> dest_ip_set("@allowlist")
+expr() |> source_ip_set("@blocklist")
+expr() |> dest_ip_set("@allowlist")
 ```
 
 ### Port Matching
@@ -405,13 +405,13 @@ Match source/destination ports.
 
 ```elixir
 # Single port
-rule() |> tcp() |> dport(22)
+expr() |> tcp() |> dport(22)
 
 # Port range
-rule() |> tcp() |> dport(8000..9000)
+expr() |> tcp() |> dport(8000..9000)
 
 # Multiple ports
-rule() |> tcp() |> dport([22, 80, 443])
+expr() |> tcp() |> dport([22, 80, 443])
 ```
 
 ### Connection Tracking
@@ -421,9 +421,9 @@ rule() |> tcp() |> dport([22, 80, 443])
 Match connection tracking state.
 
 ```elixir
-rule() |> ct_state([:established, :related])
-rule() |> ct_state([:new])
-rule() |> ct_state([:invalid])
+expr() |> ct_state([:established, :related])
+expr() |> ct_state([:new])
+expr() |> ct_state([:invalid])
 ```
 
 ### Interface Matching
@@ -433,8 +433,8 @@ rule() |> ct_state([:invalid])
 Match input/output interface.
 
 ```elixir
-rule() |> iif("eth0")
-rule() |> oif("eth1")
+expr() |> iif("eth0")
+expr() |> oif("eth1")
 ```
 
 ### Rate Limiting
@@ -444,8 +444,8 @@ rule() |> oif("eth1")
 Global rate limiting.
 
 ```elixir
-rule() |> limit(10, :minute)
-rule() |> limit(100, :second, burst: 200)
+expr() |> limit(10, :minute)
+expr() |> limit(100, :second, burst: 200)
 ```
 
 Units: `:second`, `:minute`, `:hour`, `:day`
@@ -457,9 +457,9 @@ Units: `:second`, `:minute`, `:hour`, `:day`
 Per-key rate limiting using dynamic sets.
 
 ```elixir
-import NFTables.Match.Meter
+import NFTables.Expr.Meter
 
-rule()
+expr()
 |> tcp()
 |> dport(22)
 |> meter_update(
@@ -480,12 +480,12 @@ Match packet data at specific offset.
 
 ```elixir
 # Match DNS port at transport header offset 16
-rule()
+expr()
 |> udp()
 |> payload_raw(:th, 16, 16, 53)
 
 # Match HTTP GET in inner header
-rule()
+expr()
 |> tcp()
 |> payload_raw(:ih, 0, 32, "GET ")
 ```
@@ -498,7 +498,7 @@ Match with bitmask.
 
 ```elixir
 # Match TCP SYN flag
-rule()
+expr()
 |> tcp()
 |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
 ```
@@ -510,8 +510,8 @@ rule()
 Log matching packets.
 
 ```elixir
-rule() |> log("Dropped: ")
-rule() |> log("SSH: ", level: "info")
+expr() |> log("Dropped: ")
+expr() |> log("SSH: ", level: "info")
 ```
 
 ### Counters
@@ -521,7 +521,7 @@ rule() |> log("SSH: ", level: "info")
 Add packet/byte counter.
 
 ```elixir
-rule() |> counter()
+expr() |> counter()
 ```
 
 ### Verdicts
@@ -531,7 +531,7 @@ rule() |> counter()
 Accept packets.
 
 ```elixir
-rule() |> accept()
+expr() |> accept()
 ```
 
 #### `drop/1`
@@ -539,7 +539,7 @@ rule() |> accept()
 Drop packets silently.
 
 ```elixir
-rule() |> drop()
+expr() |> drop()
 ```
 
 #### `reject/1`, `reject/2`
@@ -547,9 +547,9 @@ rule() |> drop()
 Reject with ICMP error.
 
 ```elixir
-rule() |> reject()
-rule() |> reject(:tcp_reset)
-rule() |> reject(:icmp_port_unreachable)
+expr() |> reject()
+expr() |> reject(:tcp_reset)
+expr() |> reject(:icmp_port_unreachable)
 ```
 
 ### NAT Actions
@@ -559,9 +559,9 @@ rule() |> reject(:icmp_port_unreachable)
 Network address translation.
 
 ```elixir
-rule() |> snat("203.0.113.1")
-rule() |> dnat("192.168.1.10:8080")
-rule() |> masquerade()
+expr() |> snat("203.0.113.1")
+expr() |> dnat("192.168.1.10:8080")
+expr() |> masquerade()
 ```
 
 ### Advanced Features
@@ -571,8 +571,8 @@ rule() |> masquerade()
 OS fingerprinting.
 
 ```elixir
-rule() |> osf_name("Linux")
-rule() |> osf_name("Windows", ttl: :strict)
+expr() |> osf_name("Linux")
+expr() |> osf_name("Windows", ttl: :strict)
 ```
 
 #### `socket_uid/2`, `socket_gid/2`
@@ -580,18 +580,18 @@ rule() |> osf_name("Windows", ttl: :strict)
 Match by socket owner.
 
 ```elixir
-rule() |> socket_uid(1000)
-rule() |> socket_gid(100)
+expr() |> socket_uid(1000)
+expr() |> socket_gid(100)
 ```
 
 ### Complete Examples
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
 # SSH with rate limiting
-ssh_rule = rule()
+ssh_rule = expr()
 |> tcp()
 |> dport(22)
 |> ct_state([:new])
@@ -600,12 +600,12 @@ ssh_rule = rule()
 |> accept()
 
 # Established connections
-established_rule = rule()
+established_rule = expr()
 |> ct_state([:established, :related])
 |> accept()
 
 # Block specific IP
-block_rule = rule()
+block_rule = expr()
 |> source_ip("192.168.1.100")
 |> log("Blocked: ")
 |> drop()

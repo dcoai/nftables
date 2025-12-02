@@ -2,8 +2,8 @@ defmodule NFTables.MeterIntegrationTest do
   use ExUnit.Case, async: false
 
   alias NFTables.Builder
-  alias NFTables.Match.Meter
-  import NFTables.Match
+  alias NFTables.Expr.Meter
+  import NFTables.Expr
 
   @moduletag :integration
   @moduletag :slow
@@ -72,7 +72,7 @@ defmodule NFTables.MeterIntegrationTest do
 
       # Step 3: Create rule using meter
       ssh_rule =
-        rule()
+        expr()
         |> tcp()
         |> dport(22)
         |> ct_state([:new])
@@ -91,7 +91,7 @@ defmodule NFTables.MeterIntegrationTest do
       batch_table = "batch_meter_#{:rand.uniform(1_000_000)}"
 
       meter_rule =
-        rule()
+        expr()
         |> tcp()
         |> dport(80)
         |> meter_update(Meter.payload(:ip, :saddr), "http_limits", 100, :second, burst: 200)

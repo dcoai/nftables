@@ -399,17 +399,17 @@ builder
 
 ### Automatic Rule Conversion
 
-Builder automatically converts `NFTables.Match` and `NFTables.Rule` structs to expression lists:
+Builder automatically converts `NFTables.Expr` structs to expression lists:
 
 ```elixir
 # You write:
-ssh_rule = rule() |> tcp() |> dport(22) |> accept()
+ssh_rule = expr() |> tcp() |> dport(22) |> accept()
 Builder.add(builder, rule: ssh_rule)
 
 # Builder automatically calls:
-NFTables.Match.to_expr(ssh_rule)  # → [%{match: ...}, %{accept: nil}]
+NFTables.Expr.to_list(ssh_rule)  # → [%{match: ...}, %{accept: nil}]
 
-# No need to call to_expr() manually!
+# No need to call to_list() manually!
 ```
 
 ### Command Building Pipeline
@@ -498,7 +498,7 @@ Builder.submit(builder, pid: pid)
 
 The library provides **two complementary APIs** for building rule expressions:
 
-### 1. NFTables.Match (Pure Functional API)
+### 1. NFTables.Expr (Pure Functional API)
 
 **Design:**
 - Pure functions returning updated struct
@@ -509,7 +509,7 @@ The library provides **two complementary APIs** for building rule expressions:
 **Structure:**
 
 ```elixir
-defmodule NFTables.Match do
+defmodule NFTables.Expr do
   defstruct [
     family: :inet,
     comment: nil,
@@ -535,7 +535,7 @@ end
 **Sub-Module Organization:**
 
 ```
-NFTables.Match
+NFTables.Expr
 ├── Match.IP          - IP address matching
 ├── Match.Port        - Port matching (protocol-aware)
 ├── Match.TCP         - TCP-specific (flags, options)
@@ -553,7 +553,7 @@ NFTables.Match
 
 ```elixir
 # Match.Port automatically uses protocol context
-rule()
+expr()
 |> tcp()                    # Sets protocol: :tcp
 |> dport(22)                # Uses TCP protocol for port match
 |> accept()
@@ -577,10 +577,10 @@ end
 **Expression List Building:**
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Building a rule
-ssh_rule = rule()
+ssh_rule = expr()
   |> tcp()                          # protocol: :tcp
   |> dport(22)                      # expr_list: [match tcp.dport]
   |> ct_state([:new])               # expr_list: [match tcp.dport, match ct.state]
@@ -597,7 +597,7 @@ end
 to_expr(ssh_rule)  # → [%{match: ...}, %{match: ...}, %{limit: ...}, %{log: ...}, %{accept: nil}]
 ```
 
-### 2. NFTables.Rule (High-Level Fluent API)
+### 2. NFTables.Expr (High-Level Fluent API)
 
 **Design:**
 - Simpler, more concise function names
@@ -608,7 +608,7 @@ to_expr(ssh_rule)  # → [%{match: ...}, %{match: ...}, %{limit: ...}, %{log: ..
 **Structure:**
 
 ```elixir
-defmodule NFTables.Rule do
+defmodule NFTables.Expr do
   defstruct [
     family: :inet,
     table: nil,        # Optional table context
@@ -630,12 +630,12 @@ end
 **Comparison:**
 
 ```elixir
-# NFTables.Match (verbose, explicit)
-import NFTables.Match
-rule() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
+# NFTables.Expr (verbose, explicit)
+import NFTables.Expr
+expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
 
-# NFTables.Rule (concise)
-Rule.new() |> Rule.source("10.0.0.1") |> Rule.dest("192.168.1.1") |> Rule.state([:new])
+# NFTables.Expr (concise)
+expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
 
 # Both produce same expr_list
 ```
@@ -664,7 +664,7 @@ config = Builder.new(family: :inet)
   |> Builder.add(chain: "OUTPUT", type: :filter, hook: :output)
 
 # Match composition
-ssh_rule = rule()
+ssh_rule = expr()
   |> tcp()
   |> dport(22)
   |> ct_state([:new])
@@ -719,7 +719,7 @@ Rules can be composed with `Enum` functions:
 ports = [80, 443, 8080, 8443]
 
 rules = Enum.map(ports, fn port ->
-  rule() |> tcp() |> dport(port) |> accept()
+  expr() |> tcp() |> dport(port) |> accept()
 end)
 
 # Add all rules to builder
@@ -738,7 +738,7 @@ Create reusable rule fragments:
 ```elixir
 # Create base rule builder
 defmodule MyFirewall.Rules do
-  import NFTables.Match
+  import NFTables.Expr
 
   # Partial rule - returns fn
   def with_rate_limit(rate, per) do
@@ -752,7 +752,7 @@ defmodule MyFirewall.Rules do
 
   # Compose partials
   def ssh_rule do
-    rule()
+    expr()
     |> tcp()
     |> dport(22)
     |> ct_state([:new])
@@ -769,7 +769,7 @@ Sub-modules compose through delegation:
 
 ```elixir
 # Match.IP is a separate module
-defmodule NFTables.Match.IP do
+defmodule NFTables.Expr.IP do
   def source_ip(builder, ip) do
     expr = Expr.payload_match("ip", "saddr", ip)
     Match.add_expr(builder, expr)
@@ -777,12 +777,12 @@ defmodule NFTables.Match.IP do
 end
 
 # Match delegates to it
-defmodule NFTables.Match do
+defmodule NFTables.Expr do
   defdelegate source_ip(builder, ip), to: Match.IP
 end
 
 # User composes naturally
-rule() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1")
+expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1")
 ```
 
 ---
@@ -849,11 +849,11 @@ User Code
 
 ```elixir
 # 1. Build configuration (pure, no side effects)
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
-ssh_rule = rule() |> tcp() |> dport(22) |> accept()
-http_rule = rule() |> tcp() |> dport(80) |> accept()
+ssh_rule = expr() |> tcp() |> dport(22) |> accept()
+http_rule = expr() |> tcp() |> dport(80) |> accept()
 
 config = Builder.new(family: :inet)
   |> Builder.add(table: "filter")
@@ -1236,7 +1236,7 @@ Most functions are pure (no side effects):
 Builder.add(builder, table: "filter")
 
 # Pure - returns new struct
-rule() |> tcp() |> dport(22)
+expr() |> tcp() |> dport(22)
 
 # Pure - returns command map
 Query.list_tables(family: :inet)
@@ -1253,7 +1253,7 @@ The library uses functional composition instead of OOP inheritance:
 # Not classes with inheritance
 # But functions that compose
 
-rule()
+expr()
   |> tcp()                 # Adds protocol context
   |> dport(22)             # Adds port match
   |> ct_state([:new])      # Adds state match
@@ -1306,7 +1306,7 @@ NFTables.allow_ssh(pid)
 NFTables.setup_basic_firewall(pid)
 
 # Level 2: Builder + Match (flexible)
-ssh_rule = rule() |> tcp() |> dport(22) |> accept()
+ssh_rule = expr() |> tcp() |> dport(22) |> accept()
 Builder.new() |> Builder.add(rule: ssh_rule) |> Builder.submit(pid: pid)
 
 # Level 3: Direct expression building (full control)

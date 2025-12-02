@@ -1,11 +1,11 @@
-defmodule NFTables.Match.IP do
+defmodule NFTables.Expr.IP do
   @moduledoc """
-  IP address matching functions for Match.
+  IP address matching functions for Expr.
 
   Provides functions to match source and destination IP addresses (IPv4 and IPv6).
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   @doc """
   Match source IP address.
@@ -20,7 +20,7 @@ defmodule NFTables.Match.IP do
       builder
       |> IP.source_ip("2001:db8::1")
   """
-  @spec source_ip(Match.t(), String.t() | binary()) :: Match.t()
+  @spec source_ip(Expr.t(), String.t() | binary()) :: Expr.t()
   def source_ip(builder, ip) when is_binary(ip) do
     ip_str = format_ip(ip)
 
@@ -35,12 +35,12 @@ defmodule NFTables.Match.IP do
     expr = if String.contains?(ip_str, "/") do
       # CIDR notation - use prefix match
       [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
-      Expr.payload_match_prefix(protocol, "saddr", addr, String.to_integer(prefix_len))
+      Expr.Structs.payload_match_prefix(protocol, "saddr", addr, String.to_integer(prefix_len))
     else
       # Single IP - use regular match
-      Expr.payload_match(protocol, "saddr", ip_str)
+      Expr.Structs.payload_match(protocol, "saddr", ip_str)
     end
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -56,7 +56,7 @@ defmodule NFTables.Match.IP do
       builder
       |> IP.dest_ip("2001:db8::1")
   """
-  @spec dest_ip(Match.t(), String.t() | binary()) :: Match.t()
+  @spec dest_ip(Expr.t(), String.t() | binary()) :: Expr.t()
   def dest_ip(builder, ip) when is_binary(ip) do
     ip_str = format_ip(ip)
 
@@ -71,12 +71,12 @@ defmodule NFTables.Match.IP do
     expr = if String.contains?(ip_str, "/") do
       # CIDR notation - use prefix match
       [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
-      Expr.payload_match_prefix(protocol, "daddr", addr, String.to_integer(prefix_len))
+      Expr.Structs.payload_match_prefix(protocol, "daddr", addr, String.to_integer(prefix_len))
     else
       # Single IP - use regular match
-      Expr.payload_match(protocol, "daddr", ip_str)
+      Expr.Structs.payload_match(protocol, "daddr", ip_str)
     end
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   # Private helpers

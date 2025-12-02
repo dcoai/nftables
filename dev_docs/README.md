@@ -77,11 +77,11 @@ See [ADVANCED_FEATURES_COMPLETE.md](../ADVANCED_FEATURES_COMPLETE.md) and indivi
 Match is now a **pure expression builder** with no side effects:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
 # Build pure expression
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(22)
   |> accept()
@@ -103,7 +103,7 @@ Clear separation between building and executing:
 
 Match generates JSON expression lists:
 ```elixir
-expr = rule()
+expr = expr()
   |> source_ip("192.168.1.100")
   |> tcp()
   |> dport(22)
@@ -116,10 +116,10 @@ expr = rule()
 
 **Code:**
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(22)
   |> ct_state([:new])

@@ -38,7 +38,7 @@ chmod 700 deps/nftables_port/priv/port_nftables
 
 ```elixir
 alias NFTables.Builder
-import NFTables.Rule
+import NFTables.Expr
 
 {:ok, pid} = NFTables.start_link()
 
@@ -48,7 +48,7 @@ response =
   Builder.new()
   |> Builder.add(table: "filter", family: :inet)
   |> Builder.add(chain: "INPUT", hook: :input)
-  |> Builder.add(rule: rule() |> ssh() |> accept())
+  |> Builder.add(rule: expr() |> ssh() |> accept())
   |> Builder.commit(pid: pid)
 
 IO.inspect(response}
@@ -57,7 +57,7 @@ IO.inspect(response}
 ## Features
 
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
-- **Pure Functional Rule API** - Clean, composable expression builder with no side effects
+- **Pure Functional Expr API** - Clean, composable expression builder with no side effects
 - **Sysctl Management** - Read/Write access to network kernel parameters
 - **Command/Execution Separation** - Build JSON/nft commands without executing
 - **Batch Operations** - Atomic multi-command execution
@@ -268,15 +268,16 @@ minimally for production, do the following:
 {:ok, pid} = NFTables.start_link()
 
 # Build and execute a rule to block an IP
-alias NFTables.{Builder, Rule}
+alias NFTables.{Builder, Expr}
+import NFTables.Expr
 
 Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.source("192.168.1.100")
-  |> Rule.drop()
+  expr()
+  |> source_ip("192.168.1.100")
+  |> drop()
 )
 |> Builder.submit(pid)
 
@@ -308,22 +309,23 @@ Builder.new()
 ### Build Complex Rules (New API)
 
 ```elixir
-alias NFTables.{Builder, Rule}
+alias NFTables.{Builder, Expr}
+import NFTables.Expr
 
 # Build a sophisticated firewall rule with the new fluent API
 :ok = Builder.new(family: :inet)
   |> Builder.add(table: "filter")
   |> Builder.add(chain: "INPUT")
   |> Builder.add(rule: 
-    Rule.new()
-    |> Rule.source("10.0.0.0/8")
-    |> Rule.protocol(:tcp)
-    |> Rule.dport(22)
-    |> Rule.state([:new])
-    |> Rule.limit(10, :minute, burst: 5)
-    |> Rule.log("SSH_ACCESS: ", level: "info")
-    |> Rule.counter()
-    |> Rule.accept()
+    expr()
+    |> source_ip("10.0.0.0/8")
+    |> protocol(:tcp)
+    |> dport(22)
+    |> ct_state([:new])
+    |> limit(10, :minute, burst: 5)
+    |> log("SSH_ACCESS: ", level: "info")
+    |> counter()
+    |> accept()
   )
   |> Builder.submit(pid)
 
@@ -334,10 +336,10 @@ alias NFTables.{Builder, Rule}
   |> Builder.add(table: "filter")
   |> Builder.add(chain: "INPUT")
   |> Builder.add(rule: 
-    Rule.new() |> Rule.source("10.0.0.0/8") |> Rule.drop()
+    expr() |> source_ip("10.0.0.0/8") |> drop()
   )
   |> Builder.add(rule: 
-    Rule.new() |> Rule.state([:established, :related]) |> Rule.accept()
+    expr() |> ct_state([:established, :related]) |> accept()
   )
   |> Builder.submit(pid)
 ```
@@ -362,7 +364,7 @@ alias NFTables.{Builder, Rule}
 # - Allow HTTP and HTTPS
 ```
 
-## New Builder + Rule API
+## New Builder + Expr API
 
 NFTables now provides a powerful, composable API for building firewall rules:
 
@@ -387,26 +389,26 @@ builder = Builder.new(family: :inet)
 json = Builder.to_json(builder)
 ```
 
-### Rule Module - Composable Expression Building
+### Expr Module - Composable Expression Building
 
 The `Rule` module provides a fluent API for building rule expressions:
 
 ```elixir
-alias NFTables.Rule
+alias NFTables.Expr
 
-def established_related(rule), do: Rule.state([:established, :related])
+def established_related(rule), do: ct_state([:established, :related])
 
-def ssh(rule, source), do: Rule.source(source) |> Rule.tcp() |> Rule.dport(22)
+def ssh(rule, source), do: source_ip(source) |> tcp() |> dport(22)
 
 # Build rule expressions
-ssh_rule = Rule.new()
+ssh_rule = expr()
 |> ssh("10.0.0.0/8")
 |> extablished_related()
-|> Rule.limit(10, :minute, burst: 5)    # Rate limiting
-|> Rule.log("SSH: ", level: "info")     # Logging
-|> Rule.counter()                       # Add counter
-|> Rule.accept()                        # Verdict
-# No need to call to_expr() - Builder handles conversion automatically!
+|> limit(10, :minute, burst: 5)    # Rate limiting
+|> log("SSH: ", level: "info")     # Logging
+|> counter()                       # Add counter
+|> accept()                        # Verdict
+# No need to call to_list() - Builder handles conversion automatically!
 
 # Use with Builder
 Builder.new(family: :inet)
@@ -416,7 +418,7 @@ Builder.new(family: :inet)
 |> Builder.submit(pid)
 ```
 
-### Available Rule Matchers
+### Available Expression Matchers
 
 - **IP**: `source/1`, `dest/1` - Supports single IPs and CIDR notation
 - **Ports**: `sport/1`, `dport/1`, `port/1` - TCP/UDP ports
@@ -457,9 +459,9 @@ Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.protocol(:tcp)
-  |> Rule.dport_map("port_verdict")  # Map lookup
+  expr()
+  |> protocol(:tcp)
+  |> dport_map("port_verdict")  # Map lookup
 )
 |> Builder.submit(pid)
 ```
@@ -480,11 +482,11 @@ Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.protocol(:tcp)
-  |> Rule.dport(80)
-  |> Rule.counter_ref("http_traffic")  # Reference named counter
-  |> Rule.accept()
+  expr()
+  |> protocol(:tcp)
+  |> dport(80)
+  |> counter_ref("http_traffic")  # Reference named counter
+  |> accept()
 )
 |> Builder.submit(pid)
 ```
@@ -505,9 +507,9 @@ Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "OUTPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.quota_ref("monthly_limit")
-  |> Rule.accept()
+  expr()
+  |> quota_ref("monthly_limit")
+  |> accept()
 )
 |> Builder.submit(pid)
 ```
@@ -528,11 +530,11 @@ Builder.new()
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.protocol(:tcp)
-  |> Rule.dport(22)
-  |> Rule.limit_ref("ssh_limit")  # Reference named limit
-  |> Rule.accept()
+  expr()
+  |> protocol(:tcp)
+  |> dport(22)
+  |> limit_ref("ssh_limit")  # Reference named limit
+  |> accept()
 )
 |> Builder.submit(pid)
 ```
@@ -558,9 +560,9 @@ builder
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.source("192.168.1.100")
-  |> Rule.drop()
+  expr()
+  |> source_ip("192.168.1.100")
+  |> drop()
 )
 |> Builder.submit(pid)
 ```
@@ -643,9 +645,9 @@ builder = Enum.reduce(rules, builder, &Builder.import_rule(&2, &1))
 builder
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.source("10.0.0.0/8")
-  |> Rule.accept()
+  expr()
+  |> source_ip("10.0.0.0/8")
+  |> accept()
 )
 |> Builder.submit(pid)
 ```
@@ -659,13 +661,13 @@ builder
 
 ## Migration Guide: Old API → New API
 
-If you're upgrading from the old convenience functions, here's how to migrate to the new Builder + Rule API:
+If you're upgrading from the old convenience functions, here's how to migrate to the new Builder + Expr API:
 
 ### Blocking an IP Address
 
 **Old API:**
 ```elixir
-Rule.block_ip(pid, "filter", "INPUT", "192.168.1.100")
+Expr.block_ip(pid, "filter", "INPUT", "192.168.1.100")
 ```
 
 **New API:**
@@ -674,9 +676,9 @@ Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.source("192.168.1.100")
-  |> Rule.drop()
+  expr()
+  |> source_ip("192.168.1.100")
+  |> drop()
 )
 |> Builder.submit(pid)
 ```
@@ -685,7 +687,7 @@ Builder.new(family: :inet)
 
 **Old API:**
 ```elixir
-Rule.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
+Expr.accept_ip(pid, "filter", "INPUT", "10.0.0.1")
 ```
 
 **New API:**
@@ -694,9 +696,9 @@ Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.source("10.0.0.1")
-  |> Rule.accept()
+  expr()
+  |> source_ip("10.0.0.1")
+  |> accept()
 )
 |> Builder.submit(pid)
 ```
@@ -705,7 +707,7 @@ Builder.new(family: :inet)
 
 **Old API:**
 ```elixir
-Rule.rate_limit(pid, "filter", "INPUT", 10, :minute, burst: 5)
+Expr.rate_limit(pid, "filter", "INPUT", 10, :minute, burst: 5)
 ```
 
 **New API:**
@@ -714,9 +716,9 @@ Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  Rule.new()
-  |> Rule.limit(10, :minute, burst: 5)
-  |> Rule.drop()  # or accept() depending on your use case
+  expr()
+  |> limit(10, :minute, burst: 5)
+  |> drop()  # or accept() depending on your use case
 )
 |> Builder.submit(pid)
 ```
@@ -725,7 +727,7 @@ Builder.new(family: :inet)
 
 **Old API:**
 ```elixir
-Rule.delete(pid, "filter", "INPUT", :inet, handle)
+Expr.delete(pid, "filter", "INPUT", :inet, handle)
 ```
 
 **New API:**
@@ -757,7 +759,7 @@ Builder.new(family: :inet)
 
 **Old API:**
 ```elixir
-Rule.list(pid, "filter", "INPUT", family: :inet)
+Expr.list(pid, "filter", "INPUT", family: :inet)
 ```
 
 **New API:**
@@ -808,23 +810,24 @@ Builder.new(family: :inet)
 {:ok, chains} = NFTables.Query.list_chains(pid, family: :inet)
 ```
 
-### NFTables.Rule - Rule Expression Building
+### NFTables.Expr - Rule Expression Building
 
 The `Rule` module now provides a fluent API for building rule expressions:
 
 ```elixir
-alias NFTables.{Builder, Rule}
+alias NFTables.{Builder, Expr}
+import NFTables.Expr
 
 # Build complex rules using the fluent API
 :ok = Builder.new(family: :inet)
   |> Builder.add(table: "filter")
   |> Builder.add(chain: "INPUT")
   |> Builder.add(rule: 
-    Rule.new()
-    |> Rule.source("192.168.1.100")
-    |> Rule.protocol(:tcp)
-    |> Rule.dport(80)
-    |> Rule.drop()
+    expr()
+    |> source_ip("192.168.1.100")
+    |> protocol(:tcp)
+    |> dport(80)
+    |> drop()
   )
   |> Builder.submit(pid)
 
@@ -832,18 +835,18 @@ alias NFTables.{Builder, Rule}
 {:ok, rules} = NFTables.Query.list_rules(pid, "filter", "INPUT", family: :inet)
 ```
 
-**Note**: The old `Rule.block_ip/4`, `Rule.accept_ip/4`, `Rule.rate_limit/6`, and `Rule.delete/5` functions are deprecated. See the Migration Guide above for how to use the new Builder + Rule API.
+**Note**: The old `Expr.block_ip/4`, `Expr.accept_ip/4`, `Expr.rate_limit/6`, and `Expr.delete/5` functions are deprecated. See the Migration Guide above for how to use the new Builder + Expr API.
 
-### NFTables.Match - Pure Expression Builder
+### NFTables.Expr - Pure Expression Builder
 
 The Match module provides a streamlined, pure functional API for building rule expressions:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
 # Build rule expressions with clean, chainable API
-expr = rule()
+expr = expr()
   |> source_ip("192.168.1.100")
   |> tcp()
   |> dport(22)
@@ -857,7 +860,7 @@ Builder.new()
 |> Builder.submit(pid: pid)
 
 # Or use convenience aliases for more concise code
-:ok = rule()
+:ok = expr()
   |> source("192.168.1.100")  # alias for source_ip
   |> dport(22)                 # alias for dest_port
   |> tcp()                     # match TCP protocol
@@ -1011,11 +1014,11 @@ alias NFTables.NAT
 ### Connection Tracking
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
 # Track connection state
-expr = rule()
+expr = expr()
   |> ct_state([:established, :related])
   |> accept()
 
@@ -1027,7 +1030,7 @@ Builder.new()
 :ok = NFTables.Policy.accept_established(pid)
 
 # Connection limits
-expr = rule()
+expr = expr()
   |> tcp()
   |> dport(80)
   |> ct_state([:new])
@@ -1039,7 +1042,7 @@ Builder.new()
 |> Builder.submit(pid: pid)
 
 # Track connection bytes
-expr = rule()
+expr = expr()
   |> ct_bytes(:gt, 1_000_000)  # Over 1MB
   |> log("LARGE_TRANSFER: ")
   |> accept()
@@ -1068,9 +1071,9 @@ Builder.new(family: :inet)
 |> Builder.submit(pid)
 
 # Add rule to offload established connections
-import NFTables.Match
+import NFTables.Expr
 
-offload_rule = rule()
+offload_rule = expr()
   |> state([:established, :related])
   |> flow_offload()
 
@@ -1084,11 +1087,11 @@ Builder.new()
 Dynamic rate limiting per IP address or other keys:
 
 ```elixir
-import NFTables.Match
-alias NFTables.Match.Meter
+import NFTables.Expr
+alias NFTables.Expr.Meter
 
 # Per-IP SSH rate limiting
-ssh_meter = rule()
+ssh_meter = expr()
   |> meter_update(
     Meter.payload(:ip, :saddr),  # Key: source IP
     "ssh_limits",                # Set name
@@ -1100,7 +1103,7 @@ ssh_meter = rule()
   |> accept()
 
 # Composite key (IP + port) for connection limits
-conn_meter = rule()
+conn_meter = expr()
   |> meter_add(
     Meter.composite_key([
       Meter.payload(:ip, :saddr),
@@ -1119,23 +1122,23 @@ conn_meter = rule()
 Match custom protocols using offset-based packet access:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Match DNS queries (port 53 via raw payload)
-dns_block = rule()
+dns_block = expr()
   |> udp()
   |> payload_raw(:th, 16, 16, 53)  # Transport header, offset 16, length 16 bits, value 53
   |> log("DNS query blocked: ")
   |> drop()
 
 # Check TCP SYN flag using masked match
-syn_counter = rule()
+syn_counter = expr()
   |> tcp()
   |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)  # TCP flags offset, mask SYN bit
   |> counter()
 
 # Match HTTP GET method
-http_get = rule()
+http_get = expr()
   |> tcp()
   |> dport(80)
   |> payload_raw(:ih, 0, 32, "GET ")  # Inner header, first 4 bytes
@@ -1148,7 +1151,7 @@ http_get = rule()
 Intercept traffic without changing destination addresses:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
 # Setup transparent proxy for HTTP traffic
@@ -1164,13 +1167,13 @@ Builder.new(family: :ip)
 |> Builder.submit(pid)
 
 # Mark existing transparent sockets
-mark_existing = rule()
+mark_existing = expr()
   |> socket_transparent()
   |> set_mark(1)
   |> accept()
 
 # TPROXY new HTTP connections
-tproxy_http = rule()
+tproxy_http = expr()
   |> tcp()
   |> dport(80)
   |> mark(0)
@@ -1187,16 +1190,16 @@ Builder.new()
 Support for SCTP, DCCP, and GRE protocols:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # SCTP (WebRTC data channels) - use generic dport/sport
-sctp_rule = rule()
+sctp_rule = expr()
   |> sctp()
   |> dport(9899)
   |> accept()
 
 # DCCP (streaming media) - use generic dport/sport
-dccp_rule = rule()
+dccp_rule = expr()
   |> dccp()
   |> sport(5000)
   |> dport(6000)
@@ -1204,7 +1207,7 @@ dccp_rule = rule()
   |> accept()
 
 # GRE (VPN tunnels)
-gre_rule = rule()
+gre_rule = expr()
   |> gre()
   |> gre_version(0)
   |> gre_key(12345)
@@ -1212,7 +1215,7 @@ gre_rule = rule()
   |> accept()
 
 # Port ranges supported for SCTP/DCCP
-sctp_range = rule()
+sctp_range = expr()
   |> sctp()
   |> dport(9000..9999)
   |> counter()
@@ -1223,10 +1226,10 @@ sctp_range = rule()
 Passive operating system detection for security policies:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Allow SSH only from Linux systems
-linux_ssh = rule()
+linux_ssh = expr()
   |> tcp()
   |> dport(22)
   |> osf_name("Linux")
@@ -1234,22 +1237,22 @@ linux_ssh = rule()
   |> accept()
 
 # Rate limit Windows connections
-windows_limit = rule()
+windows_limit = expr()
   |> osf_name("Windows", ttl: :strict)
   |> limit(10, :second, burst: 5)
   |> accept()
 
 # Block unknown OS
-block_unknown = rule()
+block_unknown = expr()
   |> osf_name("unknown")
   |> log("Unknown OS blocked: ")
   |> drop()
 
 # OS-based marking for routing
 mark_by_os = [
-  rule() |> osf_name("Linux") |> set_mark(1),
-  rule() |> osf_name("Windows") |> set_mark(2),
-  rule() |> osf_name("MacOS") |> set_mark(3)
+  expr() |> osf_name("Linux") |> set_mark(1),
+  expr() |> osf_name("Windows") |> set_mark(2),
+  expr() |> osf_name("MacOS") |> set_mark(3)
 ]
 ```
 
@@ -1339,7 +1342,7 @@ builder = Builder.new(family: :inet)
   policy: :drop
 )
 |> Builder.add(
-  rule: rule() |> source_ip("192.168.1.100") |> drop(),
+  rule: expr() |> source_ip("192.168.1.100") |> drop(),
   table: "filter",
   chain: "INPUT"
 )
@@ -1400,7 +1403,7 @@ json = Builder.to_json(builder)
 The Match API generates pure expressions that can be combined with Builder for remote execution:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
 # Build complex rule as Builder command (not yet executed)
@@ -1408,7 +1411,7 @@ builder = Builder.new(family: :inet)
 |> Builder.add(table: "filter")
 |> Builder.add(chain: "INPUT")
 |> Builder.add(rule: 
-  rule()
+  expr()
   |> source_ip("192.168.1.100")
   |> tcp()
   |> dport(22)
@@ -1462,9 +1465,9 @@ Builder.new()
 |> Builder.delete(set: "blocklist", table: "filter", family: :inet)
 
 # Rule operations with Match expressions
-block_ip_expr = rule() |> source_ip("192.168.1.100") |> drop()
-accept_ip_expr = rule() |> source_ip("10.0.0.1") |> accept()
-rate_limit_expr = rule() |> tcp() |> dport(22) |> limit(10, :second) |> accept()
+block_ip_expr = expr() |> source_ip("192.168.1.100") |> drop()
+accept_ip_expr = expr() |> source_ip("10.0.0.1") |> accept()
+rate_limit_expr = expr() |> tcp() |> dport(22) |> limit(10, :second) |> accept()
 
 Builder.new()
 |> Builder.add(rule: block_ip_expr, table: "filter", chain: "INPUT", family: :inet)
@@ -1481,8 +1484,8 @@ defmodule MyApp.DistributedFirewall do
   # On C&C node - build firewall configuration
   def build_firewall_config() do
     # Build expressions
-    loopback_expr = rule() |> source_ip("127.0.0.1") |> accept()
-    ssh_rate_limit_expr = rule()
+    loopback_expr = expr() |> source_ip("127.0.0.1") |> accept()
+    ssh_rate_limit_expr = expr()
       |> tcp() |> dport(22) |> state([:new])
       |> limit(10, :minute) |> accept()
 

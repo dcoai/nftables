@@ -1,12 +1,12 @@
-defmodule NFTables.Match.CT do
+defmodule NFTables.Expr.CT do
   @moduledoc """
-  Connection tracking (CT) matching functions for Match.
+  Connection tracking (CT) matching functions for Expr.
 
   Provides functions for matching based on connection tracking state, status,
   direction, labels, zones, helpers, and other CT-related attributes.
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   @doc """
   Match connection tracking state.
@@ -23,11 +23,11 @@ defmodule NFTables.Match.CT do
 
       builder |> ct_state([:established, :related])
   """
-  @spec ct_state(Match.t(), list(atom())) :: Match.t()
+  @spec ct_state(Expr.t(), list(atom())) :: Expr.t()
   def ct_state(builder, states) when is_list(states) do
     state_list = Enum.map(states, &to_string/1)
-    expr = Expr.ct_match("state", state_list)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("state", state_list)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -50,11 +50,11 @@ defmodule NFTables.Match.CT do
       # Match NATed connections
       builder |> ct_status([:snat])
   """
-  @spec ct_status(Match.t(), list(atom())) :: Match.t()
+  @spec ct_status(Expr.t(), list(atom())) :: Expr.t()
   def ct_status(builder, statuses) when is_list(statuses) do
     status_list = Enum.map(statuses, &to_string/1)
-    expr = Expr.ct_match("status", status_list)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("status", status_list)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -68,10 +68,10 @@ defmodule NFTables.Match.CT do
       # Match reply direction (incoming)
       builder |> ct_direction(:reply)
   """
-  @spec ct_direction(Match.t(), atom()) :: Match.t()
+  @spec ct_direction(Expr.t(), atom()) :: Expr.t()
   def ct_direction(builder, direction) when direction in [:original, :reply] do
-    expr = Expr.ct_match("direction", to_string(direction))
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("direction", to_string(direction))
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -83,10 +83,10 @@ defmodule NFTables.Match.CT do
 
       builder |> connmark(42)
   """
-  @spec connmark(Match.t(), non_neg_integer()) :: Match.t()
+  @spec connmark(Expr.t(), non_neg_integer()) :: Expr.t()
   def connmark(builder, mark) when is_integer(mark) and mark >= 0 do
-    expr = Expr.ct_match("mark", mark)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("mark", mark)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -102,10 +102,10 @@ defmodule NFTables.Match.CT do
       # Match numeric label bit
       builder |> ct_label(5) |> log("LABELED: ")
   """
-  @spec ct_label(Match.t(), String.t() | non_neg_integer()) :: Match.t()
+  @spec ct_label(Expr.t(), String.t() | non_neg_integer()) :: Expr.t()
   def ct_label(builder, label) when is_binary(label) or is_integer(label) do
-    expr = Expr.ct_match("label", label)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("label", label)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -121,10 +121,10 @@ defmodule NFTables.Match.CT do
       # Match zone for specific tenant
       builder |> ct_zone(100) |> jump("tenant_100")
   """
-  @spec ct_zone(Match.t(), non_neg_integer()) :: Match.t()
+  @spec ct_zone(Expr.t(), non_neg_integer()) :: Expr.t()
   def ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
-    expr = Expr.ct_match("zone", zone)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("zone", zone)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -140,10 +140,10 @@ defmodule NFTables.Match.CT do
       # Match SIP connections
       builder |> ct_helper("sip") |> log("SIP: ")
   """
-  @spec ct_helper(Match.t(), String.t()) :: Match.t()
+  @spec ct_helper(Expr.t(), String.t()) :: Expr.t()
   def ct_helper(builder, helper) when is_binary(helper) do
-    expr = Expr.ct_match("helper", helper)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("helper", helper)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -157,11 +157,11 @@ defmodule NFTables.Match.CT do
       # Match large downloads
       builder |> ct_bytes(:ge, 100_000_000) |> log("BIG-DL: ")
   """
-  @spec ct_bytes(Match.t(), atom(), non_neg_integer()) :: Match.t()
+  @spec ct_bytes(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
   def ct_bytes(builder, op, bytes) when is_integer(bytes) and bytes >= 0 do
     op_str = atom_to_op(op)
-    expr = Expr.ct_match("bytes", bytes, op_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("bytes", bytes, op_str)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -175,11 +175,11 @@ defmodule NFTables.Match.CT do
       # Block after packet limit
       builder |> ct_packets(:ge, 50000) |> drop()
   """
-  @spec ct_packets(Match.t(), atom(), non_neg_integer()) :: Match.t()
+  @spec ct_packets(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
   def ct_packets(builder, op, packets) when is_integer(packets) and packets >= 0 do
     op_str = atom_to_op(op)
-    expr = Expr.ct_match("packets", packets, op_str)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("packets", packets, op_str)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -193,7 +193,7 @@ defmodule NFTables.Match.CT do
       # Track pre-NAT source
       builder |> ct_original_saddr("10.0.0.0/8") |> log("INTERNAL: ")
   """
-  @spec ct_original_saddr(Match.t(), String.t()) :: Match.t()
+  @spec ct_original_saddr(Expr.t(), String.t()) :: Expr.t()
   def ct_original_saddr(builder, addr) when is_binary(addr) do
     # CT original address requires special structure
     expr = %{
@@ -203,7 +203,7 @@ defmodule NFTables.Match.CT do
         "op" => "=="
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -214,7 +214,7 @@ defmodule NFTables.Match.CT do
       # Match original destination before DNAT
       builder |> ct_original_daddr("203.0.113.100") |> accept()
   """
-  @spec ct_original_daddr(Match.t(), String.t()) :: Match.t()
+  @spec ct_original_daddr(Expr.t(), String.t()) :: Expr.t()
   def ct_original_daddr(builder, addr) when is_binary(addr) do
     # CT original address requires special structure
     expr = %{
@@ -224,7 +224,7 @@ defmodule NFTables.Match.CT do
         "op" => "=="
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -248,10 +248,10 @@ defmodule NFTables.Match.CT do
       |> limit_connections(3)
       |> drop()
   """
-  @spec limit_connections(Match.t(), non_neg_integer()) :: Match.t()
+  @spec limit_connections(Expr.t(), non_neg_integer()) :: Expr.t()
   def limit_connections(builder, count) when is_integer(count) and count > 0 do
-    expr = Expr.ct_match("count", count)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.ct_match("count", count)
+    Expr.add_expr(builder, expr)
   end
 
   # Helper to convert atom operators to string

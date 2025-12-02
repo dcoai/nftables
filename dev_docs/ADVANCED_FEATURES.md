@@ -37,7 +37,7 @@ Flowtables offload established connection forwarding to hardware or kernel fast 
 #### Creating a Flowtable
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 alias NFTables.Builder
 
 {:ok, pid} = NFTables.start_link()
@@ -72,7 +72,7 @@ Builder.new(family: :inet)
 |> Builder.submit(pid: pid)
 
 # Add rule to use flowtable for established connections
-fastpath_rule = rule()
+fastpath_rule = expr()
 |> ct_state([:established, :related])
 |> flow_offload("fastpath")
 
@@ -134,8 +134,8 @@ This replaces iptables' `hashlimit` with a more flexible, efficient approach.
 #### Basic Per-IP Rate Limiting
 
 ```elixir
-import NFTables.Match
-import NFTables.Match.Meter
+import NFTables.Expr
+import NFTables.Expr.Meter
 alias NFTables.Builder
 
 {:ok, pid} = NFTables.start_link()
@@ -154,7 +154,7 @@ Builder.new(family: :inet)
 |> Builder.submit(pid: pid)
 
 # Step 2: Create rule with meter
-ssh_rule = rule()
+ssh_rule = expr()
 |> tcp()
 |> dport(22)
 |> ct_state([:new])
@@ -196,7 +196,7 @@ Builder.new(family: :inet)
 |> Builder.submit(pid: pid)
 
 # Use composite key in meter
-limit_rule = rule()
+limit_rule = expr()
 |> tcp()
 |> meter_update(
   Meter.concat([
@@ -270,16 +270,16 @@ Raw payload matching allows direct access to packet data at specific offsets, en
 #### Basic Examples
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Match DNS queries (port 53) at transport header offset
-dns_rule = rule()
+dns_rule = expr()
 |> udp()
 |> payload_raw(:th, 16, 16, 53)  # offset=16, length=16 bits, value=53
 |> accept()
 
 # Match HTTP GET requests by payload signature
-http_get_rule = rule()
+http_get_rule = expr()
 |> tcp()
 |> dport(80)
 |> payload_raw(:ih, 0, 32, "GET ")  # First 4 bytes = "GET "
@@ -287,7 +287,7 @@ http_get_rule = rule()
 |> accept()
 
 # Match specific source IP using raw payload
-block_ip_rule = rule()
+block_ip_rule = expr()
 |> payload_raw(:nh, 96, 32, <<192, 168, 1, 1>>)  # offset 96 bits (byte 12)
 |> drop()
 ```
@@ -299,7 +299,7 @@ Match specific bits within a field:
 ```elixir
 # Match TCP SYN flag (bit 1 of flags byte)
 # TCP flags at offset 104 bits (13 bytes) in TCP header
-syn_rule = rule()
+syn_rule = expr()
 |> tcp()
 |> payload_raw_masked(
   :th,      # Transport header
@@ -313,7 +313,7 @@ syn_rule = rule()
 
 # Match IP Don't Fragment (DF) flag
 # Flags at offset 48 bits (bytes 6-7) in IP header
-df_rule = rule()
+df_rule = expr()
 |> payload_raw_masked(:nh, 48, 16, 0x4000, 0x4000)
 |> counter()
 |> accept()
@@ -359,20 +359,20 @@ Match packets based on existing socket connections and implement transparent pro
 Match packets by the user/group that owns the socket:
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Allow traffic from specific user
-user_rule = rule()
+user_rule = expr()
 |> socket_uid(1000)
 |> accept()
 
 # Block traffic from specific group
-group_rule = rule()
+group_rule = expr()
 |> socket_gid(100)
 |> drop()
 
 # Allow traffic only from root user
-root_only = rule()
+root_only = expr()
 |> socket_uid(0)
 |> accept()
 ```
@@ -383,12 +383,12 @@ Implement transparent proxying without changing destination addresses:
 
 ```elixir
 # Mark packets with existing transparent socket to prevent loops
-tproxy_mark = rule()
+tproxy_mark = expr()
 |> socket_transparent()
 |> mark(1)
 
 # Redirect to local transparent proxy
-tproxy_redirect = rule()
+tproxy_redirect = expr()
 |> tcp()
 |> dport(80)
 |> mark(0)  # Not already marked
@@ -437,22 +437,22 @@ SCTP is a reliable, message-oriented transport protocol combining features of TC
 #### SCTP Matching
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Match any SCTP traffic
-sctp_rule = rule()
+sctp_rule = expr()
 |> sctp()
 |> accept()
 
 # SCTP with port matching (uses generic dport/sport)
-signaling_rule = rule()
+signaling_rule = expr()
 |> sctp()
 |> dport(2905)  # SCTP M3UA port
 |> source_ip("192.168.1.0/24")
 |> accept()
 
 # Rate limit SCTP connections
-sctp_limit = rule()
+sctp_limit = expr()
 |> sctp()
 |> limit(100, :second)
 |> accept()
@@ -483,23 +483,23 @@ DCCP provides congestion control for unreliable datagrams.
 #### DCCP Matching
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Match any DCCP traffic
-dccp_rule = rule()
+dccp_rule = expr()
 |> dccp()
 |> counter()
 |> accept()
 
 # DCCP with port matching
-streaming_rule = rule()
+streaming_rule = expr()
 |> dccp()
 |> dport(5000..6000)  # Streaming port range
 |> log("DCCP stream")
 |> accept()
 
 # Source-based DCCP filtering
-trusted_dccp = rule()
+trusted_dccp = expr()
 |> dccp()
 |> source_ip("10.0.0.0/8")
 |> accept()
@@ -530,21 +530,21 @@ GRE is a tunneling protocol for encapsulating network layer protocols.
 #### GRE Matching
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Match any GRE traffic
-gre_rule = rule()
+gre_rule = expr()
 |> gre()
 |> accept()
 
 # Match specific GRE version
-gre_v0 = rule()
+gre_v0 = expr()
 |> gre()
 |> gre_version(0)
 |> accept()
 
 # Filter GRE by source
-vpn_tunnel = rule()
+vpn_tunnel = expr()
 |> gre()
 |> source_ip("203.0.113.0/24")
 |> counter()
@@ -560,7 +560,7 @@ vpn_tunnel = rule()
 tunnel_endpoints = ["203.0.113.1", "203.0.113.2"]
 
 Enum.each(tunnel_endpoints, fn endpoint ->
-  gre_rule = rule()
+  gre_rule = expr()
   |> gre()
   |> source_ip(endpoint)
   |> log("GRE tunnel from #{endpoint}")
@@ -608,23 +608,23 @@ sudo nfnl_osf -f /usr/share/pf.os
 #### Basic Usage
 
 ```elixir
-import NFTables.Match
+import NFTables.Expr
 
 # Detect Windows clients
-windows_rule = rule()
+windows_rule = expr()
 |> tcp()
 |> osf_name("Windows")
 |> log("Windows client detected")
 |> accept()
 
 # Detect Linux clients
-linux_rule = rule()
+linux_rule = expr()
 |> osf_name("Linux")
 |> counter()
 |> accept()
 
 # Detect unknown OS
-unknown_os = rule()
+unknown_os = expr()
 |> osf_name("unknown")
 |> log("Unknown OS")
 |> drop()
@@ -634,12 +634,12 @@ unknown_os = rule()
 
 ```elixir
 # Loose TTL matching (default) - allows TTL differences
-loose_match = rule()
+loose_match = expr()
 |> osf_name("Linux")
 |> accept()
 
 # Strict TTL matching - requires exact TTL
-strict_match = rule()
+strict_match = expr()
 |> osf_name("Windows", ttl: :strict)
 |> accept()
 ```
@@ -651,9 +651,9 @@ strict_match = rule()
 ```elixir
 # Set QoS marks based on OS
 os_qos_rules = [
-  rule() |> osf_name("Linux") |> set_mark(1),
-  rule() |> osf_name("Windows") |> set_mark(2),
-  rule() |> osf_name("MacOS") |> set_mark(3)
+  expr() |> osf_name("Linux") |> set_mark(1),
+  expr() |> osf_name("Windows") |> set_mark(2),
+  expr() |> osf_name("MacOS") |> set_mark(3)
 ]
 
 Enum.each(os_qos_rules, fn qos_rule ->
@@ -667,7 +667,7 @@ end)
 
 ```elixir
 # Block old/vulnerable OS versions
-block_old_os = rule()
+block_old_os = expr()
 |> tcp()
 |> dport(22)  # SSH
 |> osf_name("Windows")  # Could add version detection
@@ -675,7 +675,7 @@ block_old_os = rule()
 |> reject()
 
 # Allow only known corporate OS images
-corporate_os = rule()
+corporate_os = expr()
 |> tcp()
 |> osf_name("Linux")
 |> source_ip("10.0.0.0/8")

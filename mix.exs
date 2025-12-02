@@ -1,7 +1,7 @@
 defmodule NFTables.MixProject do
   use Mix.Project
 
-  @version "0.5.0"
+  @version "0.6.0"
   @source_url "https://github.com/yourusername/nftables"
 
   def project do
@@ -79,13 +79,12 @@ defmodule NFTables.MixProject do
       groups_for_modules: [
         "Core API": [
           NFTables.Builder,
-          NFTables.Match,
+          NFTables.Expr,
           NFTables.Query
         ],
         "Convenience API": [
           NFTables.Policy,
-          NFTables.NAT,
-          NFTables.Rule
+          NFTables.NAT
         ],
         "Execution": [
           NFTables.Local,
@@ -94,7 +93,7 @@ defmodule NFTables.MixProject do
         ],
         "Internal API": [
           NFTables.Validation,
-          NFTables.Expr,
+          NFTables.Expr.Structs,
           NFTables.Formatter
         ]
       ]

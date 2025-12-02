@@ -38,7 +38,7 @@ defmodule NFTables do
       |> Builder.submit(pid: pid)
 
       # Or use high-level convenience APIs
-      import NFTables.Match
+      import NFTables.Expr
 
       block_rule = rule()
       |> source_ip_set("@blocklist")
@@ -53,7 +53,7 @@ defmodule NFTables do
   ### Core APIs
 
   - `NFTables.Builder` - Unified API for building nftables configurations (tables, chains, sets, rules)
-  - `NFTables.Match` - Fluent API for building rule expressions
+  - `NFTables.Expr` - Fluent API for building rule expressions
   - `NFTables.Query` - Query tables, chains, rules, and sets
 
   ### Convenience APIs
@@ -168,7 +168,7 @@ defmodule NFTables do
       NFTables.add(table: "filter", chain: "INPUT", family: :inet)
 
       # Add multiple rules
-      import NFTables.Match
+      import NFTables.Expr
       NFTables.add(rules: [
         rule() |> tcp() |> dport(22) |> accept(),
         rule() |> tcp() |> dport(80) |> accept()
@@ -195,7 +195,7 @@ defmodule NFTables do
       opts = if Keyword.has_key?(opts, :rule) do
         rule_spec = Keyword.get(opts, :rule)
         case rule_spec do
-          %NFTables.Match{expr_list: expr_list} ->
+          %NFTables.Expr{expr_list: expr_list} ->
             Keyword.put(opts, :rule, expr_list)
           _ ->
             opts
@@ -250,7 +250,7 @@ defmodule NFTables do
 
     Enum.reduce(rules_list, builder, fn rule_spec, acc ->
       rule_expr = case rule_spec do
-        %NFTables.Match{expr_list: expr_list} -> expr_list
+        %NFTables.Expr{expr_list: expr_list} -> expr_list
         expr_list when is_list(expr_list) -> expr_list
       end
 

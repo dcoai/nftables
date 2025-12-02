@@ -1,27 +1,27 @@
-defmodule NFTables.Match.Verdicts do
+defmodule NFTables.Expr.Verdicts do
   @moduledoc """
-  Verdict and control flow functions for Match.
+  Verdict and control flow functions for Expr.
 
   Provides terminal verdicts (accept, drop, reject), non-terminal actions (continue, notrack),
   advanced features (queue, synproxy, flow offload), and chain control flow (jump, goto, return).
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   # Terminal verdicts
 
   @doc "Accept packets"
-  @spec accept(Match.t()) :: Match.t()
+  @spec accept(Expr.t()) :: Expr.t()
   def accept(builder) do
-    expr = Expr.verdict("accept")
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.verdict("accept")
+    Expr.add_expr(builder, expr)
   end
 
   @doc "Drop packets silently"
-  @spec drop(Match.t()) :: Match.t()
+  @spec drop(Expr.t()) :: Expr.t()
   def drop(builder) do
-    expr = Expr.verdict("drop")
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.verdict("drop")
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -32,16 +32,16 @@ defmodule NFTables.Match.Verdicts do
       builder |> reject()
       builder |> reject(:tcp_reset)
   """
-  @spec reject(Match.t(), atom()) :: Match.t()
+  @spec reject(Expr.t(), atom()) :: Expr.t()
   def reject(builder, type \\ :icmp_port_unreachable) do
     expr = case type do
-      :tcp_reset -> Expr.reject("tcp reset")
-      :icmp_port_unreachable -> Expr.reject()
-      :icmpx_port_unreachable -> Expr.reject("icmpx type port-unreachable")
-      other -> Expr.reject(to_string(other))
+      :tcp_reset -> Expr.Structs.reject("tcp reset")
+      :icmp_port_unreachable -> Expr.Structs.reject()
+      :icmpx_port_unreachable -> Expr.Structs.reject("icmpx type port-unreachable")
+      other -> Expr.Structs.reject(to_string(other))
     end
 
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   # Non-terminal actions
@@ -75,10 +75,10 @@ defmodule NFTables.Match.Verdicts do
   - Complex action chains
   - Audit trails with continued filtering
   """
-  @spec continue(Match.t()) :: Match.t()
+  @spec continue(Expr.t()) :: Expr.t()
   def continue(builder) do
-    expr = Expr.verdict("continue")
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.verdict("continue")
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -114,10 +114,10 @@ defmodule NFTables.Match.Verdicts do
   - No NAT for these packets
   - No connection limits
   """
-  @spec notrack(Match.t()) :: Match.t()
+  @spec notrack(Expr.t()) :: Expr.t()
   def notrack(builder) do
     expr = %{"notrack" => nil}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   # Advanced features
@@ -159,7 +159,7 @@ defmodule NFTables.Match.Verdicts do
   - Deep packet inspection
   - Application-level filtering
   """
-  @spec queue_to_userspace(Match.t(), non_neg_integer(), keyword()) :: Match.t()
+  @spec queue_to_userspace(Expr.t(), non_neg_integer(), keyword()) :: Expr.t()
   def queue_to_userspace(builder, queue_num, opts \\ []) when is_integer(queue_num) and queue_num >= 0 do
     bypass = Keyword.get(opts, :bypass, false)
     fanout = Keyword.get(opts, :fanout, false)
@@ -177,7 +177,7 @@ defmodule NFTables.Match.Verdicts do
     end
 
     expr = %{"queue" => queue_expr}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -229,7 +229,7 @@ defmodule NFTables.Match.Verdicts do
   - May break some TCP options
   - Backend servers see firewall as client
   """
-  @spec synproxy(Match.t(), keyword()) :: Match.t()
+  @spec synproxy(Expr.t(), keyword()) :: Expr.t()
   def synproxy(builder, opts \\ []) do
     synproxy_expr = %{}
 
@@ -259,7 +259,7 @@ defmodule NFTables.Match.Verdicts do
 
     synproxy_expr = if map_size(synproxy_expr) == 0, do: nil, else: synproxy_expr
     expr = %{"synproxy" => synproxy_expr}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -290,7 +290,7 @@ defmodule NFTables.Match.Verdicts do
   - Fixing PMTU black holes
   - WAN interface MSS clamping
   """
-  @spec set_tcp_mss(Match.t(), non_neg_integer() | :pmtu) :: Match.t()
+  @spec set_tcp_mss(Expr.t(), non_neg_integer() | :pmtu) :: Expr.t()
   def set_tcp_mss(builder, :pmtu) do
     # TCP MSS clamping to PMTU
     expr = %{
@@ -299,7 +299,7 @@ defmodule NFTables.Match.Verdicts do
         "value" => %{"rt" => "mtu"}
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
   def set_tcp_mss(builder, mss) when is_integer(mss) and mss > 0 and mss <= 65535 do
     # TCP MSS clamping to specific value
@@ -309,7 +309,7 @@ defmodule NFTables.Match.Verdicts do
         "value" => mss
       }
     }
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -340,10 +340,10 @@ defmodule NFTables.Match.Verdicts do
   - Traffic analysis and debugging
   - Compliance and auditing
   """
-  @spec duplicate_to(Match.t(), String.t()) :: Match.t()
+  @spec duplicate_to(Expr.t(), String.t()) :: Expr.t()
   def duplicate_to(builder, interface) when is_binary(interface) do
     expr = %{"dup" => %{"device" => interface}}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -381,7 +381,7 @@ defmodule NFTables.Match.Verdicts do
   - Flowtable must be created first
   - Only works for ESTABLISHED connections
   """
-  @spec flow_offload(Match.t(), keyword()) :: Match.t()
+  @spec flow_offload(Expr.t(), keyword()) :: Expr.t()
   def flow_offload(builder, opts \\ []) do
     table = Keyword.get(opts, :table)
 
@@ -391,7 +391,7 @@ defmodule NFTables.Match.Verdicts do
       %{"flow" => %{"op" => "offload"}}
     end
 
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 
   # Chain control flow
@@ -423,10 +423,10 @@ defmodule NFTables.Match.Verdicts do
   - Reusable rule groups
   - Conditional rule application
   """
-  @spec jump(Match.t(), String.t()) :: Match.t()
+  @spec jump(Expr.t(), String.t()) :: Expr.t()
   def jump(builder, chain_name) when is_binary(chain_name) do
-    expr = Expr.jump(chain_name)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.jump(chain_name)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -448,10 +448,10 @@ defmodule NFTables.Match.Verdicts do
   - `jump/1`: Returns after chain processing (like a function call)
   - `goto/1`: Never returns (like a goto statement)
   """
-  @spec goto(Match.t(), String.t()) :: Match.t()
+  @spec goto(Expr.t(), String.t()) :: Expr.t()
   def goto(builder, chain_name) when is_binary(chain_name) do
-    expr = Expr.goto(chain_name)
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.goto(chain_name)
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -469,10 +469,10 @@ defmodule NFTables.Match.Verdicts do
 
       # Continue processing in calling chain
   """
-  @spec return_from_chain(Match.t()) :: Match.t()
+  @spec return_from_chain(Expr.t()) :: Expr.t()
   def return_from_chain(builder) do
-    expr = Expr.verdict("return")
-    Match.add_expr(builder, expr)
+    expr = Expr.Structs.verdict("return")
+    Expr.add_expr(builder, expr)
   end
 
   @doc """
@@ -546,7 +546,7 @@ defmodule NFTables.Match.Verdicts do
         |> mark(1)
         |> accept()
   """
-  @spec tproxy(Match.t(), keyword()) :: Match.t()
+  @spec tproxy(Expr.t(), keyword()) :: Expr.t()
   def tproxy(builder, opts) do
     port = Keyword.fetch!(opts, :to)
     addr = Keyword.get(opts, :addr)
@@ -557,6 +557,6 @@ defmodule NFTables.Match.Verdicts do
     tproxy_map = if family, do: Map.put(tproxy_map, :family, to_string(family)), else: tproxy_map
 
     expr = %{tproxy: tproxy_map}
-    Match.add_expr(builder, expr)
+    Expr.add_expr(builder, expr)
   end
 end

@@ -1,4 +1,4 @@
-defmodule NFTables.Match.Protocols do
+defmodule NFTables.Expr.Protocols do
   @moduledoc """
   Advanced protocol matching helpers for SCTP, DCCP, and GRE.
 
@@ -36,7 +36,7 @@ defmodule NFTables.Match.Protocols do
       |> accept()
   """
 
-  alias NFTables.{Match, Expr}
+  alias NFTables.Expr
 
   ## SCTP (Stream Control Transmission Protocol)
 
@@ -64,13 +64,13 @@ defmodule NFTables.Match.Protocols do
 
   SCTP uses IP protocol number 132.
   """
-  @spec sctp(Match.t()) :: Match.t()
+  @spec sctp(Expr.t()) :: Expr.t()
   def sctp(builder) do
-    expr = Expr.payload_match("ip", "protocol", "sctp")
+    expr = Expr.Structs.payload_match("ip", "protocol", "sctp")
 
     builder
-    |> Match.add_expr(expr)
-    |> Match.set_protocol(:sctp)
+    |> Expr.add_expr(expr)
+    |> Expr.set_protocol(:sctp)
   end
 
   ## DCCP (Datagram Congestion Control Protocol)
@@ -99,13 +99,13 @@ defmodule NFTables.Match.Protocols do
 
   DCCP uses IP protocol number 33.
   """
-  @spec dccp(Match.t()) :: Match.t()
+  @spec dccp(Expr.t()) :: Expr.t()
   def dccp(builder) do
-    expr = Expr.payload_match("ip", "protocol", "dccp")
+    expr = Expr.Structs.payload_match("ip", "protocol", "dccp")
 
     builder
-    |> Match.add_expr(expr)
-    |> Match.set_protocol(:dccp)
+    |> Expr.add_expr(expr)
+    |> Expr.set_protocol(:dccp)
   end
 
   ## GRE (Generic Routing Encapsulation)
@@ -133,13 +133,13 @@ defmodule NFTables.Match.Protocols do
 
   GRE uses IP protocol number 47.
   """
-  @spec gre(Match.t()) :: Match.t()
+  @spec gre(Expr.t()) :: Expr.t()
   def gre(builder) do
-    expr = Expr.payload_match("ip", "protocol", "gre")
+    expr = Expr.Structs.payload_match("ip", "protocol", "gre")
 
     builder
-    |> Match.add_expr(expr)
-    |> Match.set_protocol(:gre)
+    |> Expr.add_expr(expr)
+    |> Expr.set_protocol(:gre)
   end
 
   @doc """
@@ -162,11 +162,11 @@ defmodule NFTables.Match.Protocols do
       |> log("PPTP tunnel: ")
       |> accept()
   """
-  @spec gre_version(Match.t(), non_neg_integer()) :: Match.t()
+  @spec gre_version(Expr.t(), non_neg_integer()) :: Expr.t()
   def gre_version(builder, version) when is_integer(version) and version >= 0 do
     builder
     |> ensure_gre()
-    |> Match.add_expr(Expr.payload_match("gre", "version", version))
+    |> Expr.add_expr(Expr.Structs.payload_match("gre", "version", version))
   end
 
   @doc """
@@ -196,11 +196,11 @@ defmodule NFTables.Match.Protocols do
   The key field must be present in the GRE header (flags bit set).
   Not all GRE packets include a key field.
   """
-  @spec gre_key(Match.t(), non_neg_integer()) :: Match.t()
+  @spec gre_key(Expr.t(), non_neg_integer()) :: Expr.t()
   def gre_key(builder, key) when is_integer(key) and key >= 0 do
     builder
     |> ensure_gre()
-    |> Match.add_expr(Expr.payload_match("gre", "key", key))
+    |> Expr.add_expr(Expr.Structs.payload_match("gre", "key", key))
   end
 
   @doc """
@@ -228,16 +228,16 @@ defmodule NFTables.Match.Protocols do
   - 0x1000: Sequence number present
   - 0x0800: Strict source route
   """
-  @spec gre_flags(Match.t(), non_neg_integer()) :: Match.t()
+  @spec gre_flags(Expr.t(), non_neg_integer()) :: Expr.t()
   def gre_flags(builder, flags) when is_integer(flags) and flags >= 0 do
     builder
     |> ensure_gre()
-    |> Match.add_expr(Expr.payload_match("gre", "flags", flags))
+    |> Expr.add_expr(Expr.Structs.payload_match("gre", "flags", flags))
   end
 
   ## Private Helpers
 
   # Ensure GRE protocol is set (auto-add if needed)
-  defp ensure_gre(%Match{protocol: :gre} = builder), do: builder
+  defp ensure_gre(%Expr{protocol: :gre} = builder), do: builder
   defp ensure_gre(builder), do: gre(builder)
 end

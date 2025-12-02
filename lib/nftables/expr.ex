@@ -1,840 +1,420 @@
 defmodule NFTables.Expr do
   @moduledoc """
-  Helper functions for building nftables expression structures.
+  Pure expression builder for nftables rules.
 
-  This module provides a clean API for constructing the expression data structures
-  used by nftables. These helpers make it easier to build complex firewall rules
-  without manually constructing nested maps.
+  This module provides a fluent, chainable interface for building firewall rule
+  expressions. It produces pure data structures that can be used with NFTables
+  for building complete configurations.
 
-  **NOTE**: All functions return maps with **atom keys** (not string keys).
-  The JSON encoding happens later in the Builder/Local pipeline.
+  ## Quick Example
 
-  ## Expression Format
+      import NFTables.Expr
 
-  nftables uses expressions that consist of:
-  - **Matches**: Compare packet fields against values
-  - **Statements**: Perform actions (counter, log, limit, mark, etc.)
-  - **Verdicts**: Terminal decisions (accept, drop, reject, etc.)
+      # Build rule expressions
+      expr() |> tcp() |> dport(22) |> accept()
+      expr() |> state([:established, :related]) |> accept()
+      expr() |> iif("lo") |> accept()
 
-  ## Examples
+  ## Usage with Builder
 
-      # Simple IP match
-      Expr.payload_match("ip", "saddr", "192.168.1.1")
-      #=> %{match: %{
-      #     left: %{payload: %{protocol: "ip", field: "saddr"}},
-      #     right: "192.168.1.1",
-      #     op: "=="
-      #   }}
+      import NFTables.Expr
+      alias NFTables.Builder
 
-      # Connection tracking match
-      Expr.ct_match("state", ["established", "related"])
-      #=> %{match: %{
-      #     left: %{ct: %{key: "state"}},
-      #     right: ["established", "related"],
-      #     op: "in"
-      #   }}
+      # Build rule expressions - Builder automatically converts to expression lists
+      ssh_rule = expr() |> tcp() |> dport(22) |> limit(10, :minute) |> accept()
+      established_rule = expr() |> state([:established, :related]) |> accept()
 
-      # Verdict
-      Expr.verdict("drop")
-      #=> %{drop: nil}
+      # Use with Builder
+      Builder.new()
+      |> Builder.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> Builder.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> Builder.submit(pid: pid)
 
-  ## Reference
+  ## Import for Concise Syntax
 
-  Official nftables documentation:
-  https://wiki.nftables.org/wiki-nftables/index.php/JSON_API
+  This module works well with `import`:
+
+      import NFTables.Expr
+
+      # Now use functions directly
+      expr() |> tcp() |> dport(80) |> accept()
+      expr() |> state([:invalid]) |> drop()
+
+  ## See Also
+
+  - `NFTables` - Main builder module
+  - `NFTables.Local` - Execute configurations
+  - `NFTables.Policy` - Pre-built common policies
   """
 
-  ## Payload Matches
+  alias NFTables.Expr.{IP, Port, TCP, Layer2, CT, Advanced, Actions, NAT, Verdicts, Meter, Protocols}
+
+  defstruct [
+    :family,
+    :comment,
+    :protocol,        # Current protocol context (nil, :tcp, :udp, etc.)
+    expr_list: []      # JSON expression maps
+  ]
+
+  @type t :: %__MODULE__{
+          family: atom(),
+          comment: String.t() | nil,
+          protocol: atom() | nil,
+          expr_list: list(map())
+        }
 
   @doc """
-  Build a payload match expression.
+  Start building a new rule expression.
 
-  Matches a protocol field against a value.
+  Returns an empty Expr struct ready for building rule expressions via piping.
 
   ## Parameters
 
-  - `protocol` - Protocol name ("ip", "ip6", "tcp", "udp", "icmp", etc.)
-  - `field` - Field name ("saddr", "daddr", "sport", "dport", etc.)
-  - `value` - Value to match (string, integer, or list)
-  - `op` - Comparison operator (default: "==")
+  - `opts` - Options:
+    - `:family` - Protocol family (default: `:inet`)
 
   ## Examples
 
-      # IPv4 source address
-      payload_match("ip", "saddr", "192.168.1.1")
+      import NFTables.Expr
 
-      # TCP destination port
-      payload_match("tcp", "dport", 80)
+      # Start a new rule with default family
+      expr() |> tcp() |> dport(22) |> accept()
+
+      # Start with specific family
+      expr(family: :inet6) |> tcp() |> dport(22) |> accept()
+
+      # Multiple rules
+      [
+        expr() |> state([:established, :related]) |> accept(),
+        expr() |> tcp() |> dport(80) |> accept(),
+        expr() |> tcp() |> dport(443) |> accept()
+      ]
+  """
+  @spec expr(keyword()) :: t()
+  def expr(opts \\ []) do
+    %__MODULE__{
+      family: Keyword.get(opts, :family, :inet),
+      expr_list: []
+    }
+  end
+
+  ## IP Matching (delegated to IP)
+
+  defdelegate source_ip(builder, ip), to: IP
+  defdelegate dest_ip(builder, ip), to: IP
+
+  ## Port Matching (delegated to Port)
+
+  defdelegate dport(builder, port), to: Port
+  defdelegate sport(builder, port), to: Port
+  defdelegate dst_port(builder, port), to: Port
+  defdelegate src_port(builder, port), to: Port
+
+  ## TCP/Protocol Matching (delegated to TCP)
+
+  defdelegate tcp_flags(builder, flags, mask), to: TCP
+  defdelegate length(builder, op, length), to: TCP
+  defdelegate ttl(builder, op, ttl), to: TCP
+  defdelegate hoplimit(builder, op, hoplimit), to: TCP
+  defdelegate protocol(builder, protocol), to: TCP
+
+  ## Layer 2 Matching (delegated to Layer2)
+
+  defdelegate source_mac(builder, mac), to: Layer2
+  defdelegate dest_mac(builder, mac), to: Layer2
+  defdelegate iif(builder, ifname), to: Layer2
+  defdelegate oif(builder, ifname), to: Layer2
+  defdelegate vlan_id(builder, vlan_id), to: Layer2
+  defdelegate vlan_pcp(builder, pcp), to: Layer2
+
+  ## Connection Tracking Matching (delegated to CT)
+
+  defdelegate ct_state(builder, states), to: CT
+  defdelegate ct_status(builder, statuses), to: CT
+  defdelegate ct_direction(builder, direction), to: CT
+  defdelegate connmark(builder, mark), to: CT
+  defdelegate ct_label(builder, label), to: CT
+  defdelegate ct_zone(builder, zone), to: CT
+  defdelegate ct_helper(builder, helper), to: CT
+  defdelegate ct_bytes(builder, op, bytes), to: CT
+  defdelegate ct_packets(builder, op, packets), to: CT
+  defdelegate ct_original_saddr(builder, addr), to: CT
+  defdelegate ct_original_daddr(builder, addr), to: CT
+  defdelegate limit_connections(builder, count), to: CT
+
+  ## Advanced Matching (delegated to Advanced)
+
+  defdelegate mark(builder, mark), to: Advanced
+  defdelegate dscp(builder, dscp), to: Advanced
+  defdelegate fragmented(builder, is_fragmented), to: Advanced
+  defdelegate icmp_type(builder, type), to: Advanced
+  defdelegate icmp_code(builder, code), to: Advanced
+  defdelegate icmpv6_type(builder, type), to: Advanced
+  defdelegate icmpv6_code(builder, code), to: Advanced
+  defdelegate pkttype(builder, pkttype), to: Advanced
+  defdelegate priority(builder, op, priority), to: Advanced
+  defdelegate cgroup(builder, cgroup_id), to: Advanced
+  defdelegate skuid(builder, uid), to: Advanced
+  defdelegate skgid(builder, gid), to: Advanced
+  defdelegate ah_spi(builder, spi), to: Advanced
+  defdelegate esp_spi(builder, spi), to: Advanced
+  defdelegate arp_operation(builder, operation), to: Advanced
+  defdelegate set(builder, set_name, match_type), to: Advanced
+  defdelegate payload_raw(builder, base, offset, length, value), to: Advanced
+  defdelegate payload_raw_masked(builder, base, offset, length, mask, value), to: Advanced
+  defdelegate payload_raw_expr(base, offset, length), to: Advanced
+  defdelegate socket_transparent(builder), to: Advanced
+
+  ## OSF (OS Fingerprinting) (delegated to Advanced)
+
+  defdelegate osf_name(builder, os_name), to: Advanced
+  defdelegate osf_name(builder, os_name, opts), to: Advanced
+  defdelegate osf_version(builder, version), to: Advanced
+  defdelegate osf_version(builder, version, opts), to: Advanced
+
+  ## Advanced Protocols (delegated to Protocols)
+
+  defdelegate sctp(builder), to: Protocols
+  defdelegate dccp(builder), to: Protocols
+  defdelegate gre(builder), to: Protocols
+  defdelegate gre_version(builder, version), to: Protocols
+  defdelegate gre_key(builder, key), to: Protocols
+  defdelegate gre_flags(builder, flags), to: Protocols
+
+  ## Actions (delegated to Actions)
+
+  defdelegate counter(builder), to: Actions
+  defdelegate log(builder, prefix), to: Actions
+  defdelegate log(builder, prefix, opts), to: Actions
+  defdelegate rate_limit(builder, rate, unit), to: Actions
+  defdelegate rate_limit(builder, rate, unit, opts), to: Actions
+  defdelegate set_mark(builder, mark), to: Actions
+  defdelegate set_connmark(builder, mark), to: Actions
+  defdelegate restore_mark(builder), to: Actions
+  defdelegate save_mark(builder), to: Actions
+  defdelegate set_ct_label(builder, label), to: Actions
+  defdelegate set_ct_helper(builder, helper), to: Actions
+  defdelegate set_ct_zone(builder, zone), to: Actions
+  defdelegate set_dscp(builder, dscp), to: Actions
+  defdelegate set_ttl(builder, ttl), to: Actions
+  defdelegate set_hoplimit(builder, hoplimit), to: Actions
+  defdelegate increment_ttl(builder), to: Actions
+  defdelegate decrement_ttl(builder), to: Actions
+  defdelegate increment_hoplimit(builder), to: Actions
+  defdelegate decrement_hoplimit(builder), to: Actions
+
+  ## Meter Operations (delegated to Meter)
+
+  defdelegate meter_update(builder, key_expr, set_name, rate, per), to: Meter
+  defdelegate meter_update(builder, key_expr, set_name, rate, per, opts), to: Meter
+  defdelegate meter_add(builder, key_expr, set_name, rate, per), to: Meter
+  defdelegate meter_add(builder, key_expr, set_name, rate, per, opts), to: Meter
+
+  ## NAT Actions (delegated to NAT)
+
+  defdelegate snat_to(builder, ip), to: NAT
+  defdelegate snat_to(builder, ip, opts), to: NAT
+  defdelegate dnat_to(builder, ip), to: NAT
+  defdelegate dnat_to(builder, ip, opts), to: NAT
+  defdelegate masquerade(builder), to: NAT
+  defdelegate masquerade(builder, opts), to: NAT
+  defdelegate redirect_to(builder, port), to: NAT
+
+  ## Verdicts (delegated to Verdicts)
+
+  defdelegate accept(builder), to: Verdicts
+  defdelegate drop(builder), to: Verdicts
+  defdelegate reject(builder), to: Verdicts
+  defdelegate reject(builder, type), to: Verdicts
+  defdelegate continue(builder), to: Verdicts
+  defdelegate notrack(builder), to: Verdicts
+  defdelegate queue_to_userspace(builder, queue_num), to: Verdicts
+  defdelegate queue_to_userspace(builder, queue_num, opts), to: Verdicts
+  defdelegate synproxy(builder), to: Verdicts
+  defdelegate synproxy(builder, opts), to: Verdicts
+  defdelegate set_tcp_mss(builder, mss), to: Verdicts
+  defdelegate duplicate_to(builder, interface), to: Verdicts
+  defdelegate flow_offload(builder), to: Verdicts
+  defdelegate flow_offload(builder, opts), to: Verdicts
+  defdelegate jump(builder, chain_name), to: Verdicts
+  defdelegate goto(builder, chain_name), to: Verdicts
+  defdelegate return_from_chain(builder), to: Verdicts
+  defdelegate tproxy(builder, opts), to: Verdicts
+
+  ## Convenience Aliases (shorter names for common operations)
+
+  @doc """
+  Alias for `source_ip/2`. Match source IP address.
+
+  ## Examples
+
+      expr() |> source("192.168.1.1")
+      expr() |> source("10.0.0.0/8")
+  """
+  @spec source(t(), String.t()) :: t()
+  defdelegate source(builder, ip), to: IP, as: :source_ip
+
+  @doc """
+  Alias for `dest_ip/2`. Match destination IP address.
+
+  ## Examples
+
+      expr() |> dest("192.168.1.1")
+      expr() |> dest("10.0.0.0/8")
+  """
+  @spec dest(t(), String.t()) :: t()
+  defdelegate dest(builder, ip), to: IP, as: :dest_ip
+
+  @doc """
+  Convenience function for matching destination port (same as `dport/2`).
+
+  Supports both single ports and port ranges.
+
+  ## Examples
+
+      # Single port
+      expr() |> tcp() |> port(22)
+      expr() |> udp() |> port(53)
 
       # Port range
-      payload_match("tcp", "dport", %{range: [1024, 65535]})
-
-      # Not equal
-      payload_match("ip", "saddr", "10.0.0.0/8", "!=")
+      expr() |> tcp() |> port(8000..9000)
   """
-  @spec payload_match(String.t(), String.t(), term(), String.t()) :: map()
-  def payload_match(protocol, field, value, op \\ "==") do
-    %{
-      match: %{
-        left: %{payload: %{protocol: protocol, field: field}},
-        right: normalize_value(value),
-        op: op
-      }
-    }
-  end
+  @spec port(t(), integer() | Range.t()) :: t()
+  def port(builder, port), do: dport(builder, port)
 
   @doc """
-  Build a payload match with prefix (CIDR notation).
+  Alias for `ct_state/2`. Match connection tracking state.
 
   ## Examples
 
-      payload_match_prefix("ip", "saddr", "192.168.1.0", 24)
-      #=> Matches 192.168.1.0/24
+      expr() |> state([:established, :related])
+      expr() |> state([:new])
+      expr() |> state(:invalid)
   """
-  @spec payload_match_prefix(String.t(), String.t(), String.t(), integer()) :: map()
-  def payload_match_prefix(protocol, field, addr, prefix_len) do
-    %{
-      match: %{
-        left: %{payload: %{protocol: protocol, field: field}},
-        right: %{
-          prefix: %{
-            addr: addr,
-            len: prefix_len
-          }
-        },
-        op: "=="
-      }
-    }
-  end
+  @spec state(t(), list(atom()) | atom()) :: t()
+  defdelegate state(builder, states), to: CT, as: :ct_state
 
   @doc """
-  Build a payload range match.
+  Alias for `rate_limit/3`. Add rate limiting.
 
   ## Examples
 
-      payload_match_range("tcp", "dport", 1024, 65535)
-      #=> Matches ports 1024-65535
+      expr() |> limit(10, :minute)
+      expr() |> limit(100, :second)
   """
-  @spec payload_match_range(String.t(), String.t(), term(), term()) :: map()
-  def payload_match_range(protocol, field, min_val, max_val) do
-    %{
-      match: %{
-        left: %{payload: %{protocol: protocol, field: field}},
-        right: %{range: [normalize_value(min_val), normalize_value(max_val)]},
-        op: "=="
-      }
-    }
-  end
-
-  ## Raw Payload Matching
+  @spec limit(t(), non_neg_integer(), atom()) :: t()
+  defdelegate limit(builder, rate, unit), to: Actions, as: :rate_limit
 
   @doc """
-  Build a raw payload expression for offset-based matching.
-
-  Raw payload matching allows matching arbitrary bytes at specific offsets,
-  bypassing protocol-specific parsing. Essential for custom protocols or DPI.
-
-  ## Parameters
-
-  - `base` - Base reference point:
-    - `:ll` - Link layer (Ethernet header start)
-    - `:nh` - Network header (IP header start)
-    - `:th` - Transport header (TCP/UDP header start)
-    - `:ih` - Inner header (for tunneled packets)
-  - `offset` - Bit offset from base (not byte offset!)
-  - `length` - Number of bits to extract
+  Alias for `rate_limit/4`. Add rate limiting with options.
 
   ## Examples
 
-      # Extract 32 bits at network header offset 96 (source IP)
-      payload_raw(:nh, 96, 32)
-      #=> %{payload: %{base: "nh", offset: 96, len: 32}}
-
-      # Extract 16 bits at transport header offset 16 (dest port)
-      payload_raw(:th, 16, 16)
-
-      # Extract 8 bits at network header offset 0 (IP version + IHL)
-      payload_raw(:nh, 0, 8)
-
-  ## Notes
-
-  - Offsets are in **bits**, not bytes (multiply byte offset by 8)
-  - Length is also in **bits** (e.g., 32 bits = 4 bytes)
-  - Network byte order (big endian) is assumed
+      expr() |> limit(10, :minute, burst: 5)
+      expr() |> limit(100, :second, burst: 200)
   """
-  @spec payload_raw(atom(), non_neg_integer(), pos_integer()) :: map()
-  def payload_raw(base, offset, length)
-      when base in [:ll, :nh, :th, :ih] and is_integer(offset) and is_integer(length) and
-             offset >= 0 and length > 0 do
-    %{
-      payload: %{
-        base: base_to_string(base),
-        offset: offset,
-        len: length
-      }
-    }
-  end
+  @spec limit(t(), non_neg_integer(), atom(), keyword()) :: t()
+  defdelegate limit(builder, rate, unit, opts), to: Actions, as: :rate_limit
 
   @doc """
-  Build a raw payload match expression.
-
-  Convenience function combining payload_raw/3 with a match.
-
-  ## Parameters
-
-  - `base` - Base reference (:ll, :nh, :th, :ih)
-  - `offset` - Bit offset from base
-  - `length` - Number of bits
-  - `value` - Value to match against
-  - `op` - Comparison operator (default: "==")
+  Match TCP protocol. Convenience for `protocol(:tcp)`.
 
   ## Examples
 
-      # Match source IP (32 bits at nh+96)
-      payload_raw_match(:nh, 96, 32, <<192, 168, 1, 1>>)
-
-      # Match destination port 53
-      payload_raw_match(:th, 16, 16, 53)
-
-      # Match DNS port with not-equal
-      payload_raw_match(:th, 16, 16, 53, "!=")
+      expr() |> tcp() |> dport(80)
   """
-  @spec payload_raw_match(atom(), non_neg_integer(), pos_integer(), term(), String.t()) :: map()
-  def payload_raw_match(base, offset, length, value, op \\ "==") do
-    # Convert binaries to hex for raw payload matching
-    normalized_value = if is_binary(value), do: binary_to_hex(value), else: normalize_value(value)
-
-    %{
-      match: %{
-        left: payload_raw(base, offset, length),
-        right: normalized_value,
-        op: op
-      }
-    }
-  end
-
-  ## Connection Tracking Matches
+  @spec tcp(t()) :: t()
+  def tcp(builder), do: TCP.protocol(builder, :tcp)
 
   @doc """
-  Build a connection tracking match expression.
-
-  ## Parameters
-
-  - `key` - CT key ("state", "status", "mark", "bytes", "packets", etc.)
-  - `value` - Value to match
-  - `op` - Comparison operator (default: "in" for lists, "==" for single values)
+  Match UDP protocol. Convenience for `protocol(:udp)`.
 
   ## Examples
 
-      # Match established/related connections
-      ct_match("state", ["established", "related"])
-
-      # Match connection mark
-      ct_match("mark", 42, "==")
-
-      # Match connection bytes
-      ct_match("bytes", 1000000, ">")
+      expr() |> udp() |> dport(53)
   """
-  @spec ct_match(String.t(), term(), String.t() | nil) :: map()
-  def ct_match(key, value, op \\ nil) do
-    # Auto-determine operator if not specified
-    op = op || (if is_list(value), do: "in", else: "==")
-
-    %{
-      match: %{
-        left: %{ct: %{key: key}},
-        right: normalize_value(value),
-        op: op
-      }
-    }
-  end
+  @spec udp(t()) :: t()
+  def udp(builder), do: TCP.protocol(builder, :udp)
 
   @doc """
-  Build a connection tracking original direction match.
+  Match ICMP protocol. Convenience for `protocol(:icmp)`.
 
   ## Examples
 
-      ct_original_match("saddr", "192.168.1.1")
-      #=> Match original source address
+      expr() |> icmp() |> icmp_type(:echo_request)
   """
-  @spec ct_original_match(String.t(), String.t()) :: map()
-  def ct_original_match(field, value) do
-    %{
-      match: %{
-        left: %{ct: %{key: field, dir: "original"}},
-        right: value,
-        op: "=="
-      }
-    }
-  end
-
-  ## Socket Matching
+  @spec icmp(t()) :: t()
+  def icmp(builder), do: TCP.protocol(builder, :icmp)
 
   @doc """
-  Build a socket match expression.
+  Alias for `in_set/3`. Match against a named set.
 
-  Socket matching allows matching packets based on socket attributes.
-  Useful for transparent proxy setups and process-based filtering.
-
-  ## Parameters
-
-  - `key` - Socket attribute to match:
-    - `"transparent"` - Match transparent sockets (for TPROXY)
-    - `"mark"` - Match socket mark
-    - `"wildcard"` - Match wildcard sockets
+  Delegates to `Advanced.set/3`.
 
   ## Examples
 
-      # Match packets with transparent socket
-      socket_match("transparent")
-      #=> %{socket: %{key: "transparent"}}
-
-      # Match socket mark
-      socket_match("mark")
-      #=> %{socket: %{key: "mark"}}
+      expr() |> in_set("blocklist", :saddr)
+      expr() |> in_set("allowed_ports", :dport)
   """
-  @spec socket_match(String.t()) :: map()
-  def socket_match(key) when is_binary(key) do
-    %{socket: %{key: key}}
-  end
+  @spec in_set(t(), String.t(), atom()) :: t()
+  defdelegate in_set(builder, set_name, match_type), to: Advanced, as: :set
 
   @doc """
-  Build a socket match expression with value comparison.
+  Alias for `return_from_chain/1`. Return from current chain.
 
   ## Examples
 
-      # Match transparent socket (value = 1)
-      socket_match_value("transparent", 1)
-      #=> %{match: %{left: %{socket: %{key: "transparent"}}, right: 1, op: "=="}}
+      expr() |> return()
   """
-  @spec socket_match_value(String.t(), term(), String.t()) :: map()
-  def socket_match_value(key, value, op \\ "==") do
-    %{
-      match: %{
-        left: socket_match(key),
-        right: value,
-        op: op
-      }
-    }
-  end
+  @spec return(t()) :: t()
+  defdelegate return(builder), to: Verdicts, as: :return_from_chain
 
-  ## OSF (OS Fingerprinting)
+  ## Helpers
 
   @doc """
-  Build an OSF (OS Fingerprinting) match expression.
+  Extract the expression list from an expression builder.
 
-  OSF performs passive operating system detection by analyzing TCP SYN packet
-  characteristics. Requires the pf.os fingerprint database to be loaded.
-
-  ## Parameters
-
-  - `key` - What to match: "name" (OS name) or "version" (OS version)
-  - `ttl` - TTL matching mode (default: "loose"):
-    - "loose" - Allow TTL variations
-    - "skip" - Ignore TTL completely
-    - "strict" - Require exact TTL match
+  Returns the list of JSON expressions that can be used with Builder.add/2.
 
   ## Examples
 
-      # Match OS name
-      osf_match("name")
-      #=> %{osf: %{key: "name", ttl: "loose"}}
-
-      # Match OS version with strict TTL
-      osf_match("version", "strict")
-      #=> %{osf: %{key: "version", ttl: "strict"}}
-
-  ## Requirements
-
-  The pf.os database must be loaded before using OSF:
-  ```bash
-  nfnl_osf -f /usr/share/pf.os
-  ```
-
-  ## Supported OS Names
-
-  Common values include: "Linux", "Windows", "MacOS", "FreeBSD", "OpenBSD"
+      expression = expr() |> tcp() |> dport(22) |> accept()
+      expr_list = to_list(expression)
+      # Use expr_list with Builder: Builder.add(builder, rule: expr_list)
   """
-  @spec osf_match(String.t(), String.t()) :: map()
-  def osf_match(key, ttl \\ "loose")
-      when key in ["name", "version"] and ttl in ["loose", "skip", "strict"] do
-    %{
-      osf: %{
-        key: key,
-        ttl: ttl
-      }
-    }
-  end
+  @spec to_list(t()) :: list(map())
+  def to_list(%__MODULE__{expr_list: expr_list}), do: expr_list
 
   @doc """
-  Build an OSF match expression with value comparison.
+  Add a comment to the rule.
+
+  Note: Comments are metadata and don't affect rule matching.
 
   ## Examples
 
-      # Match Linux systems
-      osf_match_value("name", "Linux")
-      #=> %{match: %{left: %{osf: %{key: "name", ttl: "loose"}}, right: "Linux", op: "=="}}
-
-      # Match specific OS version
-      osf_match_value("version", "3.x", "strict")
-      #=> %{match: %{left: %{osf: %{key: "version", ttl: "strict"}}, right: "3.x", op: "=="}}
+      expr() |> dport(22) |> comment("Allow SSH from trusted network") |> accept()
   """
-  @spec osf_match_value(String.t(), term(), String.t(), String.t()) :: map()
-  def osf_match_value(key, value, ttl \\ "loose", op \\ "==") do
-    %{
-      match: %{
-        left: osf_match(key, ttl),
-        right: value,
-        op: op
-      }
-    }
+  @spec comment(t(), String.t()) :: t()
+  def comment(rule, text) when is_binary(text) do
+    %{rule | comment: text}
   end
 
-  ## Meta Matches
+  # Private helpers
 
-  @doc """
-  Build a meta expression match.
-
-  Meta expressions match packet metadata (not packet contents).
-
-  ## Parameters
-
-  - `key` - Meta key ("mark", "iif", "oif", "length", "protocol", etc.)
-  - `value` - Value to match
-  - `op` - Comparison operator (default: "==")
-
-  ## Examples
-
-      # Match packet mark
-      meta_match("mark", 100)
-
-      # Match input interface
-      meta_match("iifname", "eth0")
-
-      # Match packet length
-      meta_match("length", 1000, ">")
-  """
-  @spec meta_match(String.t(), term(), String.t()) :: map()
-  def meta_match(key, value, op \\ "==") do
-    %{
-      match: %{
-        left: %{meta: %{key: key}},
-        right: normalize_value(value),
-        op: op
-      }
-    }
-  end
-
-  ## Set Matches
-
-  @doc """
-  Build a set membership match.
-
-  Checks if a value is in a named set.
-
-  ## Examples
-
-      # Check if source IP is in blocklist
-      set_match("ip", "saddr", "@blocklist")
-
-      # Check if destination port is in allowed_ports set
-      set_match("tcp", "dport", "@allowed_ports")
-  """
-  @spec set_match(String.t(), String.t(), String.t()) :: map()
-  def set_match(protocol, field, set_name) do
-    %{
-      match: %{
-        left: %{payload: %{protocol: protocol, field: field}},
-        right: set_name,
-        op: "in"
-      }
-    }
-  end
-
-  ## Bitwise Operations
-
-  @doc """
-  Build a bitwise AND match.
-
-  Used for TCP flags, fragmentation checks, etc.
-
-  ## Examples
-
-      # TCP flags: Check if SYN is set (mask includes SYN, ACK, RST, FIN)
-      bitwise_and_match(
-        %{payload: %{protocol: "tcp", field: "flags"}},
-        ["syn", "ack", "rst", "fin"],
-        ["syn"]
-      )
-  """
-  @spec bitwise_and_match(map(), term(), term()) :: map()
-  def bitwise_and_match(left_expr, mask, value) do
-    %{
-      match: %{
-        left: %{"&": [left_expr, normalize_value(mask)]},
-        right: normalize_value(value),
-        op: "=="
-      }
-    }
-  end
-
-  ## Statements
-
-  @doc """
-  Build a counter statement.
-
-  Counts packets and bytes.
-
-  ## Examples
-
-      counter()
-      #=> %{counter: nil}
-  """
-  @spec counter() :: map()
-  def counter do
-    %{counter: nil}
+  @doc false
+  def add_expr(builder, expr) when is_map(expr) do
+    # Add JSON expression map to expr_list
+    %{builder | expr_list: builder.expr_list ++ [expr]}
   end
 
   @doc """
-  Build a log statement.
+  Set the protocol context for subsequent port matching.
 
-  ## Options
-
-  - `:prefix` - Log prefix string (required)
-  - `:level` - Syslog level ("emerg", "alert", "crit", "err", "warn", "notice", "info", "debug")
-  - `:flags` - Log flags list (["tcp sequence", "tcp options", "ip options", "skuid", "ether", "all"])
-
-  ## Examples
-
-      log("SSH_ATTEMPT: ")
-      log("DROPPED: ", level: "warn")
-      log("AUDIT: ", level: "info", flags: ["all"])
+  This is used internally by tcp(), udp(), etc. to track which protocol
+  the rule is matching, allowing sport/dport to work protocol-agnostically.
   """
-  @spec log(String.t(), keyword()) :: map()
-  def log(prefix, opts \\ []) do
-    log_expr = %{prefix: prefix}
-    log_expr = maybe_put(log_expr, :level, opts[:level])
-    log_expr = maybe_put(log_expr, :flags, opts[:flags])
-
-    %{log: log_expr}
+  @spec set_protocol(t(), atom()) :: t()
+  def set_protocol(builder, protocol) when is_atom(protocol) do
+    %{builder | protocol: protocol}
   end
-
-  @doc """
-  Build a limit statement (rate limiting).
-
-  ## Options
-
-  - `:rate` - Rate number (required)
-  - `:per` - Time unit ("second", "minute", "hour", "day") (required)
-  - `:burst` - Burst packets (optional)
-  - `:inv` - Invert match (rate over) (optional)
-
-  ## Examples
-
-      limit(10, "minute")
-      limit(100, "second", burst: 200)
-      limit(5, "minute", burst: 10, inv: true)  # Rate over 5/min
-  """
-  @spec limit(integer(), String.t(), keyword()) :: map()
-  def limit(rate, per, opts \\ []) do
-    limit_expr = %{
-      rate: rate,
-      per: per
-    }
-
-    limit_expr = maybe_put(limit_expr, :burst, opts[:burst])
-    limit_expr = maybe_put(limit_expr, :inv, opts[:inv])
-
-    %{limit: limit_expr}
-  end
-
-  ## Verdict Expressions
-
-  @doc """
-  Build a verdict expression.
-
-  ## Supported Verdicts
-
-  - "accept" - Accept the packet
-  - "drop" - Drop the packet
-  - "continue" - Continue to next rule
-  - "return" - Return from chain
-
-  ## Examples
-
-      verdict("accept")
-      #=> %{accept: nil}
-
-      verdict("drop")
-      #=> %{drop: nil}
-  """
-  @spec verdict(String.t()) :: map()
-  def verdict(verdict_name) when verdict_name in ["accept", "drop", "continue", "return"] do
-    %{String.to_existing_atom(verdict_name) => nil}
-  end
-
-  @doc """
-  Build a reject verdict with optional type.
-
-  ## Examples
-
-      reject()
-      reject("tcp reset")
-      reject("icmpx port-unreachable")
-  """
-  @spec reject(String.t() | nil) :: map()
-  def reject(type \\ nil) do
-    if type do
-      %{reject: %{type: type}}
-    else
-      %{reject: nil}
-    end
-  end
-
-  @doc """
-  Build a jump verdict (jump to another chain).
-
-  ## Examples
-
-      jump("custom_chain")
-      #=> %{jump: %{target: "custom_chain"}}
-  """
-  @spec jump(String.t()) :: map()
-  def jump(chain_name) do
-    %{jump: %{target: chain_name}}
-  end
-
-  @doc """
-  Build a goto verdict (goto another chain, no return).
-
-  ## Examples
-
-      goto("custom_chain")
-      #=> %{goto: %{target: "custom_chain"}}
-  """
-  @spec goto(String.t()) :: map()
-  def goto(chain_name) do
-    %{goto: %{target: chain_name}}
-  end
-
-  ## NAT Statements
-
-  @doc """
-  Build a SNAT (Source NAT) statement.
-
-  ## Options
-
-  - `:port` - Port or port range
-  - `:family` - Address family ("ip" or "ip6", default: "ip")
-
-  ## Examples
-
-      snat("203.0.113.1")
-      snat("203.0.113.1", port: 1024)
-      snat("203.0.113.1", port: [1024, 65535])
-      snat("2001:db8::1", family: "ip6")
-  """
-  @spec snat(String.t(), keyword()) :: map()
-  def snat(addr, opts \\ []) do
-    family = Keyword.get(opts, :family, "ip")
-    snat_expr = %{addr: addr, family: family}
-    snat_expr = maybe_put(snat_expr, :port, opts[:port])
-
-    %{snat: snat_expr}
-  end
-
-  @doc """
-  Build a DNAT (Destination NAT) statement.
-
-  ## Options
-
-  - `:port` - Port or port range
-  - `:family` - Address family ("ip" or "ip6", default: "ip")
-
-  ## Examples
-
-      dnat("192.168.1.10")
-      dnat("192.168.1.10", port: 8080)
-      dnat("192.168.1.10", port: [8080, 8090])
-      dnat("2001:db8::10", family: "ip6")
-  """
-  @spec dnat(String.t(), keyword()) :: map()
-  def dnat(addr, opts \\ []) do
-    family = Keyword.get(opts, :family, "ip")
-    dnat_expr = %{addr: addr, family: family}
-    dnat_expr = maybe_put(dnat_expr, :port, opts[:port])
-
-    %{dnat: dnat_expr}
-  end
-
-  @doc """
-  Build a masquerade statement.
-
-  ## Examples
-
-      masquerade()
-      masquerade(port: [1024, 65535])
-  """
-  @spec masquerade(keyword()) :: map()
-  def masquerade(opts \\ []) do
-    if opts[:port] do
-      %{masquerade: %{port: opts[:port]}}
-    else
-      %{masquerade: nil}
-    end
-  end
-
-  ## Packet Modification Statements
-
-  @doc """
-  Build a meta set statement (set packet mark, priority, etc.).
-
-  ## Examples
-
-      meta_set("mark", 100)
-      meta_set("priority", 1)
-  """
-  @spec meta_set(String.t(), term()) :: map()
-  def meta_set(key, value) do
-    %{
-      mangle: %{
-        key: %{meta: %{key: key}},
-        value: normalize_value(value)
-      }
-    }
-  end
-
-  @doc """
-  Build a CT set statement (set connection tracking value).
-
-  ## Examples
-
-      ct_set("mark", 42)
-      ct_set("helper", "ftp")
-  """
-  @spec ct_set(String.t(), term()) :: map()
-  def ct_set(key, value) do
-    %{
-      ct: %{
-        key: key,
-        value: normalize_value(value)
-      }
-    }
-  end
-
-  ## Set Operations (for meters/dynamic sets)
-
-  @doc """
-  Build a set update operation (for meters).
-
-  Set update operations add elements to a set with associated statements (like limit).
-  Used for per-key rate limiting (meters).
-
-  ## Parameters
-
-  - `elem` - Element expression(s) to add to set (single value or list for composite keys)
-  - `set_name` - Name of the set (without @ prefix)
-  - `statements` - List of statement expressions to associate with the element
-
-  ## Examples
-
-      # Per-IP rate limiting
-      set_update(
-        %{payload: %{protocol: "ip", field: "saddr"}},
-        "ssh_ratelimit",
-        [limit(3, "minute", burst: 5)]
-      )
-
-      # Composite key (src + dst IP)
-      set_update(
-        [
-          %{payload: %{protocol: "ip", field: "saddr"}},
-          %{payload: %{protocol: "ip", field: "daddr"}}
-        ],
-        "flow_limits",
-        [limit(100, "second")]
-      )
-  """
-  @spec set_update(term(), String.t(), list(map())) :: map()
-  def set_update(elem, set_name, statements) when is_list(statements) do
-    # For composite keys (lists), wrap in concat expression
-    normalized_elem = case elem do
-      list when is_list(list) and length(list) > 1 -> %{concat: list}
-      other -> normalize_value(other)
-    end
-
-    %{
-      set: %{
-        op: "update",
-        elem: normalized_elem,
-        set: "@#{set_name}",
-        stmt: statements
-      }
-    }
-  end
-
-  @doc """
-  Build a set add operation.
-
-  Similar to set_update but uses "add" operation instead of "update".
-  "add" fails if element already exists, "update" updates existing or adds new.
-
-  ## Examples
-
-      set_add_operation(
-        %{payload: %{protocol: "ip", field: "saddr"}},
-        "tracked_ips",
-        [counter()]
-      )
-  """
-  @spec set_add_operation(term(), String.t(), list(map())) :: map()
-  def set_add_operation(elem, set_name, statements) when is_list(statements) do
-    # For composite keys (lists), wrap in concat expression
-    normalized_elem = case elem do
-      list when is_list(list) and length(list) > 1 -> %{concat: list}
-      other -> normalize_value(other)
-    end
-
-    %{
-      set: %{
-        op: "add",
-        elem: normalized_elem,
-        set: "@#{set_name}",
-        stmt: statements
-      }
-    }
-  end
-
-  ## Helper Functions
-
-  # Normalize values for expression structures
-  defp normalize_value(value) when is_binary(value), do: value
-  defp normalize_value(value) when is_integer(value), do: value
-  defp normalize_value(value) when is_list(value), do: value
-  defp normalize_value(value) when is_map(value), do: value
-  defp normalize_value({:range, min, max}), do: [min, max]
-  defp normalize_value(first..last//_ = _range), do: [first, last]
-  defp normalize_value(value), do: to_string(value)
-
-  # Convert binary/string to hex for raw payload matching
-  defp binary_to_hex(value) when is_binary(value) do
-    hex =
-      value
-      |> :binary.bin_to_list()
-      |> Enum.map(&Integer.to_string(&1, 16))
-      |> Enum.map(&String.pad_leading(&1, 2, "0"))
-      |> Enum.join()
-
-    "0x" <> String.downcase(hex)
-  end
-
-  # Conditionally add key to map if value is not nil
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
-
-  # Convert payload base atoms to strings
-  defp base_to_string(:ll), do: "ll"  # Link layer
-  defp base_to_string(:nh), do: "nh"  # Network header
-  defp base_to_string(:th), do: "th"  # Transport header
-  defp base_to_string(:ih), do: "ih"  # Inner header
 end
