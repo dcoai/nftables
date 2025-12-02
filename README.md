@@ -34,7 +34,7 @@ chmod 700 deps/nftables_port/priv/port_nftables
 
 ### Build a Rule
 
-**Note** - before running the following on a remote machine, be aware you are able block your remote access.  You may want to start by experimenting in a VM or local machine.
+**Note** - before running examples on a remote machine, *be aware* you are able block your remote access.  You may want to start by experimenting in a VM or local machine.
 
 ```elixir
 alias NFTables.Builder
@@ -57,42 +57,30 @@ IO.inspect(response}
 ## Features
 
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
-- **Pure Functional Expr API** - Clean, composable expression builder with no side effects
+- **Pure Functional Expr API** - composable expression builder with no side effects
 - **Sysctl Management** - Read/Write access to network kernel parameters
-- **Command/Execution Separation** - Build JSON/nft commands without executing
 - **Batch Operations** - Atomic multi-command execution
-- **IP Blocklist Management** - Add/remove IPs from blocklists with one function call
 - **Query Operations** - List tables, chains, rules, sets, and elements
-- **Builder Pattern** - Clear separation between building and executing commands
-- **Policy Module** - Pre-built firewall policies (SSH, HTTP, rate limiting, etc.)
+- **Builder Pattern** - Clear separation between building and executing rules
 - **Elixir Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
 - **Security** - Port runs with minimal privileges (CAP_NET_ADMIN only)
 
-## Advanced Features
+### Advanced Features
 
-NFTables includes comprehensive support for advanced nftables capabilities:
-
-### Hardware Acceleration & Performance
 - **Flowtables** - Hardware-accelerated packet forwarding for established connections
 - **Meters/Dynamic Sets** - Per-key rate limiting with composite key support
-
-### Deep Packet Inspection
 - **Raw Payload Matching** - Offset-based packet header access for custom protocols
 - **Socket Matching & TPROXY** - Transparent proxy support without destination changes
-
-### Specialized Protocols
 - **SCTP** - Stream Control Transmission Protocol (WebRTC, telephony)
 - **DCCP** - Datagram Congestion Control Protocol (streaming, gaming)
 - **GRE** - Generic Routing Encapsulation (VPN tunnels)
-
-### Security & Intelligence
 - **OSF (OS Fingerprinting)** - Passive operating system detection via TCP SYN analysis
 
-See [dev_docs/ADVANCED_FEATURES.md](dev_docs/ADVANCED_FEATURES.md) for comprehensive documentation of all advanced features.
+See [dev_docs/advanced_features.md](dev_docs/advanced_features.md) for comprehensive documentation of all advanced features.
 
 ### NFTables_Port 
 
-NFTables.Port is an elixir wrapper, and a program written in Zig which accepts json structures and sends them to NFTables using the libnftables (C library).  The Elixir part manages the Zig program as a Port.
+NFTables.Port is an elixir wrapper, and a program written in Zig which accepts json structures and sends them to NFTables using the libnftables (C library).  The Elixir module manages the Zig program as a Port.
 
 ```elixir
 {:ok, pid} = NFTables.Port.start_link()
@@ -106,9 +94,7 @@ Visit the [NFTables.Port](https://github.com/dcoai/nftables_port) project page f
 
 ### NFTables
 
-NFTables.Port takes JSON requests and passes them on to nftables.  The Elixir NFTables library is a set of tools to query and build rule sets which can be applied via NFTables.Port.
-
-is an Elixir library, which builds expressions (as Elixir Maps), which can be converted to JSON and passed to the NFTables_Port for processing by libnftables.  This library allows for constructing Tables, Chains, Sets, Rules, etc... in a composable elixer way
+NFTables.Port takes JSON requests and passes them on to the Linux nftables service.  The Elixir NFTables library is a set of tools to query and build rule sets which can be applied via NFTables.Port.
 
 **Generate JSON using NFTables library**
 
@@ -138,7 +124,9 @@ json_cmd =
 
 Using this we can manage a local firewall from Elixir.
 
-It would be possible to put the NFTables.Port portion on another node or multiple nodes, and use erlang's ssh module to build a secure communication layer to manage firewalls remotely, or to set up a distributed firewall.
+A couple possibilities:
+- dynamic firewall which process events and updates firewall based on the events.
+- distributed firewall on multiple nodes.
 
 ## System Requirements
 
@@ -191,7 +179,7 @@ mix deps.get
 mix compile
 ```
 
-The compiled `port_nftables` binary will be placed in `priv/port_nftables`.
+The compiled `port_nftables` binary will be placed in `deps/nftables_port/priv/port_nftables`.
 
 ### Manual Build
 
@@ -209,7 +197,7 @@ The binary will be in `native/zig-out/bin/port_nftables`.
 The port binary needs CAP_NET_ADMIN capability to manage firewall rules:
 
 ```bash
-sudo setcap cap_net_admin=ep priv/port_nftables
+sudo setcap cap_net_admin=ep deps/nftables_port/priv/port_nftables
 ```
 
 Verify:
@@ -218,12 +206,6 @@ Verify:
 getcap priv/port_nftables
 # Should show: priv/port_nftables = cap_net_admin+ep
 ```
-
-## Potential Use Cases
-
-- **Dynamic Firewall Management** - Modify firewall rules from your Elixir application
-- **Local Firewall** - powered by Elixir
-- **Distributed Firewall** - manage many firewalls centrally
 
 ### Security considerations
 
