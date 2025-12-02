@@ -46,8 +46,8 @@ defmodule NFTables.MixProject do
 
   defp description do
     """
-    Pure Elixir library for working with Linux nftables rules. Provides high-level APIs
-    for building tables, chains, rules, and sets. Works with NFTables.Port for
+    Elixir library for working with Linux nftables rules. Provides high-level APIs
+    for building tables, chains, rules, maps and sets. Works with NFTables.Port for
     communicating with the kernel firewall, or can generate JSON/rule definitions
     independently for inspection, testing, or remote execution.
     """
@@ -75,6 +75,10 @@ defmodule NFTables.MixProject do
       extras: [
         "README.md",
         "LICENSE"
+        "dev_docs/architecture.md"
+        "dev_docs/advanced_features.md"
+        "dev_docs/quick_reference.md"
+        "dev_docs/reference.md"
       ],
       groups_for_modules: [
         "Core API": [
@@ -86,7 +90,7 @@ defmodule NFTables.MixProject do
           NFTables.Policy,
           NFTables.NAT
         ],
-        "Execution": [
+        "Requests": [
           NFTables.Local,
           NFTables.Requestor,
           NFTables.Decoder
