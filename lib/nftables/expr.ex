@@ -266,6 +266,28 @@ defmodule NFTables.Expr do
   def dest(builder \\ expr(), ip), do: IP.dest_ip(builder, ip)
 
   @doc """
+  Alias for `source_ip/2`. Match source IP address.
+
+  ## Examples
+
+      expr() |> src("192.168.1.1")
+      expr() |> src("10.0.0.0/8")
+  """
+  @spec src(t(), String.t()) :: t()
+  def src(builder \\ expr(), ip), do: IP.source_ip(builder, ip)
+  
+  @doc """
+  Alias for `dest_ip/2`. Match destination IP address.
+
+  ## Examples
+
+      expr() |> dst("192.168.1.1")
+      expr() |> dst("10.0.0.0/8")
+  """
+  @spec dst(t(), String.t()) :: t()
+  def dst(builder \\ expr(), ip), do: IP.dest_ip(builder, ip)
+  
+  @doc """
   Convenience function for matching destination port (same as `dport/2`).
 
   Supports both single ports and port ranges.
@@ -293,6 +315,96 @@ defmodule NFTables.Expr do
   """
   @spec state(t(), list(atom()) | atom()) :: t()
   def state(builder \\ expr(), states), do: CT.ct_state(builder, states)
+
+  @doc """
+  Alias for `ct_state(builder, [:new])`. Match connection tracking state [:new].
+
+  ## Examples
+
+      expr() |> new()
+  """
+  @spec new(t()) :: t()
+  def new(builder \\ expr()), do: CT.ct_state(builder, [:new])
+  
+  @doc """
+  Alias for `ct_state(builder, [:established])`. Match connection tracking state [:new].
+
+  ## Examples
+
+      expr() |> established()
+  """
+  @spec established(t()) :: t()
+  def established(builder \\ expr()), do: CT.ct_state(builder, [:established])
+  
+  @doc """
+  Alias for `ct_state(builder, [:established])`. Match connection tracking state [:related].
+
+  ## Examples
+
+      expr() |> est()
+  """
+  @spec est(t()) :: t()
+  def est(builder \\ expr()), do: CT.ct_state(builder, [:established])
+
+  @doc """
+  Alias for `ct_state(builder, [:related])`. Match connection tracking state [:related].
+
+  ## Examples
+
+      expr() |> related()
+  """
+  @spec related(t()) :: t()
+  def related(builder \\ expr()), do: CT.ct_state(builder, [:related])
+
+  @doc """
+  Alias for `ct_state(builder, [:related])`. Match connection tracking state [:related].
+
+  ## Examples
+
+      expr() |> rel()
+  """
+  @spec rel(t()) :: t()
+  def rel(builder \\ expr()), do: CT.ct_state(builder, [:related])
+  
+  @doc """
+  Alias for `ct_state(builder, [:established, :related])`. Match connection tracking state [:established, :related].
+
+  ## Examples
+
+      expr() |> established_related()
+  """
+  @spec established_related(t()) :: t()
+  def established_related(builder \\ expr()), do: CT.ct_state(builder, [:established, :related])
+
+  @doc """
+  Alias for `ct_state(builder, [:established, :related])`. Match connection tracking state [:established, :related].
+
+  ## Examples
+
+      expr() |> est_rel()
+  """
+  @spec est_rel(t()) :: t()
+  def est_rel(builder \\ expr()), do: CT.ct_state(builder, [:established, :related])
+  
+  @doc """
+  Alias for `ct_state(builder, [:invalid])`. Match connection tracking state [:invalid].
+
+  ## Examples
+
+      expr() |> invalid()
+  """
+  @spec invalid(t()) :: t()
+  def invalid(builder \\ expr()), do: CT.ct_state(builder, [:invalid])
+
+  @doc """
+  Alias for `ct_state(builder, [:invalid])`. Match connection tracking state [:invalid].
+
+  ## Examples
+
+      expr() |> inv()
+  """
+  @spec inv(t()) :: t()
+  def inv(builder \\ expr()), do: CT.ct_state(builder, [:invalid])
 
   @doc """
   Alias for `rate_limit/3`. Add rate limiting.

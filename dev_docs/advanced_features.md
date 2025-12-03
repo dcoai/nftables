@@ -25,7 +25,7 @@ NFTables provides comprehensive support for advanced nftables capabilities that 
 
 Flowtables enable hardware-accelerated packet forwarding for established connections, dramatically improving throughput for routing and forwarding scenarios.
 
-#### What are Flowtables?
+a#### What are Flowtables?
 
 Flowtables offload established connection forwarding to hardware or kernel fast path, bypassing the full netfilter pipeline. This can significantly improve performance for routers, NAT gateways, and load balancers.
 
