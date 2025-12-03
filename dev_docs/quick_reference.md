@@ -1,18 +1,14 @@
 # NFTables Quick Reference
 
-## New Match API Overview
+## Match Expressions
 
-The Match API is now a **pure functional expression builder**:
+The `Expr` module provides tooling for building match expressions.
 
-- ✅ **No side effects** - Build expressions as pure data
-- ✅ **Dual-arity functions** - Both `tcp()` and `tcp(builder)` work
-- ✅ **Chainable** - Use pipe operator naturally
-- ✅ **Composable** - Build expressions, then execute separately
-- ✅ **Testable** - Test expression building without execution
+### How Expressions Works
 
-## How Match Works
+Expressions are represented by an %Expr{} struct.  This struct can be piped through a series of functions to build and manipulate the structure.  The structure at the end of the pipeline
+represents the expressions which will be used to match packets.
 
-The Match uses a **pure functional pattern** to build JSON expressions:
 
 1. **Initialize** - Create empty expression builder
 2. **Accumulate** - Each function adds JSON expression to list
@@ -25,47 +21,55 @@ import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
 # Step 1: Initialize
-builder = expr()
-# %Match{expr_list: [], family: :inet}
+match_expr = expr()
+# %Expr{fmaily: :inet, comment: nil, protocol: nil, expr_list: []}
 
 # Step 2: Accumulate expressions
-builder
+match_expr
 |> tcp()
-# %Match{expr_list: [%{match: {protocol: "tcp"}}]}
+# %Expr{
+#   family: :inet, comment: nil, protocol: :tcp,
+#   expr_list: [
+#     %{match: %{ op: "==", left: %{payload: %{protocol: "ip", field: "protocol"}}, right: "tcp" } } 
+#   ] }
 
 |> dport(22)
-# %Match{expr_list: [
-#   %{match: {protocol: "tcp"}},
-#   %{match: {left: {payload: {protocol: "tcp", field: "dport"}}, right: 22}}
-# ]}
+# %Expr{
+#   family: :inet, comment: nil, protocol: :tcp,
+#   expr_list: [
+#     %{ match: %{ op: "==", left: %{payload: %{protocol: "ip", field: "protocol"}}, right: "tcp" } },
+#     %{ match: %{ op: "==", left: %{payload: %{protocol: "tcp", field: "dport"}}, right: 22 } }
+#   ] }
 
 |> accept()
-# %Match{expr_list: [
-#   %{match: {protocol: "tcp"}},
-#   %{match: {left: {payload: {protocol: "tcp", field: "dport"}}, right: 22}},
-#   %{accept: nil}
-# ]}
+# %Expr{
+#   family: :inet, comment: nil, protocol: :tcp,
+#   expr_list: [
+#     %{ match: %{ op: "==", left: %{payload: %{protocol: "ip", field: "protocol"}}, right: "tcp" } },
+#     %{ match: %{ op: "==", left: %{payload: %{protocol: "tcp", field: "dport"}}, right: 22 } }
+#     %{ accept: nil }
+#   ] }
 
-# Step 3: Execute - Builder automatically extracts expression list
+# Step 3: Commit - Builder automatically extracts expression list
 |> then(fn rule ->
   Builder.new()
   |> Builder.add(rule: rule, table: "filter", chain: "INPUT", family: :inet)
-  |> Local.submit(pid)
+  |> Builder.submit(pid)
 end)
 ```
 
 ### Internal Flow
 
 ```
-expr()
+Expr.expr() - new expression
     ↓
-Pure expression building (no side effects)
+expression building
     ↓
-Builder.add(rule: ) - Automatically extracts expression list and adds to configuration
+Builder.add(rule: rule ) - Automatically extracts expression list and adds to configuration
     ↓
-Local.submit() - Send to kernel
+Builder.submit() - Send to NFTables.Port
     ↓
-JSON encoding
+Local.submit() - JSON encoding
     ↓
 NFTables.Port
     ↓
@@ -85,12 +89,11 @@ Kernel
 - Log violations
 - Drop excessive attempts
 
-**New API:**
 ```elixir
 import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
-expr = expr()
+expr = 
   |> tcp()
   |> dport(22)
   |> ct_state([:new])
@@ -103,18 +106,6 @@ Builder.new()
 |> Local.submit(pid)
 ```
 
-**Convenience aliases:**
-```elixir
-# Using shorter function names
-expr = expr()
-  |> tcp()
-  |> dport(22)           # alias for dest_port
-  |> state([:new])       # alias for ct_state
-  |> limit(5, :minute, burst: 10)  # alias for rate_limit
-  |> log("SSH: ")
-  |> drop()
-```
-
 ### Example 2: Port Forwarding (DNAT)
 
 **What it does:**
@@ -122,9 +113,8 @@ expr = expr()
 - Only NEW connections
 - Forward to internal server 10.0.0.10:80
 
-**New API:**
 ```elixir
-expr = expr()
+expr = 
   |> tcp()
   |> dport(8080)
   |> ct_state([:new])
@@ -143,9 +133,8 @@ Builder.new()
 - Log blocked IPs
 - Drop packet
 
-**New API:**
 ```elixir
-expr = expr()
+expr = 
   |> set("blocklist", :saddr)
   |> counter()
   |> log("BLOCKED_IP: ", level: :info)
@@ -165,9 +154,8 @@ Builder.new()
 - Enable SYN proxy
 - Accept legitimate traffic
 
-**New API:**
 ```elixir
-expr = expr()
+expr = 
   |> tcp()
   |> dport(443)
   |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
@@ -197,7 +185,7 @@ builder = tcp(builder)
 builder = dport(builder, 22)
 builder = accept(builder)
 
-# Both work! Use whichever is clearer.
+# Both work, Use whichever is clearer.
 ```
 
 ## Advanced Features Quick Reference
@@ -334,6 +322,11 @@ expr()
 
 ### OS Fingerprinting (OSF)
 
+**Requirements:**
+```bash
+nfnl_osf -f /usr/share/pf.os
+```
+
 ```elixir
 # Match Linux systems
 expr()
@@ -362,11 +355,6 @@ expr()
 
 **TTL Modes:** `:loose` (default), `:skip`, `:strict`
 **Common OS:** "Linux", "Windows", "MacOS", "FreeBSD", "OpenBSD", "unknown"
-
-**Requirements:**
-```bash
-nfnl_osf -f /usr/share/pf.os
-```
 
 ### Actions vs Verdicts
 
@@ -400,7 +388,7 @@ nfnl_osf -f /usr/share/pf.os
 
 ### Convenience Aliases
 
-Shorter function names for common operations:
+save buf Shorter function names for common operations:
 
 | Full Name | Alias | Example |
 |-----------|-------|---------|
@@ -533,11 +521,3 @@ libnftables
     ↓
 Kernel
 ```
-
-**Benefits:**
-- ✅ Pure functional - No side effects
-- ✅ Composable - Build and reuse expressions
-- ✅ Testable - Test without execution
-- ✅ Type-safe operations
-- ✅ Clear separation of concerns
-- ✅ Distributed firewall friendly
