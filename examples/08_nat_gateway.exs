@@ -62,7 +62,7 @@ defmodule NATGatewayExample do
     IO.puts("║      NFTables - NAT Gateway Configuration       ║")
     IO.puts("╚═══════════════════════════════════════════════╝\n")
 
-    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    {:ok, pid} = NFTables.Port.start_link(check_capabilities: false)
     IO.puts("✓ NFTables started (JSON-based port)\n")
 
     # Cleanup and setup
@@ -102,9 +102,9 @@ defmodule NATGatewayExample do
     IO.puts("    Interface: #{@wan_interface}")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.setup_masquerade(@wan_interface, table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("    ✓ Masquerade enabled for LAN clients")
 
@@ -140,9 +140,9 @@ defmodule NATGatewayExample do
     IO.puts("    Services: HTTP (80), HTTPS (443)")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.static_nat(@public_ip_web, @dmz_web_server, table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("    ✓ Bidirectional NAT configured")
     IO.puts("      → Inbound: #{@public_ip_web} → #{@dmz_web_server}")
@@ -154,9 +154,9 @@ defmodule NATGatewayExample do
     IO.puts("    Services: SMTP (25), SMTPS (465), IMAPS (993)")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.static_nat(@public_ip_mail, @dmz_mail_server, table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("    ✓ Bidirectional NAT configured")
 
@@ -183,7 +183,7 @@ defmodule NATGatewayExample do
     IO.puts("    #{@public_ip_gateway}:11194 → #{@dmz_vpn_server}:1194")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.port_forward(11194, @dmz_vpn_server, 1194,
         table: "nat",
         interface: @wan_interface
@@ -193,7 +193,7 @@ defmodule NATGatewayExample do
         table: "nat",
         interface: @wan_interface
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("    ✓ Port forwarding configured (TCP)")
     IO.puts("    ✓ Port forwarding configured (UDP)")
@@ -203,12 +203,12 @@ defmodule NATGatewayExample do
     IO.puts("    #{@public_ip_gateway}:2222 → #{@lan_fileserver}:22")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.port_forward(2222, @lan_fileserver, 22,
         table: "nat",
         interface: @wan_interface
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("    ✓ SSH port forwarding enabled")
 
@@ -217,12 +217,12 @@ defmodule NATGatewayExample do
     IO.puts("    #{@public_ip_gateway}:3389 → 192.168.1.50:3389")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.port_forward(3389, "192.168.1.50", 3389,
         table: "nat",
         interface: @wan_interface
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("    ✓ RDP forwarding enabled")
 
@@ -230,7 +230,7 @@ defmodule NATGatewayExample do
     IO.puts("\n  • Game Server")
     IO.puts("    #{@public_ip_gateway}:27015 → 192.168.1.200:27015")
 
-    builder = Builder.new()
+    builder = NFTables.add(table: "filter")
 
     builder =
       for protocol <- [:tcp, :udp], reduce: builder do
@@ -242,7 +242,7 @@ defmodule NATGatewayExample do
           )
       end
 
-    :ok = Builder.submit(builder, pid: pid)
+    :ok = NFTables.submit(builder, pid: pid)
 
     IO.puts("    ✓ Game server forwarding (TCP+UDP)")
 

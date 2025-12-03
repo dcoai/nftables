@@ -11,7 +11,7 @@ defmodule NFTables.PolicyIntegrationTest do
   # Most policy functionality is tested via unit tests in policy_unit_test.exs
 
   setup do
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
 
     # Use isolated test table
     test_table = "nftables_test_policy_integration"
@@ -36,7 +36,7 @@ defmodule NFTables.PolicyIntegrationTest do
         |> Builder.delete(table: test_table, family: :inet)
         |> Builder.submit(pid: pid)
 
-        NFTables.stop(pid)
+        NFTables.Port.stop(pid)
       end
     end)
 

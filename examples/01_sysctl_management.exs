@@ -34,7 +34,7 @@ defmodule SysctlManagement do
     IO.puts("=== NFTables Sysctl Management Example ===\n")
 
     # Start NFTables
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
     IO.puts("✓ NFTables started\n")
 
     # 1. Read current network parameters
