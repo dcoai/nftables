@@ -32,6 +32,192 @@ defmodule NFTables.BuilderTest do
     end
   end
 
+  describe "set/2" do
+    test "sets single field: family" do
+      builder = Builder.new(family: :inet)
+      |> Builder.set(family: :ip6)
+
+      assert builder.family == :ip6
+    end
+
+    test "sets single field: requestor" do
+      builder = Builder.new()
+      |> Builder.set(requestor: MyCustomRequestor)
+
+      assert builder.requestor == MyCustomRequestor
+    end
+
+    test "sets single field: table" do
+      builder = Builder.new()
+      |> Builder.set(table: "filter")
+
+      assert builder.table == "filter"
+    end
+
+    test "sets single field: chain" do
+      builder = Builder.new()
+      |> Builder.set(chain: "INPUT")
+
+      assert builder.chain == "INPUT"
+    end
+
+    test "sets single field: collection" do
+      builder = Builder.new()
+      |> Builder.set(collection: "blocklist")
+
+      assert builder.collection == "blocklist"
+    end
+
+    test "sets single field: type" do
+      builder = Builder.new()
+      |> Builder.set(type: :ipv4_addr)
+
+      assert builder.type == :ipv4_addr
+    end
+
+    test "sets type as tuple (for maps)" do
+      builder = Builder.new()
+      |> Builder.set(type: {:ipv4_addr, :verdict})
+
+      assert builder.type == {:ipv4_addr, :verdict}
+    end
+
+    test "sets multiple fields at once" do
+      builder = Builder.new()
+      |> Builder.set(family: :ip6, table: "filter", chain: "INPUT")
+
+      assert builder.family == :ip6
+      assert builder.table == "filter"
+      assert builder.chain == "INPUT"
+    end
+
+    test "sets all context fields at once" do
+      builder = Builder.new()
+      |> Builder.set(
+        family: :inet,
+        requestor: MyCustomRequestor,
+        table: "nat",
+        chain: "PREROUTING",
+        collection: "my_set",
+        type: :ipv4_addr
+      )
+
+      assert builder.family == :inet
+      assert builder.requestor == MyCustomRequestor
+      assert builder.table == "nat"
+      assert builder.chain == "PREROUTING"
+      assert builder.collection == "my_set"
+      assert builder.type == :ipv4_addr
+    end
+
+    test "clears field by setting to nil: table" do
+      builder = Builder.new()
+      |> Builder.set(table: "filter")
+      |> Builder.set(table: nil)
+
+      assert builder.table == nil
+    end
+
+    test "clears field by setting to nil: chain" do
+      builder = Builder.new()
+      |> Builder.set(chain: "INPUT")
+      |> Builder.set(chain: nil)
+
+      assert builder.chain == nil
+    end
+
+    test "clears multiple fields at once" do
+      builder = Builder.new()
+      |> Builder.set(table: "filter", chain: "INPUT", collection: "blocklist")
+      |> Builder.set(chain: nil, collection: nil)
+
+      assert builder.table == "filter"
+      assert builder.chain == nil
+      assert builder.collection == nil
+    end
+
+    test "chains with other builder operations" do
+      builder = Builder.new()
+      |> Builder.set(table: "filter", chain: "INPUT")
+      |> Builder.add(rule: [%{accept: nil}])
+
+      assert builder.table == "filter"
+      assert builder.chain == "INPUT"
+      assert length(builder.commands) == 1
+    end
+
+    test "switches context mid-pipeline" do
+      builder = Builder.new()
+      |> Builder.set(family: :inet, table: "filter")
+      |> Builder.add(chain: "INPUT")
+      |> Builder.set(chain: "FORWARD")
+      |> Builder.add(rule: [%{accept: nil}])
+
+      assert builder.chain == "FORWARD"
+      assert length(builder.commands) == 2
+      [chain_cmd, rule_cmd] = builder.commands
+      assert chain_cmd.add.chain.name == "INPUT"
+      assert rule_cmd.add.rule.chain == "FORWARD"
+    end
+
+    test "raises on invalid family" do
+      assert_raise ArgumentError, ~r/Invalid family.*Must be one of/, fn ->
+        Builder.new() |> Builder.set(family: :invalid)
+      end
+    end
+
+    test "raises on invalid field name" do
+      assert_raise ArgumentError, ~r/Invalid field.*Valid fields/, fn ->
+        Builder.new() |> Builder.set(invalid_field: "value")
+      end
+    end
+
+    test "raises on trying to set spec" do
+      assert_raise ArgumentError, ~r/:spec is an internal field/, fn ->
+        Builder.new() |> Builder.set(spec: %{})
+      end
+    end
+
+    test "raises on trying to set commands" do
+      assert_raise ArgumentError, ~r/:commands cannot be set directly/, fn ->
+        Builder.new() |> Builder.set(commands: [])
+      end
+    end
+
+    test "raises on wrong type for table (not string)" do
+      assert_raise ArgumentError, ~r/Invalid field/, fn ->
+        Builder.new() |> Builder.set(table: :atom_not_string)
+      end
+    end
+
+    test "raises on wrong type for chain (not string)" do
+      assert_raise ArgumentError, ~r/Invalid field/, fn ->
+        Builder.new() |> Builder.set(chain: 123)
+      end
+    end
+
+    test "raises on wrong type for requestor (not atom)" do
+      assert_raise ArgumentError, ~r/Invalid field/, fn ->
+        Builder.new() |> Builder.set(requestor: "NotAnAtom")
+      end
+    end
+
+    test "accepts nil for requestor" do
+      builder = Builder.new(requestor: MyCustomRequestor)
+      |> Builder.set(requestor: nil)
+
+      assert builder.requestor == nil
+    end
+
+    test "accepts nil for type" do
+      builder = Builder.new()
+      |> Builder.set(type: :ipv4_addr)
+      |> Builder.set(type: nil)
+
+      assert builder.type == nil
+    end
+  end
+
   describe "context tracking" do
     test "sets table context when adding table" do
       builder = Builder.new()
