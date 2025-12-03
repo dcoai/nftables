@@ -21,7 +21,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> mark(100)
   """
   @spec mark(Expr.t(), non_neg_integer()) :: Expr.t()
-  def mark(builder, mark) when is_integer(mark) and mark >= 0 do
+  def mark(builder \\ Expr.expr(), mark) when is_integer(mark) and mark >= 0 do
     expr = Expr.Structs.meta_match("mark", mark)
     Expr.add_expr(builder, expr)
   end
@@ -38,7 +38,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> dscp(10)
   """
   @spec dscp(Expr.t(), non_neg_integer()) :: Expr.t()
-  def dscp(builder, dscp) when is_integer(dscp) and dscp >= 0 and dscp <= 63 do
+  def dscp(builder \\ Expr.expr(), dscp) when is_integer(dscp) and dscp >= 0 and dscp <= 63 do
     expr = Expr.Structs.payload_match("ip", "dscp", dscp)
     Expr.add_expr(builder, expr)
   end
@@ -55,6 +55,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> fragmented(false)
   """
   @spec fragmented(Expr.t(), boolean()) :: Expr.t()
+  def fragmented(builder \\ Expr.expr(), is_fragmented)
   def fragmented(builder, true) do
     # ip frag-off & 0x1fff != 0
     expr = %{
@@ -112,7 +113,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> protocol(:icmp) |> drop()
   """
   @spec icmp_type(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
-  def icmp_type(builder, type) do
+  def icmp_type(builder \\ Expr.expr(), type) do
     type_val = case type do
       :echo_reply -> "echo-reply"
       :dest_unreachable -> "destination-unreachable"
@@ -150,7 +151,7 @@ defmodule NFTables.Expr.Advanced do
       |> accept()
   """
   @spec icmp_code(Expr.t(), non_neg_integer()) :: Expr.t()
-  def icmp_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
+  def icmp_code(builder \\ Expr.expr(), code) when is_integer(code) and code >= 0 and code <= 255 do
     expr = Expr.Structs.payload_match("icmp", "code", code)
     Expr.add_expr(builder, expr)
   end
@@ -178,7 +179,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> icmpv6_type(:neighbour_advert) |> accept()
   """
   @spec icmpv6_type(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
-  def icmpv6_type(builder, type) do
+  def icmpv6_type(builder \\ Expr.expr(), type) do
     type_val = case type do
       :dest_unreachable -> "destination-unreachable"
       :packet_too_big -> "packet-too-big"
@@ -211,7 +212,7 @@ defmodule NFTables.Expr.Advanced do
       |> drop()
   """
   @spec icmpv6_code(Expr.t(), non_neg_integer()) :: Expr.t()
-  def icmpv6_code(builder, code) when is_integer(code) and code >= 0 and code <= 255 do
+  def icmpv6_code(builder \\ Expr.expr(), code) when is_integer(code) and code >= 0 and code <= 255 do
     expr = Expr.Structs.payload_match("icmpv6", "code", code)
     Expr.add_expr(builder, expr)
   end
@@ -240,7 +241,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> pkttype(:unicast) |> accept()
   """
   @spec pkttype(Expr.t(), atom()) :: Expr.t()
-  def pkttype(builder, pkttype) when pkttype in [:unicast, :broadcast, :multicast, :other] do
+  def pkttype(builder \\ Expr.expr(), pkttype) when pkttype in [:unicast, :broadcast, :multicast, :other] do
     expr = Expr.Structs.meta_match("pkttype", to_string(pkttype))
     Expr.add_expr(builder, expr)
   end
@@ -257,7 +258,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> priority(:eq, 7) |> log("PRIO-7: ")
   """
   @spec priority(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def priority(builder, op, priority) when is_integer(priority) and priority >= 0 do
+  def priority(builder \\ Expr.expr(), op, priority) when is_integer(priority) and priority >= 0 do
     op_str = case op do
       :eq -> "=="
       :ne -> "!="
@@ -286,7 +287,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> cgroup(2000) |> drop()
   """
   @spec cgroup(Expr.t(), non_neg_integer()) :: Expr.t()
-  def cgroup(builder, cgroup_id) when is_integer(cgroup_id) and cgroup_id >= 0 do
+  def cgroup(builder \\ Expr.expr(), cgroup_id) when is_integer(cgroup_id) and cgroup_id >= 0 do
     expr = Expr.Structs.meta_match("cgroup", cgroup_id)
     Expr.add_expr(builder, expr)
   end
@@ -313,7 +314,7 @@ defmodule NFTables.Expr.Advanced do
       |> accept()
   """
   @spec skuid(Expr.t(), non_neg_integer()) :: Expr.t()
-  def skuid(builder, uid) when is_integer(uid) and uid >= 0 do
+  def skuid(builder \\ Expr.expr(), uid) when is_integer(uid) and uid >= 0 do
     expr = Expr.Structs.meta_match("skuid", uid)
     Expr.add_expr(builder, expr)
   end
@@ -340,7 +341,7 @@ defmodule NFTables.Expr.Advanced do
       |> accept()
   """
   @spec skgid(Expr.t(), non_neg_integer()) :: Expr.t()
-  def skgid(builder, gid) when is_integer(gid) and gid >= 0 do
+  def skgid(builder \\ Expr.expr(), gid) when is_integer(gid) and gid >= 0 do
     expr = Expr.Structs.meta_match("skgid", gid)
     Expr.add_expr(builder, expr)
   end
@@ -359,6 +360,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> ah_spi(:any) |> log("IPSEC-AH: ")
   """
   @spec ah_spi(Expr.t(), non_neg_integer() | :any) :: Expr.t()
+  def ah_spi(builder \\ Expr.expr(), spi)
   def ah_spi(builder, :any) do
     # Match any AH SPI (just check if AH header exists)
     expr = %{"match" => %{
@@ -385,6 +387,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> esp_spi(:any) |> log("IPSEC-ESP: ")
   """
   @spec esp_spi(Expr.t(), non_neg_integer() | :any) :: Expr.t()
+  def esp_spi(builder \\ Expr.expr(), spi)
   def esp_spi(builder, :any) do
     # Match any ESP SPI (just check if ESP header exists)
     expr = %{"match" => %{
@@ -419,7 +422,7 @@ defmodule NFTables.Expr.Advanced do
       builder |> arp_operation(:reply) |> accept()
   """
   @spec arp_operation(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
-  def arp_operation(builder, operation) do
+  def arp_operation(builder \\ Expr.expr(), operation) do
     op_val = case operation do
       :request -> 1
       :reply -> 2
@@ -475,7 +478,7 @@ defmodule NFTables.Expr.Advanced do
   to determine IPv4 ("ip") or IPv6 ("ip6") protocol.
   """
   @spec set(Expr.t(), String.t(), atom()) :: Expr.t()
-  def set(builder, set_name, match_type) when is_binary(set_name) do
+  def set(builder \\ Expr.expr(), set_name, match_type) when is_binary(set_name) do
     # Ensure set name starts with @
     set_ref = if String.starts_with?(set_name, "@"), do: set_name, else: "@#{set_name}"
 
@@ -585,7 +588,7 @@ defmodule NFTables.Expr.Advanced do
   - Network byte order (big endian) is assumed
   """
   @spec payload_raw(Expr.t(), atom(), non_neg_integer(), pos_integer(), term()) :: Expr.t()
-  def payload_raw(builder, base, offset, length, value) do
+  def payload_raw(builder \\ Expr.expr(), base, offset, length, value) do
     expr = Expr.Structs.payload_raw_match(base, offset, length, value)
     Expr.add_expr(builder, expr)
   end
@@ -645,7 +648,7 @@ defmodule NFTables.Expr.Advanced do
           integer(),
           integer()
         ) :: Expr.t()
-  def payload_raw_masked(builder, base, offset, length, mask, value) do
+  def payload_raw_masked(builder \\ Expr.expr(), base, offset, length, mask, value) do
     payload_expr = Expr.Structs.payload_raw(base, offset, length)
     expr = Expr.Structs.bitwise_and_match(payload_expr, mask, value)
     Expr.add_expr(builder, expr)
@@ -721,7 +724,7 @@ defmodule NFTables.Expr.Advanced do
         |> accept()
   """
   @spec socket_transparent(Expr.t()) :: Expr.t()
-  def socket_transparent(builder) do
+  def socket_transparent(builder \\ Expr.expr()) do
     expr = Expr.Structs.socket_match_value("transparent", 1)
     Expr.add_expr(builder, expr)
   end
@@ -812,7 +815,7 @@ defmodule NFTables.Expr.Advanced do
   - Can be evaded by OS fingerprint spoofing tools
   """
   @spec osf_name(Expr.t(), String.t(), keyword()) :: Expr.t()
-  def osf_name(builder, os_name, opts \\ []) when is_binary(os_name) do
+  def osf_name(builder \\ Expr.expr(), os_name, opts \\ []) when is_binary(os_name) do
     ttl = opts |> Keyword.get(:ttl, :loose) |> ttl_to_string()
     expr = Expr.Structs.osf_match_value("name", os_name, ttl)
     Expr.add_expr(builder, expr)
@@ -863,7 +866,7 @@ defmodule NFTables.Expr.Advanced do
      ```
   """
   @spec osf_version(Expr.t(), String.t(), keyword()) :: Expr.t()
-  def osf_version(builder, version, opts \\ []) when is_binary(version) do
+  def osf_version(builder \\ Expr.expr(), version, opts \\ []) when is_binary(version) do
     ttl = opts |> Keyword.get(:ttl, :loose) |> ttl_to_string()
     expr = Expr.Structs.osf_match_value("version", version, ttl)
     Expr.add_expr(builder, expr)

@@ -115,7 +115,7 @@ defmodule NFTables.Expr.Meter do
   """
   @spec meter_update(Expr.t(), term(), String.t(), non_neg_integer(), atom(), keyword()) ::
           Expr.t()
-  def meter_update(builder, key_expr, set_name, rate, per, opts \\ []) do
+  def meter_update(builder \\ Expr.expr(), key_expr, set_name, rate, per, opts \\ []) do
     limit_expr = build_limit_expr(rate, per, opts)
     set_expr = Expr.Structs.set_update(key_expr, set_name, [limit_expr])
     Expr.add_expr(builder, set_expr)
@@ -135,7 +135,7 @@ defmodule NFTables.Expr.Meter do
   """
   @spec meter_add(Expr.t(), term(), String.t(), non_neg_integer(), atom(), keyword()) ::
           Expr.t()
-  def meter_add(builder, key_expr, set_name, rate, per, opts \\ []) do
+  def meter_add(builder \\ Expr.expr(), key_expr, set_name, rate, per, opts \\ []) do
     limit_expr = build_limit_expr(rate, per, opts)
     set_expr = Expr.Structs.set_add_operation(key_expr, set_name, [limit_expr])
     Expr.add_expr(builder, set_expr)

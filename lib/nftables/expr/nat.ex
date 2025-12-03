@@ -19,7 +19,7 @@ defmodule NFTables.Expr.NAT do
       builder |> snat_to("203.0.113.1", port: 1024)
   """
   @spec snat_to(Expr.t(), String.t(), keyword()) :: Expr.t()
-  def snat_to(builder, ip, opts \\ []) when is_binary(ip) do
+  def snat_to(builder \\ Expr.expr(), ip, opts \\ []) when is_binary(ip) do
     port = Keyword.get(opts, :port)
     expr = Expr.Structs.snat(ip, port: port)
     Expr.add_expr(builder, expr)
@@ -37,7 +37,7 @@ defmodule NFTables.Expr.NAT do
       builder |> dnat_to("192.168.1.100", port: 8080)
   """
   @spec dnat_to(Expr.t(), String.t(), keyword()) :: Expr.t()
-  def dnat_to(builder, ip, opts \\ []) when is_binary(ip) do
+  def dnat_to(builder \\ Expr.expr(), ip, opts \\ []) when is_binary(ip) do
     port = Keyword.get(opts, :port)
     expr = Expr.Structs.dnat(ip, port: port)
     Expr.add_expr(builder, expr)
@@ -57,7 +57,7 @@ defmodule NFTables.Expr.NAT do
       builder |> masquerade(port_range: "1024-65535")
   """
   @spec masquerade(Expr.t(), keyword()) :: Expr.t()
-  def masquerade(builder, opts \\ []) do
+  def masquerade(builder \\ Expr.expr(), opts \\ []) do
     port_range = Keyword.get(opts, :port_range)
 
     expr = if port_range do
@@ -80,7 +80,7 @@ defmodule NFTables.Expr.NAT do
       builder |> tcp() |> dport(80) |> redirect_to(3128)
   """
   @spec redirect_to(Expr.t(), non_neg_integer()) :: Expr.t()
-  def redirect_to(builder, port) when is_integer(port) and port >= 0 and port <= 65535 do
+  def redirect_to(builder \\ Expr.expr(), port) when is_integer(port) and port >= 0 and port <= 65535 do
     expr = %{"redirect" => %{"port" => port}}
     Expr.add_expr(builder, expr)
   end

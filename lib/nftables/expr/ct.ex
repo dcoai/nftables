@@ -24,7 +24,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_state([:established, :related])
   """
   @spec ct_state(Expr.t(), list(atom())) :: Expr.t()
-  def ct_state(builder, states) when is_list(states) do
+  def ct_state(builder \\ Expr.expr(), states) when is_list(states) do
     state_list = Enum.map(states, &to_string/1)
     expr = Expr.Structs.ct_match("state", state_list)
     Expr.add_expr(builder, expr)
@@ -51,7 +51,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_status([:snat])
   """
   @spec ct_status(Expr.t(), list(atom())) :: Expr.t()
-  def ct_status(builder, statuses) when is_list(statuses) do
+  def ct_status(builder \\ Expr.expr(), statuses) when is_list(statuses) do
     status_list = Enum.map(statuses, &to_string/1)
     expr = Expr.Structs.ct_match("status", status_list)
     Expr.add_expr(builder, expr)
@@ -69,7 +69,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_direction(:reply)
   """
   @spec ct_direction(Expr.t(), atom()) :: Expr.t()
-  def ct_direction(builder, direction) when direction in [:original, :reply] do
+  def ct_direction(builder \\ Expr.expr(), direction) when direction in [:original, :reply] do
     expr = Expr.Structs.ct_match("direction", to_string(direction))
     Expr.add_expr(builder, expr)
   end
@@ -84,7 +84,7 @@ defmodule NFTables.Expr.CT do
       builder |> connmark(42)
   """
   @spec connmark(Expr.t(), non_neg_integer()) :: Expr.t()
-  def connmark(builder, mark) when is_integer(mark) and mark >= 0 do
+  def connmark(builder \\ Expr.expr(), mark) when is_integer(mark) and mark >= 0 do
     expr = Expr.Structs.ct_match("mark", mark)
     Expr.add_expr(builder, expr)
   end
@@ -103,7 +103,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_label(5) |> log("LABELED: ")
   """
   @spec ct_label(Expr.t(), String.t() | non_neg_integer()) :: Expr.t()
-  def ct_label(builder, label) when is_binary(label) or is_integer(label) do
+  def ct_label(builder \\ Expr.expr(), label) when is_binary(label) or is_integer(label) do
     expr = Expr.Structs.ct_match("label", label)
     Expr.add_expr(builder, expr)
   end
@@ -122,7 +122,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_zone(100) |> jump("tenant_100")
   """
   @spec ct_zone(Expr.t(), non_neg_integer()) :: Expr.t()
-  def ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
+  def ct_zone(builder \\ Expr.expr(), zone) when is_integer(zone) and zone >= 0 do
     expr = Expr.Structs.ct_match("zone", zone)
     Expr.add_expr(builder, expr)
   end
@@ -141,7 +141,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_helper("sip") |> log("SIP: ")
   """
   @spec ct_helper(Expr.t(), String.t()) :: Expr.t()
-  def ct_helper(builder, helper) when is_binary(helper) do
+  def ct_helper(builder \\ Expr.expr(), helper) when is_binary(helper) do
     expr = Expr.Structs.ct_match("helper", helper)
     Expr.add_expr(builder, expr)
   end
@@ -158,7 +158,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_bytes(:ge, 100_000_000) |> log("BIG-DL: ")
   """
   @spec ct_bytes(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def ct_bytes(builder, op, bytes) when is_integer(bytes) and bytes >= 0 do
+  def ct_bytes(builder \\ Expr.expr(), op, bytes) when is_integer(bytes) and bytes >= 0 do
     op_str = atom_to_op(op)
     expr = Expr.Structs.ct_match("bytes", bytes, op_str)
     Expr.add_expr(builder, expr)
@@ -176,7 +176,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_packets(:ge, 50000) |> drop()
   """
   @spec ct_packets(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def ct_packets(builder, op, packets) when is_integer(packets) and packets >= 0 do
+  def ct_packets(builder \\ Expr.expr(), op, packets) when is_integer(packets) and packets >= 0 do
     op_str = atom_to_op(op)
     expr = Expr.Structs.ct_match("packets", packets, op_str)
     Expr.add_expr(builder, expr)
@@ -194,7 +194,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_original_saddr("10.0.0.0/8") |> log("INTERNAL: ")
   """
   @spec ct_original_saddr(Expr.t(), String.t()) :: Expr.t()
-  def ct_original_saddr(builder, addr) when is_binary(addr) do
+  def ct_original_saddr(builder \\ Expr.expr(), addr) when is_binary(addr) do
     # CT original address requires special structure
     expr = %{
       "match" => %{
@@ -215,7 +215,7 @@ defmodule NFTables.Expr.CT do
       builder |> ct_original_daddr("203.0.113.100") |> accept()
   """
   @spec ct_original_daddr(Expr.t(), String.t()) :: Expr.t()
-  def ct_original_daddr(builder, addr) when is_binary(addr) do
+  def ct_original_daddr(builder \\ Expr.expr(), addr) when is_binary(addr) do
     # CT original address requires special structure
     expr = %{
       "match" => %{
@@ -249,7 +249,7 @@ defmodule NFTables.Expr.CT do
       |> drop()
   """
   @spec limit_connections(Expr.t(), non_neg_integer()) :: Expr.t()
-  def limit_connections(builder, count) when is_integer(count) and count > 0 do
+  def limit_connections(builder \\ Expr.expr(), count) when is_integer(count) and count > 0 do
     expr = Expr.Structs.ct_match("count", count)
     Expr.add_expr(builder, expr)
   end

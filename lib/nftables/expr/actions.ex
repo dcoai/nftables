@@ -12,7 +12,7 @@ defmodule NFTables.Expr.Actions do
 
   @doc "Add counter expression"
   @spec counter(Expr.t()) :: Expr.t()
-  def counter(builder) do
+  def counter(builder \\ Expr.expr()) do
     expr = Expr.Structs.counter()
     Expr.add_expr(builder, expr)
   end
@@ -42,7 +42,7 @@ defmodule NFTables.Expr.Actions do
       builder |> log("CRITICAL: ", level: :crit)
   """
   @spec log(Expr.t(), String.t(), keyword()) :: Expr.t()
-  def log(builder, prefix, opts \\ []) do
+  def log(builder \\ Expr.expr(), prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
 
     json_opts = if level do
@@ -76,7 +76,7 @@ defmodule NFTables.Expr.Actions do
       builder |> rate_limit(100, :second)
   """
   @spec rate_limit(Expr.t(), non_neg_integer(), atom(), keyword()) :: Expr.t()
-  def rate_limit(builder, rate, unit, opts \\ []) do
+  def rate_limit(builder \\ Expr.expr(), rate, unit, opts \\ []) do
     unit_str = case unit do
       :second -> "second"
       :minute -> "minute"
@@ -108,7 +108,7 @@ defmodule NFTables.Expr.Actions do
       builder |> set_mark(100)
   """
   @spec set_mark(Expr.t(), non_neg_integer()) :: Expr.t()
-  def set_mark(builder, mark) when is_integer(mark) and mark >= 0 do
+  def set_mark(builder \\ Expr.expr(), mark) when is_integer(mark) and mark >= 0 do
     expr = Expr.Structs.meta_set("mark", mark)
     Expr.add_expr(builder, expr)
   end
@@ -123,7 +123,7 @@ defmodule NFTables.Expr.Actions do
       builder |> set_connmark(42)
   """
   @spec set_connmark(Expr.t(), non_neg_integer()) :: Expr.t()
-  def set_connmark(builder, mark) when is_integer(mark) and mark >= 0 do
+  def set_connmark(builder \\ Expr.expr(), mark) when is_integer(mark) and mark >= 0 do
     expr = Expr.Structs.ct_set("mark", mark)
     Expr.add_expr(builder, expr)
   end
@@ -150,7 +150,7 @@ defmodule NFTables.Expr.Actions do
   3. All packets in connection use same route/QoS tier
   """
   @spec restore_mark(Expr.t()) :: Expr.t()
-  def restore_mark(builder) do
+  def restore_mark(builder \\ Expr.expr()) do
     # meta mark set ct mark
     expr = %{
       "mangle" => %{
@@ -185,7 +185,7 @@ defmodule NFTables.Expr.Actions do
   3. Later packets restore connmark via restore_mark()
   """
   @spec save_mark(Expr.t()) :: Expr.t()
-  def save_mark(builder) do
+  def save_mark(builder \\ Expr.expr()) do
     # ct mark set meta mark
     expr = %{
       "mangle" => %{
@@ -226,7 +226,7 @@ defmodule NFTables.Expr.Actions do
   - Security event correlation
   """
   @spec set_ct_label(Expr.t(), String.t() | non_neg_integer()) :: Expr.t()
-  def set_ct_label(builder, label) when is_binary(label) or is_integer(label) do
+  def set_ct_label(builder \\ Expr.expr(), label) when is_binary(label) or is_integer(label) do
     expr = Expr.Structs.ct_set("label", label)
     Expr.add_expr(builder, expr)
   end
@@ -262,7 +262,7 @@ defmodule NFTables.Expr.Actions do
   - TFTP file transfers
   """
   @spec set_ct_helper(Expr.t(), String.t()) :: Expr.t()
-  def set_ct_helper(builder, helper) when is_binary(helper) do
+  def set_ct_helper(builder \\ Expr.expr(), helper) when is_binary(helper) do
     expr = Expr.Structs.ct_set("helper", helper)
     Expr.add_expr(builder, expr)
   end
@@ -295,7 +295,7 @@ defmodule NFTables.Expr.Actions do
   - Container network isolation
   """
   @spec set_ct_zone(Expr.t(), non_neg_integer()) :: Expr.t()
-  def set_ct_zone(builder, zone) when is_integer(zone) and zone >= 0 do
+  def set_ct_zone(builder \\ Expr.expr(), zone) when is_integer(zone) and zone >= 0 do
     expr = Expr.Structs.ct_set("zone", zone)
     Expr.add_expr(builder, expr)
   end
@@ -340,7 +340,7 @@ defmodule NFTables.Expr.Actions do
       |> accept()
   """
   @spec set_dscp(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
-  def set_dscp(builder, dscp) do
+  def set_dscp(builder \\ Expr.expr(), dscp) do
     dscp_val = case dscp do
       :ef -> 46
       :af41 -> 34
@@ -381,7 +381,7 @@ defmodule NFTables.Expr.Actions do
   - Router hop limit enforcement
   """
   @spec set_ttl(Expr.t(), non_neg_integer()) :: Expr.t()
-  def set_ttl(builder, ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
+  def set_ttl(builder \\ Expr.expr(), ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
@@ -405,7 +405,7 @@ defmodule NFTables.Expr.Actions do
       builder |> set_hoplimit(255) |> accept()
   """
   @spec set_hoplimit(Expr.t(), non_neg_integer()) :: Expr.t()
-  def set_hoplimit(builder, hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
+  def set_hoplimit(builder \\ Expr.expr(), hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
@@ -424,7 +424,7 @@ defmodule NFTables.Expr.Actions do
       builder |> increment_ttl() |> accept()
   """
   @spec increment_ttl(Expr.t()) :: Expr.t()
-  def increment_ttl(builder) do
+  def increment_ttl(builder \\ Expr.expr()) do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
@@ -448,7 +448,7 @@ defmodule NFTables.Expr.Actions do
       builder |> decrement_ttl() |> accept()
   """
   @spec decrement_ttl(Expr.t()) :: Expr.t()
-  def decrement_ttl(builder) do
+  def decrement_ttl(builder \\ Expr.expr()) do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip", "field" => "ttl"}},
@@ -472,7 +472,7 @@ defmodule NFTables.Expr.Actions do
       builder |> increment_hoplimit() |> accept()
   """
   @spec increment_hoplimit(Expr.t()) :: Expr.t()
-  def increment_hoplimit(builder) do
+  def increment_hoplimit(builder \\ Expr.expr()) do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
@@ -496,7 +496,7 @@ defmodule NFTables.Expr.Actions do
       builder |> decrement_hoplimit() |> accept()
   """
   @spec decrement_hoplimit(Expr.t()) :: Expr.t()
-  def decrement_hoplimit(builder) do
+  def decrement_hoplimit(builder \\ Expr.expr()) do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},

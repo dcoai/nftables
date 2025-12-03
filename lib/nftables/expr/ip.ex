@@ -11,17 +11,21 @@ defmodule NFTables.Expr.IP do
   Match source IP address.
 
   Accepts either a string IP ("192.168.1.100") or binary form (<<192, 168, 1, 100>>).
+  Supports dual-arity: can start a new expression or continue an existing one.
 
   ## Examples
 
-      builder
-      |> IP.source_ip("192.168.1.100")
+      # Start new expression
+      source_ip("192.168.1.100") |> accept()
 
-      builder
-      |> IP.source_ip("2001:db8::1")
+      # Continue existing expression
+      expr() |> source_ip("192.168.1.100")
+
+      # IPv6
+      expr() |> source_ip("2001:db8::1")
   """
   @spec source_ip(Expr.t(), String.t() | binary()) :: Expr.t()
-  def source_ip(builder, ip) when is_binary(ip) do
+  def source_ip(builder \\ Expr.expr(), ip) when is_binary(ip) do
     ip_str = format_ip(ip)
 
     # Determine IP version based on family or IP format
@@ -47,17 +51,21 @@ defmodule NFTables.Expr.IP do
   Match destination IP address.
 
   Accepts either a string IP ("192.168.1.100") or binary form (<<192, 168, 1, 100>>).
+  Supports dual-arity: can start a new expression or continue an existing one.
 
   ## Examples
 
-      builder
-      |> IP.dest_ip("192.168.1.100")
+      # Start new expression
+      dest_ip("192.168.1.100") |> accept()
 
-      builder
-      |> IP.dest_ip("2001:db8::1")
+      # Continue existing expression
+      expr() |> dest_ip("192.168.1.100")
+
+      # IPv6
+      expr() |> dest_ip("2001:db8::1")
   """
   @spec dest_ip(Expr.t(), String.t() | binary()) :: Expr.t()
-  def dest_ip(builder, ip) when is_binary(ip) do
+  def dest_ip(builder \\ Expr.expr(), ip) when is_binary(ip) do
     ip_str = format_ip(ip)
 
     # Determine IP version based on family or IP format
