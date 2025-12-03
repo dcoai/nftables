@@ -1,7 +1,7 @@
 defmodule NFTables.MixProject do
   use Mix.Project
 
-  @version "0.6.1"
+  @version "0.6.2"
   @source_url "https://github.com/yourusername/nftables"
 
   def project do
@@ -37,7 +37,7 @@ defmodule NFTables.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nftables_port, "~> 0.4"},
+      {:nftables_port, "~> 0.4.2"},
       {:jason, "~> 1.4"},
       {:usage_rules, "~> 0.1.25", only: :dev},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false}
@@ -48,8 +48,7 @@ defmodule NFTables.MixProject do
     """
     Elixir library for working with Linux nftables rules. Provides high-level APIs
     for building tables, chains, rules, maps and sets. Works with NFTables.Port for
-    communicating with the kernel firewall, or can generate JSON/rule definitions
-    independently for inspection, testing, or remote execution.
+    communicating with the kernel firewall.
     """
   end
 
@@ -60,9 +59,8 @@ defmodule NFTables.MixProject do
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Security" => "#{@source_url}/blob/main/SECURITY.md"
       },
-      maintainers: ["Your Name"],
+      maintainers: ["Doug ClymerOlson"],
       source_url: @source_url
     ]
   end
