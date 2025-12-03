@@ -1,7 +1,7 @@
 defmodule NFTables.MixProject do
   use Mix.Project
 
-  @version "0.6.5"
+  @version "0.6.6"
   @source_url "https://github.com/dcoai/nftables"
 
   def project do
@@ -74,9 +74,7 @@ defmodule NFTables.MixProject do
         "README.md",
         "LICENSE",
         "dev_docs/architecture.md",
-        "dev_docs/advanced_features.md",
         "dev_docs/quick_reference.md",
-        "dev_docs/reference.md"
       ],
       groups_for_modules: [
         "Core API": [
