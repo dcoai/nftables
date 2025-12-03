@@ -35,6 +35,24 @@ defmodule NFTables.Builder do
       {:ok, pid} = NFTables.start_link()
       Builder.submit(builder, pid: pid)
 
+  ## Setting Builder Context
+
+  Use `set/2` to update multiple builder fields at once:
+
+      # Set context fields directly
+      builder = Builder.new()
+      |> Builder.set(family: :inet, table: "filter", chain: "INPUT")
+
+      # Switch context mid-pipeline
+      builder
+      |> Builder.set(table: "filter", chain: "INPUT")
+      |> Builder.add(rule: allow_ssh)
+      |> Builder.set(chain: "FORWARD")  # Switch to different chain
+      |> Builder.add(rule: allow_forwarding)
+
+      # Clear context
+      builder |> Builder.set(chain: nil, collection: nil)
+
   ## Unified API Pattern
 
   All object types use the same functions: `add/2`, `delete/2`, `insert/2`, `replace/2`, `flush/2`, `rename/2`.
@@ -184,6 +202,102 @@ defmodule NFTables.Builder do
   @spec set_requestor(t(), module() | nil) :: t()
   def set_requestor(%__MODULE__{} = builder, requestor) when is_atom(requestor) do
     %{builder | requestor: requestor}
+  end
+
+  @doc """
+  Set multiple builder fields at once using a keyword list.
+
+  This function provides a convenient way to update multiple builder struct fields
+  in a single call. It validates each field and value before updating.
+
+  ## Supported Fields
+
+  - `:family` - Address family (:inet, :ip, :ip6, :arp, :bridge, :netdev)
+  - `:requestor` - Requestor module (atom or nil)
+  - `:table` - Table name (string or nil)
+  - `:chain` - Chain name (string or nil)
+  - `:collection` - Set/map name (string or nil)
+  - `:type` - Type for sets/maps (atom, tuple, or nil)
+
+  ## Examples
+
+      # Set single field
+      builder |> Builder.set(family: :ip6)
+
+      # Set multiple fields at once
+      builder |> Builder.set(family: :inet, table: "filter", chain: "INPUT")
+
+      # Chain with other operations
+      Builder.new()
+      |> Builder.set(table: "nat", chain: "PREROUTING")
+      |> Builder.add(rule: expr)
+      |> Builder.submit(pid: pid)
+
+      # Clear context
+      builder |> Builder.set(chain: nil, collection: nil)
+
+      # Switch context mid-pipeline
+      builder
+      |> Builder.set(table: "filter", chain: "INPUT")
+      |> Builder.add(rule: allow_ssh)
+      |> Builder.set(chain: "FORWARD")
+      |> Builder.add(rule: allow_forwarding)
+
+  ## Raises
+
+  - `ArgumentError` - If field name is invalid or value doesn't match expected type
+  """
+  @spec set(t(), keyword()) :: t()
+  def set(%__MODULE__{} = builder, opts) when is_list(opts) do
+    Enum.reduce(opts, builder, fn {field, value}, acc ->
+      validate_and_set_field(acc, field, value)
+    end)
+  end
+
+  # Validate and set individual fields
+  defp validate_and_set_field(builder, :family, value) do
+    valid_families = [:inet, :ip, :ip6, :arp, :bridge, :netdev]
+    unless value in valid_families do
+      raise ArgumentError,
+        "Invalid family: #{inspect(value)}. Must be one of: #{inspect(valid_families)}"
+    end
+    %{builder | family: value}
+  end
+
+  defp validate_and_set_field(builder, :requestor, value) when is_atom(value) do
+    %{builder | requestor: value}
+  end
+
+  defp validate_and_set_field(builder, :table, value) when is_binary(value) or is_nil(value) do
+    %{builder | table: value}
+  end
+
+  defp validate_and_set_field(builder, :chain, value) when is_binary(value) or is_nil(value) do
+    %{builder | chain: value}
+  end
+
+  defp validate_and_set_field(builder, :collection, value) when is_binary(value) or is_nil(value) do
+    %{builder | collection: value}
+  end
+
+  defp validate_and_set_field(builder, :type, value) when is_atom(value) or is_tuple(value) or is_nil(value) do
+    %{builder | type: value}
+  end
+
+  defp validate_and_set_field(_builder, :spec, _value) do
+    raise ArgumentError,
+      ":spec is an internal field and cannot be set directly. Use add/2, delete/2, etc. to build commands."
+  end
+
+  defp validate_and_set_field(_builder, :commands, _value) do
+    raise ArgumentError,
+      ":commands cannot be set directly. Use add/2, delete/2, insert/2, etc. to build commands."
+  end
+
+  defp validate_and_set_field(_builder, field, value) do
+    raise ArgumentError,
+      "Invalid field #{inspect(field)} with value #{inspect(value)}. " <>
+      "Valid fields: :family, :requestor, :table, :chain, :collection, :type"
   end
 
 

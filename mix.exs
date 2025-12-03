@@ -74,10 +74,10 @@ defmodule NFTables.MixProject do
       source_url: @source_url,
       extras: [
         "README.md",
-        "LICENSE"
-        "dev_docs/architecture.md"
-        "dev_docs/advanced_features.md"
-        "dev_docs/quick_reference.md"
+        "LICENSE",
+        "dev_docs/architecture.md",
+        "dev_docs/advanced_features.md",
+        "dev_docs/quick_reference.md",
         "dev_docs/reference.md"
       ],
       groups_for_modules: [
