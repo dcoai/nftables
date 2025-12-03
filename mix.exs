@@ -1,8 +1,8 @@
 defmodule NFTables.MixProject do
   use Mix.Project
 
-  @version "0.6.2"
-  @source_url "https://github.com/yourusername/nftables"
+  @version "0.6.3"
+  @source_url "https://github.com/dcoai/nftables"
 
   def project do
     [
@@ -55,7 +55,7 @@ defmodule NFTables.MixProject do
   defp package do
     [
       name: "nftables",
-      files: ~w(lib .formatter.exs mix.exs README.md LICENSE),
+      files: ~w(lib examples .formatter.exs mix.exs README.md LICENSE),
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,

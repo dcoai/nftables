@@ -11,7 +11,7 @@ Add `nftables_port` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:nftables, "~> 0.6.2"}
+    {:nftables, "~> 0.6.3"}
   ]
 end
 ```
@@ -241,7 +241,7 @@ minimally for production, do the following:
 2. `chown exfw nftables_port`  # make the executable belong to the new user `exfw`
 3. `chmod 700 nftables_port`   # make the executable only runnable by the user `exfw`
 
-## Quick Start
+## Useage Examples
 
 ### Block an IP Address 
 
@@ -262,8 +262,6 @@ Builder.new(family: :inet)
   |> drop()
 )
 |> Builder.submit(pid)
-
-# That's it! The rule is now active in the kernel.
 ```
 
 ### Manage IP Blocklists with Sets
@@ -1586,17 +1584,7 @@ NFTables follows security best practices:
 4. **Fault Isolation** - Port crashes don't affect the BEAM VM
 5. **No Shell Commands** - All operations use libnftables API, no shell execution
 
-See [SECURITY.md](SECURITY.md) for security policy and vulnerability reporting.
-
-## Performance
-
-Benchmarks show JSON-based communication is significantly faster than ETF (Erlang Term Format):
-
-- Small messages (37 bytes): **JSON 41% faster**
-- Medium messages (379 bytes): **JSON 109% faster**
-- Large messages (13KB): **JSON 5372% faster**
-
-The JSON-only architecture provides optimal performance while maintaining simplicity.
+See NFTables_port [Security](https://github.com/dcoai/nftables_port/dev_docs/security.md) doc.
 
 ## Contributing
 
