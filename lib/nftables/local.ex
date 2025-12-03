@@ -19,22 +19,22 @@ defmodule NFTables.Local do
 
       # Uses NFTables.Local by default
       Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.submit()
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit()
 
   You can also use it explicitly:
 
       Builder.new(requestor: NFTables.Local)
-      |> Builder.add(table: "filter")
-      |> Builder.submit(pid: custom_pid, timeout: 10_000)
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit(pid: custom_pid, timeout: 10_000)
 
   Or override at submit time:
 
       builder = Builder.new(requestor: MyApp.RemoteRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       # Override to use local execution
-      Builder.submit(builder, requestor: NFTables.Local)
+      NFTables.submit(builder, requestor: NFTables.Local)
 
   ## Options
 
@@ -47,20 +47,20 @@ defmodule NFTables.Local do
 
       # Basic usage with default options (write operation)
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      :ok = Builder.submit(builder)
+      |> NFTables.add(table: "filter")
+      :ok = NFTables.submit(builder)
 
       # With specific port process
       {:ok, pid} = NFTables.start_link()
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      Builder.submit(builder, pid: pid)
+      |> NFTables.add(table: "filter")
+      NFTables.submit(builder, pid: pid)
 
       # Custom timeout for long operations
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
-      Builder.submit(builder, timeout: 30_000)
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
+      NFTables.submit(builder, timeout: 30_000)
 
   ## Return Values
 
@@ -101,7 +101,7 @@ defmodule NFTables.Local do
 
       # With Builder struct (write operation)
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       :ok = NFTables.Local.submit(builder, [])
 
       # With raw command map (query operation)
@@ -186,7 +186,7 @@ defmodule NFTables.Local do
             raise ArgumentError, """
             No NFTables.Port process found. Either:
             1. Start NFTables with: NFTables.start_link()
-            2. Pass pid explicitly: Builder.submit(builder, pid: pid)
+            2. Pass pid explicitly: NFTables.submit(builder, pid: pid)
             """
 
           pid ->

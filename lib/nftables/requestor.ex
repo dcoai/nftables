@@ -34,22 +34,22 @@ defmodule NFTables.Requestor do
   ### Setting Requestor at Creation
 
       builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
-      |> Builder.submit(node: :firewall@server)
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
+      |> NFTables.submit(node: :firewall@server)
 
   ### Setting Requestor Later
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.set_requestor(MyApp.AuditRequestor)
-      |> Builder.submit(audit_id: "12345")
+      |> NFTables.submit(audit_id: "12345")
 
   ### Overriding Requestor at Submit Time
 
       builder = Builder.new(requestor: MyApp.DefaultRequestor)
-      |> Builder.add(table: "filter")
-      |> Builder.submit(requestor: MyApp.SpecialRequestor, priority: :high)
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit(requestor: MyApp.SpecialRequestor, priority: :high)
 
   ## Example Implementations
 

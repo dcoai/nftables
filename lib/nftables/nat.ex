@@ -16,14 +16,14 @@ defmodule NFTables.NAT do
       # Single rule
       Builder.new()
       |> NFTables.NAT.setup_masquerade("wan0")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Compose multiple NAT rules
       Builder.new()
       |> NFTables.NAT.setup_masquerade("wan0", table: "nat")
       |> NFTables.NAT.port_forward(80, "192.168.1.100", 8080, table: "nat")
       |> NFTables.NAT.static_nat("203.0.113.1", "192.168.1.100", table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
   ## Prerequisites
 
@@ -31,8 +31,8 @@ defmodule NFTables.NAT do
 
       # Create NAT table and chains using Builder
       Builder.new()
-      |> Builder.add(table: "nat", family: :inet)
-      |> Builder.add(
+      |> NFTables.add(table: "nat", family: :inet)
+      |> NFTables.add(
         table: "nat",
         chain: "prerouting",
         family: :inet,
@@ -41,7 +41,7 @@ defmodule NFTables.NAT do
         priority: -100,
         policy: :accept
       )
-      |> Builder.add(
+      |> NFTables.add(
         table: "nat",
         chain: "postrouting",
         family: :inet,
@@ -50,7 +50,7 @@ defmodule NFTables.NAT do
         priority: 100,
         policy: :accept
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
   """
 
@@ -79,13 +79,13 @@ defmodule NFTables.NAT do
       # Share internet connection via eth0
       Builder.new()
       |> NFTables.NAT.setup_masquerade("eth0")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Compose with other rules
       Builder.new()
       |> NFTables.NAT.setup_masquerade("wan0", table: "nat")
       |> NFTables.NAT.source_nat("10.0.0.0/24", "203.0.113.1", table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec setup_masquerade(Builder.t(), String.t(), keyword()) :: Builder.t()
   def setup_masquerade(builder \\ Builder.new(), interface, opts \\ []) when is_binary(interface) do
@@ -99,7 +99,7 @@ defmodule NFTables.NAT do
       |> masquerade()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -126,23 +126,23 @@ defmodule NFTables.NAT do
       # Forward external port 80 to internal web server
       Builder.new()
       |> NFTables.NAT.port_forward(80, "192.168.1.100", 8080)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Forward SSH to internal host
       Builder.new()
       |> NFTables.NAT.port_forward(2222, "192.168.1.10", 22)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Forward UDP DNS
       Builder.new()
       |> NFTables.NAT.port_forward(53, "192.168.1.1", 53, protocol: :udp)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Compose multiple port forwards
       Builder.new()
       |> NFTables.NAT.port_forward(80, "192.168.1.100", 8080, table: "nat")
       |> NFTables.NAT.port_forward(443, "192.168.1.100", 8443, table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec port_forward(Builder.t(), non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
           Builder.t()
@@ -173,7 +173,7 @@ defmodule NFTables.NAT do
       |> dnat_to(internal_ip, port: internal_port)
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -196,13 +196,13 @@ defmodule NFTables.NAT do
       # Map public IP to DMZ host
       Builder.new()
       |> NFTables.NAT.static_nat("203.0.113.100", "192.168.1.100")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Multiple static NAT mappings
       Builder.new()
       |> NFTables.NAT.static_nat("203.0.113.100", "192.168.1.100", table: "nat")
       |> NFTables.NAT.static_nat("203.0.113.101", "192.168.1.101", table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec static_nat(Builder.t(), String.t(), String.t(), keyword()) :: Builder.t()
   def static_nat(builder \\ Builder.new(), public_ip, private_ip, opts \\ [])
@@ -223,8 +223,8 @@ defmodule NFTables.NAT do
       |> snat_to(public_ip)
 
     builder
-    |> Builder.add(rule: dnat_expr, table: table, chain: "prerouting", family: family)
-    |> Builder.add(rule: snat_expr, table: table, chain: "postrouting", family: family)
+    |> NFTables.add(rule: dnat_expr, table: table, chain: "prerouting", family: family)
+    |> NFTables.add(rule: snat_expr, table: table, chain: "postrouting", family: family)
   end
 
   @doc """
@@ -246,17 +246,17 @@ defmodule NFTables.NAT do
       # NAT internal subnet to public IP
       Builder.new()
       |> NFTables.NAT.source_nat("192.168.1.0/24", "203.0.113.1")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # NAT specific host
       Builder.new()
       |> NFTables.NAT.source_nat("192.168.1.100", "203.0.113.1")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With interface restriction
       Builder.new()
       |> NFTables.NAT.source_nat("10.0.0.0/24", "203.0.113.1", interface: "wan0")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec source_nat(Builder.t(), String.t(), String.t(), keyword()) :: Builder.t()
   def source_nat(builder \\ Builder.new(), source, nat_ip, opts \\ [])
@@ -281,7 +281,7 @@ defmodule NFTables.NAT do
       |> snat_to(nat_ip)
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -303,12 +303,12 @@ defmodule NFTables.NAT do
       # Redirect traffic to virtual IP to actual server
       Builder.new()
       |> NFTables.NAT.destination_nat("203.0.113.100", "192.168.1.100")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With interface restriction
       Builder.new()
       |> NFTables.NAT.destination_nat("203.0.113.100", "192.168.1.100", interface: "wan0")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec destination_nat(Builder.t(), String.t(), String.t(), keyword()) :: Builder.t()
   def destination_nat(builder \\ Builder.new(), dest, nat_ip, opts \\ [])
@@ -332,7 +332,7 @@ defmodule NFTables.NAT do
       |> dnat_to(nat_ip)
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -356,18 +356,18 @@ defmodule NFTables.NAT do
       # Redirect HTTP to local proxy
       Builder.new()
       |> NFTables.NAT.redirect_port(80, 3128)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Redirect HTTPS to local proxy
       Builder.new()
       |> NFTables.NAT.redirect_port(443, 8443)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Multiple redirects
       Builder.new()
       |> NFTables.NAT.redirect_port(80, 3128, table: "nat")
       |> NFTables.NAT.redirect_port(443, 8443, table: "nat")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec redirect_port(Builder.t(), non_neg_integer(), non_neg_integer(), keyword()) ::
           Builder.t()
@@ -388,6 +388,6 @@ defmodule NFTables.NAT do
       |> redirect_to(to_port)
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 end

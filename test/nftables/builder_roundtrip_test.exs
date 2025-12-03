@@ -74,7 +74,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
@@ -98,7 +98,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
@@ -123,7 +123,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
@@ -152,8 +152,8 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
       |> Builder.import_rule(rule_map)
 
       json = Builder.to_json(builder)
@@ -181,8 +181,8 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
       |> Builder.import_rule(rule_map)
 
       json = Builder.to_json(builder)
@@ -200,8 +200,8 @@ defmodule NFTables.BuilderRoundtripTest do
       ]
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
 
       builder = Enum.reduce(rules, builder, fn rule, b ->
         Builder.import_rule(b, rule)
@@ -226,7 +226,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
@@ -248,7 +248,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
@@ -274,7 +274,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
@@ -296,8 +296,8 @@ defmodule NFTables.BuilderRoundtripTest do
       # Import table and add new content
       builder = Builder.new()
       |> Builder.import_table(table_map)
-      |> Builder.add(chain: "custom_chain")
-      |> Builder.add(rule: [%{accept: nil}])
+      |> NFTables.add(chain: "custom_chain")
+      |> NFTables.add(rule: [%{accept: nil}])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -322,9 +322,9 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
-      |> Builder.add(rule: [%{drop: nil}])
+      |> NFTables.add(rule: [%{drop: nil}])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -412,7 +412,7 @@ defmodule NFTables.BuilderRoundtripTest do
       }
 
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.import_chain(original_chain)
 
       json = Builder.to_json(builder)

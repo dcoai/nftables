@@ -161,7 +161,7 @@ defmodule NFTables do
         rule() |> tcp() |> dport(80) |> accept()
       ])
   """
-  def add(opts) when is_list(opts), do: Builder.new(opts) |> add(opts)
+  def add(opts), do: Builder.new(opts) |> add(opts)
 
   
   @doc """
@@ -173,60 +173,48 @@ defmodule NFTables do
       |> NFTables.add(chain: "INPUT")
       |> NFTables.add(rule: [%{accept: nil}])
   """
-  def add(%Builder{} = builder, opts) when is_list(opts) do
-    # Handle :rules as batch operation
-    if Keyword.has_key?(opts, :rules) do
-      add_rule_set(builder, opts)
-    else
-      # Handle Match struct conversion for :rule
-      opts = if Keyword.has_key?(opts, :rule) do
-        rule_spec = Keyword.get(opts, :rule)
-        case rule_spec do
-          %NFTables.Expr{expr_list: expr_list} ->
-            Keyword.put(opts, :rule, expr_list)
-          _ ->
-            opts
-        end
-      else
-        opts
-      end
-
-      # Delegate to unified Builder API
-      Builder.add(builder, opts)
-    end
-  end
+  def add(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :add, opts)
 
   @doc """
-  Contextual delete operation (arity-1) - starts new builder.
+  delete/1 delete an object, starts a new builder.
+
+  ## Examples
+
+      builder |> delete(table: "filter")
+      builder |> delete(chain: "input")
+      builder |> delete(rule: [...], handle: 123)
   """
-  def delete(opts) when is_list(opts) do
-    Builder.new()
-    |> delete(opts)
-  end
+  def delete(opts), do: Builder.new() |> delete(opts)
 
   @doc """
-  Contextual delete operation (arity-2) - continues existing builder.
+  delete/2 operation same as delete/1 but continues existing builder.
   """
-  def delete(%Builder{} = builder, opts) when is_list(opts) do
-    Builder.delete(builder, opts)
-  end
+  def delete(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :delete, opts)
 
   @doc """
   Contextual flush operation (arity-1) - starts new builder.
   """
-  def flush(opts) when is_list(opts) or is_atom(opts) do
-    Builder.new()
-    |> flush(opts)
-  end
+  def flush(opts), do: Builder.new() |> flush(opts)
 
   @doc """
   Contextual flush operation (arity-2) - continues existing builder.
+
+  options:
+    :scope - when set to :all will flush everything (limited by :family option if that is specified)
+    :family - limits flush to particular nft family: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   """
-  def flush(%Builder{} = builder, opts) do
-    case opts do
-      :ruleset -> Builder.flush_ruleset(builder)
-      :all -> Builder.flush(builder, [:all])
-      opts when is_list(opts) -> Builder.flush(builder, opts)
+  def flush(%Builder{} = builder, opts) when is_list(opts) do
+    # If specific object is provided (table, chain, etc), use regular flush
+    # Otherwise default scope to :all for flush_ruleset
+    has_object = Keyword.has_key?(opts, :table) or
+                 Keyword.has_key?(opts, :chain) or
+                 Keyword.has_key?(opts, :set) or
+                 Keyword.has_key?(opts, :map)
+
+    case {Keyword.get(opts, :scope), has_object} do
+      {:all, _} -> Builder.flush_ruleset(builder, opts)
+      {nil, false} -> Builder.flush_ruleset(builder, opts)  # Default to flush_ruleset when no object
+      _ -> Builder.apply_with_opts(builder, :flush, opts)
     end
   end
 
@@ -240,17 +228,12 @@ defmodule NFTables do
       import NFTables.Expr
       NFTables.insert(table: "filter", chain: "INPUT", rule: tcp() |> dport(22) |> accept(), index: 0)
   """
-  def insert(opts) when is_list(opts) do
-    Builder.new()
-    |> insert(opts)
-  end
+  def insert(opts), do: Builder.new() |> insert(opts)
 
   @doc """
   Contextual insert operation (arity-2) - continues existing builder.
   """
-  def insert(%Builder{} = builder, opts) when is_list(opts) do
-    Builder.insert(builder, opts)
-  end
+  def insert(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :insert, opts)
 
   @doc """
   Contextual replace operation (arity-1) - starts new builder.
@@ -262,17 +245,12 @@ defmodule NFTables do
       import NFTables.Expr
       NFTables.replace(table: "filter", chain: "INPUT", rule: tcp() |> dport(80) |> accept(), handle: 123)
   """
-  def replace(opts) when is_list(opts) do
-    Builder.new()
-    |> replace(opts)
-  end
+  def replace(opts), do: Builder.new() |> replace(opts)
 
   @doc """
   Contextual replace operation (arity-2) - continues existing builder.
   """
-  def replace(%Builder{} = builder, opts) when is_list(opts) do
-    Builder.replace(builder, opts)
-  end
+  def replace(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :replace, opts)
 
   @doc """
   Contextual rename operation (arity-1) - starts new builder.
@@ -283,17 +261,12 @@ defmodule NFTables do
 
       NFTables.rename(table: "filter", chain: "input", newname: "INPUT")
   """
-  def rename(opts) when is_list(opts) do
-    Builder.new()
-    |> rename(opts)
-  end
+  def rename(opts), do: Builder.new() |> rename(opts)
 
   @doc """
   Contextual rename operation (arity-2) - continues existing builder.
   """
-  def rename(%Builder{} = builder, opts) when is_list(opts) do
-    Builder.rename(builder, opts)
-  end
+  def rename(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :rename, opts)
 
   @doc """
   Submit the builder configuration using the configured requestor.
@@ -362,38 +335,8 @@ defmodule NFTables do
     Builder.flush_ruleset(builder, opts)
   end
 
-  # Helper function for bulk rule addition
-  defp add_rule_set(%Builder{} = builder, opts) do
-    rules_list = Keyword.fetch!(opts, :rules)
-    base_opts = Keyword.drop(opts, [:rules])
-
-    Enum.reduce(rules_list, builder, fn rule_spec, acc ->
-      rule_expr = case rule_spec do
-        %NFTables.Expr{expr_list: expr_list} -> expr_list
-        expr_list when is_list(expr_list) -> expr_list
-      end
-
-      Builder.add(acc, Keyword.put(base_opts, :rule, rule_expr))
-    end)
-  end
-
   # Delegate other Builder functions for advanced use
   defdelegate to_json(builder), to: Builder
   defdelegate to_map(builder), to: Builder
   defdelegate set_family(builder, family), to: Builder
-
-  # ============================================================================
-  # Policy & NAT Helpers (delegated)
-  # ============================================================================
-
-  defdelegate allow_ssh(pid, opts \\ []), to: NFTables.Policy
-  defdelegate allow_http(pid, opts \\ []), to: NFTables.Policy
-  defdelegate allow_https(pid, opts \\ []), to: NFTables.Policy
-  defdelegate accept_established(pid, opts \\ []), to: NFTables.Policy
-  defdelegate drop_invalid(pid, opts \\ []), to: NFTables.Policy
-  defdelegate setup_basic_firewall(pid, opts \\ []), to: NFTables.Policy
-
-  # NAT helpers - note: setup_masquerade requires (pid, interface, opts)
-  # so we only delegate those that match the simple pattern
-  # Users can call NFTables.NAT.* directly for more complex functions
 end

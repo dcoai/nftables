@@ -26,9 +26,9 @@ defmodule NFTables.Expr do
 
       # Use with Builder
       Builder.new()
-      |> Builder.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> Builder.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> Builder.submit(pid: pid)
+      |> NFTables.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> NFTables.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> NFTables.submit(pid: pid)
 
   ## Import for Concise Syntax
 
@@ -510,7 +510,7 @@ defmodule NFTables.Expr do
 
       expression = expr() |> tcp() |> dport(22) |> accept()
       expr_list = to_list(expression)
-      # Use expr_list with Builder: Builder.add(builder, rule: expr_list)
+      # Use expr_list with Builder: NFTables.add(builder, rule: expr_list)
   """
   @spec to_list(t()) :: list(map())
   def to_list(%__MODULE__{expr_list: expr_list}), do: expr_list

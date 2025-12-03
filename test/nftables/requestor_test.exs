@@ -105,9 +105,9 @@ defmodule NFTables.RequestorTest do
 
     test "chains with other builder operations" do
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.set_requestor(CaptureRequestor)
-      |> Builder.add(chain: "INPUT")
+      |> NFTables.add(chain: "INPUT")
 
       assert builder.requestor == CaptureRequestor
       assert length(builder.commands) == 2
@@ -117,7 +117,7 @@ defmodule NFTables.RequestorTest do
   describe "Builder.submit/1" do
     test "submits with configured requestor" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder, test_pid: self())
 
@@ -127,7 +127,7 @@ defmodule NFTables.RequestorTest do
 
     test "submits with default requestor (NFTables.Local) when not explicitly set" do
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       # Should not raise - uses NFTables.Local by default
       # We can't actually test the submit here without a running NFTables.Port,
@@ -137,7 +137,7 @@ defmodule NFTables.RequestorTest do
 
     test "returns error from requestor" do
       builder = Builder.new(requestor: ErrorRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder, reason: "custom error")
 
@@ -146,8 +146,8 @@ defmodule NFTables.RequestorTest do
 
     test "returns result from requestor" do
       builder = Builder.new(requestor: ResultRequestor)
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
 
       result = Builder.submit(builder)
 
@@ -158,7 +158,7 @@ defmodule NFTables.RequestorTest do
   describe "Builder.submit/2" do
     test "passes options to requestor" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       Builder.submit(builder, test_pid: self(), custom_opt: "value")
 
@@ -168,7 +168,7 @@ defmodule NFTables.RequestorTest do
 
     test "overrides builder requestor with opts[:requestor]" do
       builder = Builder.new(requestor: ErrorRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder,
         requestor: CaptureRequestor,
@@ -181,7 +181,7 @@ defmodule NFTables.RequestorTest do
 
     test "uses builder requestor when not overridden" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       Builder.submit(builder, test_pid: self(), other_opt: 123)
 
@@ -191,7 +191,7 @@ defmodule NFTables.RequestorTest do
 
     test "uses default requestor (NFTables.Local) when no override provided" do
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       # Builder has NFTables.Local as default, so no error should be raised
       # We can't actually test the submit here without a running NFTables.Port,
@@ -201,7 +201,7 @@ defmodule NFTables.RequestorTest do
 
     test "validates requestor implements submit/2" do
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       assert_raise ArgumentError, ~r/does not implement NFTables.Requestor/, fn ->
         Builder.submit(builder, requestor: NotARequestor)
@@ -210,7 +210,7 @@ defmodule NFTables.RequestorTest do
 
     test "allows requestor override without pre-configured requestor" do
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder,
         requestor: CaptureRequestor,
@@ -225,9 +225,9 @@ defmodule NFTables.RequestorTest do
   describe "integration with Builder operations" do
     test "submit works with full builder chain" do
       builder = Builder.new(family: :inet, requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT", type: :filter, hook: :input)
-      |> Builder.add(set: "blocklist", type: :ipv4_addr)
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(set: "blocklist", type: :ipv4_addr)
 
       Builder.submit(builder, test_pid: self())
 
@@ -238,7 +238,7 @@ defmodule NFTables.RequestorTest do
 
     test "submit preserves builder state" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       # Submit doesn't modify the builder
       Builder.submit(builder, test_pid: self())
@@ -251,7 +251,7 @@ defmodule NFTables.RequestorTest do
 
     test "can submit same builder multiple times" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       Builder.submit(builder, test_pid: self(), attempt: 1)
       Builder.submit(builder, test_pid: self(), attempt: 2)
@@ -266,7 +266,7 @@ defmodule NFTables.RequestorTest do
   describe "requestor return values" do
     test "handles :ok return" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder, test_pid: self(), return: :ok)
       assert result == :ok
@@ -274,7 +274,7 @@ defmodule NFTables.RequestorTest do
 
     test "handles {:ok, result} return" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder, test_pid: self(), return: {:ok, "success"})
       assert result == {:ok, "success"}
@@ -282,7 +282,7 @@ defmodule NFTables.RequestorTest do
 
     test "handles {:error, reason} return" do
       builder = Builder.new(requestor: CaptureRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       result = Builder.submit(builder, test_pid: self(), return: {:error, "failed"})
       assert result == {:error, "failed"}

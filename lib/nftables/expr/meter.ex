@@ -17,7 +17,7 @@ defmodule NFTables.Expr.Meter do
 
   ## Workflow
 
-  1. Create a dynamic set with `Builder.add(set: ...)`
+  1. Create a dynamic set with `NFTables.add(set: ...)`
   2. Use meter expressions in rules to track and limit per-key
   3. nftables automatically manages set entries with timeouts
 
@@ -29,8 +29,8 @@ defmodule NFTables.Expr.Meter do
 
       # Step 1: Create dynamic set
       Builder.new(family: :inet)
-      |> Builder.add(table: "filter")
-      |> Builder.add(
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(
         set: "ssh_ratelimit",
         table: "filter",
         type: :ipv4_addr,
@@ -38,7 +38,7 @@ defmodule NFTables.Expr.Meter do
         timeout: 60,    # Expire after 60s inactivity
         size: 10000     # Max 10k tracked IPs
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Step 2: Use meter in rule
       ssh_rule = rule()
@@ -56,8 +56,8 @@ defmodule NFTables.Expr.Meter do
        
 
       Builder.new()
-      |> Builder.add(rule: ssh_rule, table: "filter", chain: "input", family: :inet)
-      |> Builder.submit(pid: pid)
+      |> NFTables.add(rule: ssh_rule, table: "filter", chain: "input", family: :inet)
+      |> NFTables.submit(pid: pid)
 
   ## Set Types for Keys
 
