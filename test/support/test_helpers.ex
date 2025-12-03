@@ -40,7 +40,7 @@ defmodule NFTables.TestHelpers do
   ## Usage
 
       setup do
-        {:ok, pid} = NFTables.start_link()
+        {:ok, pid} = NFTables.Port.start_link()
 
         # Create isolated test infrastructure WITHOUT hooks (safe)
         {:ok, table, chain} = NFTables.TestHelpers.setup_test_table_and_chain(

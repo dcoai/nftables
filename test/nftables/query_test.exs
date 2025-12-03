@@ -15,9 +15,9 @@ defmodule NFTables.QueryTest do
 
   describe "list_tables/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -75,9 +75,9 @@ defmodule NFTables.QueryTest do
 
   describe "list_chains/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -122,9 +122,9 @@ defmodule NFTables.QueryTest do
 
   describe "list_rules/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -172,9 +172,9 @@ defmodule NFTables.QueryTest do
 
   describe "list_sets/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -214,9 +214,9 @@ defmodule NFTables.QueryTest do
 
   describe "list_set_elements/3" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
       {:ok, pid: pid}
     end
@@ -255,9 +255,9 @@ defmodule NFTables.QueryTest do
 
   describe "integration test" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
       {:ok, pid: pid}
     end

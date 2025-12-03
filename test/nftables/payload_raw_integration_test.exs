@@ -8,7 +8,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
   @moduletag :slow
 
   setup do
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
     test_table = "raw_test_#{:rand.uniform(1_000_000)}"
 
     # Create test table

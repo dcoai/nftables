@@ -11,7 +11,7 @@ defmodule NFTables.NATTest do
 
   setup do
     # Start NFTables
-    {:ok, pid} = NFTables.start_link(port: NFTables.Port, check_capabilities: false)
+    {:ok, pid} = NFTables.Port.start_link(port: NFTables.Port, check_capabilities: false)
 
     # Clean up any existing test tables
     cleanup_tables(pid)
@@ -34,7 +34,7 @@ defmodule NFTables.NATTest do
     on_exit(fn ->
       if Process.alive?(pid) do
         cleanup_tables(pid)
-        NFTables.stop(pid)
+        NFTables.Port.stop(pid)
       end
     end)
 

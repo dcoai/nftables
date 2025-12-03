@@ -1,10 +1,34 @@
 defmodule NFTables.Builder do
   @moduledoc """
-  Functional builder for constructing nftables configurations.
+  Internal builder implementation for nftables configurations.
 
-  This module provides a clean, functional API for building nftables commands.
-  The builder accumulates commands and can be executed when ready, separating
-  configuration building from execution.
+  > #### Note {: .info}
+  >
+  > This module is an internal implementation detail. Most users should use the
+  > `NFTables` module API instead, which provides the same functionality with
+  > a cleaner interface.
+  >
+  > Use `NFTables.add/2`, `NFTables.submit/2`, etc. instead of calling Builder directly.
+
+  ## For Library Users
+
+  Use the `NFTables` module for all nftables operations:
+
+      import NFTables.Expr
+
+      {:ok, pid} = NFTables.Port.start_link()
+
+      NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rule: tcp() |> dport(22) |> accept())
+      |> NFTables.submit(pid: pid)
+
+  ## For Advanced Users
+
+  This module can be used directly for:
+  - Creating custom abstractions or libraries
+  - Implementing custom requestor behaviours
+  - Advanced builder manipulation
 
   ## Design Philosophy
 
@@ -14,10 +38,13 @@ defmodule NFTables.Builder do
   - **Context Tracking**: Automatically tracks table/chain/collection context for chaining
   - **Unified API**: Single set of functions (add/delete/flush/etc) for all object types
 
-  ## Basic Usage
+  ## Internal Usage Example
+
+      alias NFTables.Builder
+      import NFTables.Expr
 
       # Create builder (automatically uses NFTables.Local as default requestor)
-      builder = Builder.new(family: :inet)
+      builder = Builder.new()  # family: :inet is default if no options are specified
 
       # Add table and chain - context is automatically tracked
       builder = builder
@@ -26,18 +53,67 @@ defmodule NFTables.Builder do
 
       # Add rules - automatically uses table and chain from context
       builder = builder
-      |> Builder.add(rule: [
-          %{match: %{left: %{ct: %{key: "state"}}, right: ["established", "related"], op: "in"}},
-          %{accept: nil}
-        ])
+      |> Builder.add(rule: state([:established, :related]) |> accept())
 
       # Submit when ready (uses NFTables.Local by default)
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
       Builder.submit(builder, pid: pid)
 
+  ## Option Specificity
+
+  Internally, options are given a priority, so Builder.add() will choose to build the command around the most specific option.
+
+      Builder.add(table: "filter")   # creates a new table
+
+      Builder.add(                   # creates a new chain "INPUT" in the existing table "filter"
+        table: "filter",
+        chain: "INPUT"
+      )
+
+      Builder.add(                   # appends a new rule to existing chain "INPUT" in table "filter"
+        table: "filter",
+        chain: "INPUT"
+        rule: tcp() |> dport(22) |> accept()
+      )
+
+  If a table does not exist, the `Builder.add(table: "mytable")` must be done before adding a chain, and the same with a
+  chain and a rule.
+
+  The builder struct tracks the most recently used table and chain, which makes it possible to specify rules as follows:
+
+      Builder.new()
+      |> Builder.add(table: "filter")
+      |> Builder.add(chain: "INPUT", type: :filter, hook: :input)
+      |> Builder.add(rules: [
+        tcp() |> dport(22) |> accept(),
+        udp() |> dport(53) |> accept()
+        ])
+
+  Options specified in an `add`, `delete`, `insert`, etc.  call, must specify only non-conflicting options otherwise an
+  ArgumentError exception with be raised.  Only one of {`:rule`, `:rules`}, only one of {`:set`, `:map`, `:counter`,
+  `:quota`, `:limit`, `:flowtable`}, can be specified.  unknown or unusued options are ignored.
+
+  ## Composition
+
+  Because of the way Builder and Expr compose, it is possible to create your own functions for common patterns:
+
+      def add_chain(builder \\ Builder.new(), table, name, opts \\ []) do
+        builder
+        |> Builder.add(table: table)
+        |> Builder.add([chain: chain | opts])
+      end
+
+      def ssh(expr \\ Expr.expr()), do: tcp() |> dport(22)
+      def dns(expr \\ Expr.expr()), do: udp() |> dport(53)
+
+      add_chain("filter", "INPUT", type: :filter, hook: :input)
+      |> Bulder.add(rules: [ssh, dns])
+
+  Libraries of your own common patterns can be built.
+  
   ## Setting Builder Context
 
-  Use `set/2` to update multiple builder fields at once:
+  An alternative approach is to use `set/2` to update multiple builder fields at once:
 
       # Set context fields directly
       builder = Builder.new()
@@ -71,42 +147,11 @@ defmodule NFTables.Builder do
   The builder automatically tracks context (table, chain, collection) so you don't need to repeat it:
 
       builder
-      |> Builder.add(table: "filter", chain: "input")  # Sets context
-      |> Builder.add(rule: [%{accept: nil}])           # Uses filter/input automatically
-      |> Builder.add(rule: [%{drop: nil}])             # Still uses filter/input
-
-  ## Automatic Rule Conversion
-
-  Builder automatically converts `NFTables.Expr` structs to expression lists,
-  so you don't need to call `to_expr/1` manually:
-
-      import NFTables.Expr
-
-      # No need to call to_expr() - Builder handles it automatically
-      ssh_rule = rule() |> tcp() |> dport(22) |> accept()
-
-      builder
-      |> Builder.add(table: "filter", chain: "input")
-      |> Builder.add(rule: ssh_rule)  # Automatically converted to expression list
-      |> Builder.submit(pid: pid)
-
-  This also works with lists of rules:
-
-      rules = [
-        rule() |> tcp() |> dport(22) |> accept(),
-        rule() |> tcp() |> dport(80) |> accept()
-      ]
-
-      # Each rule in the list is automatically converted
-      Enum.reduce(rules, builder, fn r, b ->
-        Builder.add(b, rule: r)
-      end)
-
-  For backwards compatibility, you can still pass expression lists directly:
-
-      # This still works
-      expr_list = rule() |> tcp() |> dport(22) |> accept() |> to_expr()
-      Builder.add(builder, rule: expr_list)
+      |> Builder.add(
+        table: "filter", chain: "input")        # Sets context
+        rule: [%{accept: nil}]                  # Uses filter/input
+      )
+      |> Builder.add(rule: [%{drop: nil}])      # Still uses filter/input
   """
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
