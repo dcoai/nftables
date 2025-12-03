@@ -6,12 +6,12 @@ Elixir module for Linux nftables. NFTables provides both high-level helper funct
 
 ### Installation
 
-Add `nftables_port` to your dependencies in `mix.exs`:
+Add `nftables` to your dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:nftables, "~> 0.6.3"}
+    {:nftables, "~> 0.6.4"}
   ]
 end
 ```
@@ -80,7 +80,7 @@ See [dev_docs/advanced_features.md](dev_docs/advanced_features.md) for comprehen
 
 ### NFTables_Port 
 
-NFTables.Port is an elixir wrapper, and a program written in Zig which accepts json structures and sends them to NFTables using the libnftables (C library).  The Elixir module manages the Zig program as a Port.
+The NFTables library depends on [NFTables.Port](https://hex.pm/packages/nftables_port) which is an elixir wrapper, and a program written in Zig which accepts json structures and sends them to Linux nftables using the libnftables (C library).  The Elixir module manages the Zig program as a Port.
 
 ```elixir
 {:ok, pid} = NFTables.Port.start_link()
