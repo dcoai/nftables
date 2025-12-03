@@ -11,7 +11,7 @@ Add `nftables_port` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:nftables, "~> 0.6.1"}
+    {:nftables, "~> 0.6.2"}
   ]
 end
 ```
