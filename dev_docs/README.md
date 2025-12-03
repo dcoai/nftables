@@ -88,7 +88,7 @@ expr = expr()
 
 # Execute separately
 Builder.new()
-|> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -128,7 +128,7 @@ expr = expr()
   |> drop()
 
 Builder.new()
-|> Builder.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 

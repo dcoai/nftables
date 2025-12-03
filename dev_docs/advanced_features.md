@@ -40,19 +40,19 @@ Flowtables offload established connection forwarding to hardware or kernel fast 
 import NFTables.Expr
 alias NFTables.Builder
 
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 
 # Create flowtable for fast-path forwarding
 Builder.new(family: :inet)
-|> Builder.add(table: "filter")
-|> Builder.add(
+|> NFTables.add(table: "filter")
+|> NFTables.add(
   flowtable: "fastpath",
   table: "filter",
   hook: :ingress,
   priority: 0,
   devices: ["eth0", "eth1"]  # Interfaces to accelerate
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 ```
 
 #### Using Flowtables in Rules
@@ -60,8 +60,8 @@ Builder.new(family: :inet)
 ```elixir
 # Create forward chain with flowtable offload
 Builder.new(family: :inet)
-|> Builder.add(table: "filter")
-|> Builder.add(
+|> NFTables.add(table: "filter")
+|> NFTables.add(
   chain: "forward",
   table: "filter",
   type: :filter,
@@ -69,7 +69,7 @@ Builder.new(family: :inet)
   priority: 0,
   policy: :drop
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 
 # Add rule to use flowtable for established connections
 fastpath_rule = expr()
@@ -77,13 +77,13 @@ fastpath_rule = expr()
 |> flow_offload("fastpath")
 
 Builder.new()
-|> Builder.add(
+|> NFTables.add(
   rule: fastpath_rule,
   table: "filter",
   chain: "forward",
   family: :inet
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 ```
 
 #### Hardware Offload
@@ -92,7 +92,7 @@ Enable hardware offload on supported NICs:
 
 ```elixir
 Builder.new(family: :inet)
-|> Builder.add(
+|> NFTables.add(
   flowtable: "hwoffload",
   table: "filter",
   hook: :ingress,
@@ -100,7 +100,7 @@ Builder.new(family: :inet)
   devices: ["eth0"],
   flags: [:offload]  # Enable hardware acceleration
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 ```
 
 **Note:** Hardware offload requires:
@@ -138,12 +138,12 @@ import NFTables.Expr
 import NFTables.Expr.Meter
 alias NFTables.Builder
 
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 
 # Step 1: Create dynamic set
 Builder.new(family: :inet)
-|> Builder.add(table: "filter")
-|> Builder.add(
+|> NFTables.add(table: "filter")
+|> NFTables.add(
   set: "ssh_ratelimit",
   table: "filter",
   type: :ipv4_addr,
@@ -151,7 +151,7 @@ Builder.new(family: :inet)
   timeout: 60,    # Expire entries after 60s inactivity
   size: 10000     # Max 10,000 tracked IPs
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 
 # Step 2: Create rule with meter
 ssh_rule = expr()
@@ -168,13 +168,13 @@ ssh_rule = expr()
 |> accept()
 
 Builder.new()
-|> Builder.add(
+|> NFTables.add(
   rule: ssh_rule,
   table: "filter",
   chain: "INPUT",
   family: :inet
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 ```
 
 #### Composite Key Tracking
@@ -184,8 +184,8 @@ Track by multiple fields (e.g., IP + port):
 ```elixir
 # Create set with composite key type
 Builder.new(family: :inet)
-|> Builder.add(table: "filter")
-|> Builder.add(
+|> NFTables.add(table: "filter")
+|> NFTables.add(
   set: "connection_limits",
   table: "filter",
   type: {:concat, [:ipv4_addr, :inet_service]},
@@ -193,7 +193,7 @@ Builder.new(family: :inet)
   timeout: 120,
   size: 50000
 )
-|> Builder.submit(pid: pid)
+|> NFTables.submit(pid: pid)
 
 # Use composite key in meter
 limit_rule = expr()
@@ -567,8 +567,8 @@ Enum.each(tunnel_endpoints, fn endpoint ->
   |> accept()
 
   Builder.new()
-  |> Builder.add(rule: gre_rule, table: "filter", chain: "INPUT")
-  |> Builder.submit(pid: pid)
+  |> NFTables.add(rule: gre_rule, table: "filter", chain: "INPUT")
+  |> NFTables.submit(pid: pid)
 end)
 ```
 
@@ -658,8 +658,8 @@ os_qos_rules = [
 
 Enum.each(os_qos_rules, fn qos_rule ->
   Builder.new()
-  |> Builder.add(rule: qos_rule, table: "filter", chain: "FORWARD")
-  |> Builder.submit(pid: pid)
+  |> NFTables.add(rule: qos_rule, table: "filter", chain: "FORWARD")
+  |> NFTables.submit(pid: pid)
 end)
 ```
 

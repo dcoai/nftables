@@ -85,7 +85,7 @@ defmodule NFTables.MeterUnitTest do
     test "generates correct JSON for dynamic set" do
       builder =
         Builder.new(family: :inet)
-        |> Builder.add(
+        |> NFTables.add(
           set: "json_test",
           table: "filter",
           type: :ipv4_addr,
@@ -120,7 +120,7 @@ defmodule NFTables.MeterUnitTest do
 
       builder =
         Builder.new(family: :inet)
-        |> Builder.add(rule: meter_expr, table: "filter", chain: "INPUT")
+        |> NFTables.add(rule: meter_expr, table: "filter", chain: "INPUT")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)

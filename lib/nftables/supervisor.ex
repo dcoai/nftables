@@ -18,8 +18,8 @@ defmodule NFTables.Supervisor do
       alias NFTables.Builder
 
       Builder.new()
-      |> Builder.add(table: "filter", family: :inet)
-      |> Builder.submit(pid: NFTables)
+      |> NFTables.add(table: "filter", family: :inet)
+      |> NFTables.submit(pid: NFTables)
   """
 
   use Supervisor

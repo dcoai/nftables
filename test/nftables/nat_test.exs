@@ -18,18 +18,18 @@ defmodule NFTables.NATTest do
 
     # Create NAT table and chains using Builder
     Builder.new()
-    |> Builder.add(table: "nftables_test_nat", family: :inet)
-    |> Builder.add(
+    |> NFTables.add(table: "nftables_test_nat", family: :inet)
+    |> NFTables.add(
       table: "nftables_test_nat",
       chain: "prerouting",
       family: :inet
     )
-    |> Builder.add(
+    |> NFTables.add(
       table: "nftables_test_nat",
       chain: "postrouting",
       family: :inet
     )
-    |> Builder.submit(pid: pid)
+    |> NFTables.submit(pid: pid)
 
     on_exit(fn ->
       if Process.alive?(pid) do
@@ -46,7 +46,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.setup_masquerade("eth0", table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -61,7 +61,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.port_forward(80, "192.168.1.100", 8080, table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -76,7 +76,7 @@ defmodule NFTables.NATTest do
           protocol: :udp,
           table: "nftables_test_nat"
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -91,7 +91,7 @@ defmodule NFTables.NATTest do
           interface: "wan0",
           table: "nftables_test_nat"
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -105,7 +105,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.static_nat("203.0.113.1", "192.168.1.100", table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -123,7 +123,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.source_nat("192.168.1.0/24", "203.0.113.1", table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -135,7 +135,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.source_nat("192.168.1.100", "203.0.113.1", table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -149,7 +149,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.destination_nat("203.0.113.1", "192.168.1.100", table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -163,7 +163,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.redirect_port(80, 3128, table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -175,7 +175,7 @@ defmodule NFTables.NATTest do
       result =
         Builder.new()
         |> NAT.redirect_port(53, 5353, protocol: :udp, table: "nftables_test_nat")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok = result
 
@@ -189,8 +189,8 @@ defmodule NFTables.NATTest do
   defp cleanup_tables(pid) do
     try do
       Builder.new()
-      |> Builder.delete(table: "nftables_test_nat", family: :inet)
-      |> Builder.submit(pid: pid)
+      |> NFTables.delete(table: "nftables_test_nat", family: :inet)
+      |> NFTables.submit(pid: pid)
     rescue
       _ -> :ok
     catch

@@ -40,118 +40,104 @@ defmodule NFTables.Builder do
 
   ## Internal Usage Example
 
+  For advanced users who need direct Builder access:
+
       alias NFTables.Builder
       import NFTables.Expr
 
       # Create builder (automatically uses NFTables.Local as default requestor)
       builder = Builder.new()  # family: :inet is default if no options are specified
 
-      # Add table and chain - context is automatically tracked
+      # Use apply_with_opts for operations
       builder = builder
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "input", type: :filter, hook: :input, priority: 0, policy: :drop)
-
-      # Add rules - automatically uses table and chain from context
-      builder = builder
-      |> Builder.add(rule: state([:established, :related]) |> accept())
+      |> Builder.apply_with_opts(:add, table: "filter")
+      |> Builder.apply_with_opts(:add, chain: "input", type: :filter, hook: :input, priority: 0, policy: :drop)
+      |> Builder.apply_with_opts(:add, rule: state([:established, :related]) |> accept())
 
       # Submit when ready (uses NFTables.Local by default)
       {:ok, pid} = NFTables.Port.start_link()
-      Builder.submit(builder, pid: pid)
+      NFTables.submit(builder, pid: pid)
 
   ## Option Specificity
 
-  Internally, options are given a priority, so Builder.add() will choose to build the command around the most specific option.
+  Internally, options are given a priority to determine the main object being operated on:
 
-      Builder.add(table: "filter")   # creates a new table
+      NFTables.add(table: "filter")   # creates a new table
 
-      Builder.add(                   # creates a new chain "INPUT" in the existing table "filter"
+      NFTables.add(                   # creates a new chain "INPUT" in the existing table "filter"
         table: "filter",
         chain: "INPUT"
       )
 
-      Builder.add(                   # appends a new rule to existing chain "INPUT" in table "filter"
+      NFTables.add(                   # appends a new rule to existing chain "INPUT" in table "filter"
         table: "filter",
-        chain: "INPUT"
+        chain: "INPUT",
         rule: tcp() |> dport(22) |> accept()
       )
 
-  If a table does not exist, the `Builder.add(table: "mytable")` must be done before adding a chain, and the same with a
-  chain and a rule.
+  If a table does not exist, it must be created before adding a chain, and the chain must exist before adding rules.
 
-  The builder struct tracks the most recently used table and chain, which makes it possible to specify rules as follows:
+  The builder struct tracks the most recently used table and chain, enabling context reuse:
 
-      Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT", type: :filter, hook: :input)
-      |> Builder.add(rules: [
+      NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rules: [
         tcp() |> dport(22) |> accept(),
         udp() |> dport(53) |> accept()
         ])
 
-  Options specified in an `add`, `delete`, `insert`, etc.  call, must specify only non-conflicting options otherwise an
-  ArgumentError exception with be raised.  Only one of {`:rule`, `:rules`}, only one of {`:set`, `:map`, `:counter`,
-  `:quota`, `:limit`, `:flowtable`}, can be specified.  unknown or unusued options are ignored.
+  Options specified in operations must be non-conflicting. Only one of {`:rule`, `:rules`}, only one of
+  {`:set`, `:map`, `:counter`, `:quota`, `:limit`, `:flowtable`} can be specified. Unknown or unused options are ignored.
 
   ## Composition
 
-  Because of the way Builder and Expr compose, it is possible to create your own functions for common patterns:
+  NFTables and Expr compose well, enabling custom functions for common patterns:
 
-      def add_chain(builder \\ Builder.new(), table, name, opts \\ []) do
-        builder
-        |> Builder.add(table: table)
-        |> Builder.add([chain: chain | opts])
-      end
+      def ssh(expr \\ Expr.expr()), do: expr |> tcp() |> dport(22)
+      def dns(expr \\ Expr.expr()), do: expr |> udp() |> dport(53)
 
-      def ssh(expr \\ Expr.expr()), do: tcp() |> dport(22)
-      def dns(expr \\ Expr.expr()), do: udp() |> dport(53)
+      NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rules: [ssh(), dns()])
 
-      add_chain("filter", "INPUT", type: :filter, hook: :input)
-      |> Bulder.add(rules: [ssh, dns])
-
-  Libraries of your own common patterns can be built.
+  Libraries of custom patterns can be built this way.
   
   ## Setting Builder Context
 
-  An alternative approach is to use `set/2` to update multiple builder fields at once:
+  For advanced builder manipulation, use `set/2` to update context fields:
 
-      # Set context fields directly
+      # Set context fields directly (advanced usage)
       builder = Builder.new()
       |> Builder.set(family: :inet, table: "filter", chain: "INPUT")
 
       # Switch context mid-pipeline
       builder
       |> Builder.set(table: "filter", chain: "INPUT")
-      |> Builder.add(rule: allow_ssh)
+      |> Builder.apply_with_opts(:add, rule: allow_ssh)
       |> Builder.set(chain: "FORWARD")  # Switch to different chain
-      |> Builder.add(rule: allow_forwarding)
+      |> Builder.apply_with_opts(:add, rule: allow_forwarding)
 
       # Clear context
       builder |> Builder.set(chain: nil, collection: nil)
 
   ## Unified API Pattern
 
-  All object types use the same functions: `add/2`, `delete/2`, `insert/2`, `replace/2`, `flush/2`, `rename/2`.
-  The object type is automatically detected from the options:
+  All object types use the same operations via NFTables module:
 
-      Builder.new(family: :inet)
-      |> Builder.add(table: "filter")                          # Adds table
-      |> Builder.add(chain: "input", type: :filter,            # Adds chain
+      NFTables.add(table: "filter", family: :inet)
+      |> NFTables.add(chain: "input", type: :filter,           # Adds chain
                      hook: :input, priority: 0, policy: :drop)
-      |> Builder.add(set: "blocklist", type: :ipv4_addr)       # Adds set
-      |> Builder.add(rule: [%{accept: nil}])                   # Adds rule
-      |> Builder.submit(pid: pid)
+      |> NFTables.add(set: "blocklist", type: :ipv4_addr)      # Adds set
+      |> NFTables.add(rule: [%{accept: nil}])                  # Adds rule
+      |> NFTables.submit(pid: pid)
 
   ## Context Chaining
 
-  The builder automatically tracks context (table, chain, collection) so you don't need to repeat it:
+  The builder automatically tracks context (table, chain) eliminating repetition:
 
-      builder
-      |> Builder.add(
-        table: "filter", chain: "input")        # Sets context
-        rule: [%{accept: nil}]                  # Uses filter/input
-      )
-      |> Builder.add(rule: [%{drop: nil}])      # Still uses filter/input
+      NFTables.add(table: "filter", chain: "input")   # Sets context
+      |> NFTables.add(rule: [%{accept: nil}])         # Uses filter/input
+      |> NFTables.add(rule: [%{drop: nil}])           # Still uses filter/input
   """
 
   @type family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
@@ -233,10 +219,10 @@ defmodule NFTables.Builder do
 
       # Chain with other builder operations
       Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.set_requestor(MyApp.AuditRequestor)
-      |> Builder.add(chain: "INPUT")
-      |> Builder.submit(audit_id: "12345")
+      |> NFTables.add(chain: "INPUT")
+      |> NFTables.submit(audit_id: "12345")
 
   ## See Also
 
@@ -275,8 +261,8 @@ defmodule NFTables.Builder do
       # Chain with other operations
       Builder.new()
       |> Builder.set(table: "nat", chain: "PREROUTING")
-      |> Builder.add(rule: expr)
-      |> Builder.submit(pid: pid)
+      |> NFTables.add(rule: expr)
+      |> NFTables.submit(pid: pid)
 
       # Clear context
       builder |> Builder.set(chain: nil, collection: nil)
@@ -284,9 +270,9 @@ defmodule NFTables.Builder do
       # Switch context mid-pipeline
       builder
       |> Builder.set(table: "filter", chain: "INPUT")
-      |> Builder.add(rule: allow_ssh)
+      |> NFTables.add(rule: allow_ssh)
       |> Builder.set(chain: "FORWARD")
-      |> Builder.add(rule: allow_forwarding)
+      |> NFTables.add(rule: allow_forwarding)
 
   ## Raises
 
@@ -452,85 +438,6 @@ defmodule NFTables.Builder do
     "Valid commands for :#{object_type}: #{commands}"
   end
 
-  ## Generic Command Entry Points
-
-  @doc """
-  Add an object (table, chain, rule, set, map, etc.).
-
-  The object type is automatically detected from the options.
-
-  ## Examples
-
-      # Add table
-      builder |> add(table: "filter")
-
-      # Add chain
-      builder |> add(chain: "input", type: :filter, hook: :input, priority: 0)
-
-      # Add rule
-      builder |> add(rule: [%{accept: nil}])
-
-      # Add set
-      builder |> add(set: "blocklist", type: :ipv4_addr)
-  """
-  @spec add(t(), keyword()) :: t()
-  def add(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :add, opts)
-
-  @doc """
-  Delete an object.
-
-  ## Examples
-
-      builder |> delete(table: "filter")
-      builder |> delete(chain: "input")
-      builder |> delete(rule: [...], handle: 123)
-  """
-  @spec delete(t(), keyword()) :: t()
-  def delete(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :delete, opts)
-
-  @doc """
-  Flush an object (remove contents but keep object).
-
-  Valid for: table, chain, set, map
-
-  ## Examples
-
-      builder |> flush(table: "filter")  # Flush all chains/rules in table
-      builder |> flush(chain: "input")   # Flush all rules in chain
-  """
-  @spec flush(t(), keyword()) :: t()
-  def flush(%__MODULE__{} = builder, [:all | opts]), do: flush_ruleset(builder, opts)
-  def flush(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :flush, opts)
-
-  @doc """
-  Rename a chain.
-
-  ## Examples
-
-      builder |> rename(chain: "input", newname: "INPUT")
-  """
-  @spec rename(t(), keyword()) :: t()
-  def rename(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :rename, opts)
-
-  @doc """
-  Insert a rule at a specific position.
-
-  ## Examples
-
-      builder |> insert(rule: [...], index: 0)
-  """
-  @spec insert(t(), keyword()) :: t()
-  def insert(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :insert, opts)
-
-  @doc """
-  Replace a rule at a specific handle.
-
-  ## Examples
-
-      builder |> replace(rule: [...], handle: 123)
-  """
-  @spec replace(t(), keyword()) :: t()
-  def replace(%__MODULE__{} = builder, opts), do: apply_with_opts(builder, :replace, opts)
 
   ################################################################################
   # Object Detection via Priority Map
@@ -1208,30 +1115,10 @@ defmodule NFTables.Builder do
   # Use: builder |> add(rule: expr_list, ...)
   # See the top-level add/2, insert/2, replace/2, delete/2 functions.
 
-  @doc """
-  Add multiple rules at once.
-
-  ## Examples
-
-      rules = [
-        [%{match: ...}, %{accept: nil}],
-        [%{match: ...}, %{drop: nil}]
-      ]
-      builder |> Builder.add_rules(rules)
-  """
-  @spec add_rules(t(), list(list(map())), keyword()) :: t()
-  def add_rules(%__MODULE__{} = builder, rules, opts \\ []) when is_list(rules) do
-    Enum.reduce(rules, builder, fn rule_expr, acc ->
-      add(acc, Keyword.merge([rule: rule_expr], opts))
-    end)
-  end
-
-
   ## Set Operations
   # Note: Individual set operations have been replaced by the unified API.
   # Use: builder |> add(set: "name", type: :ipv4_addr, ...)
   # See the top-level add/2, delete/2, flush/2 functions.
-
 
   ## Maps
   # Note: Individual map operations have been replaced by the unified API.
@@ -1281,7 +1168,7 @@ defmodule NFTables.Builder do
   @spec import_table(t(), map()) :: t()
   def import_table(%__MODULE__{} = builder, %{name: name, family: family}) do
     %__MODULE__{builder | family: family}
-    |> add(table: name)
+    |> apply_with_opts(:add, table: name)
   end
 
   @doc """
@@ -1307,7 +1194,7 @@ defmodule NFTables.Builder do
     opts
     |> Keyword.put(:table, chain_map.table)
     |> Keyword.put(:chain, chain_map.name)
-    |> then(&add(builder, &1))
+    |> then(&apply_with_opts(builder, :add, &1))
   end
 
   defp build_chain_opts(chain_map) do
@@ -1343,7 +1230,7 @@ defmodule NFTables.Builder do
   """
   @spec import_rule(t(), map()) :: t()
   def import_rule(%__MODULE__{} = builder, %{table: table, chain: chain, expr: expr}) do
-    add(builder, table: table, chain: chain, rule: expr)
+    apply_with_opts(builder, :add, table: table, chain: chain, rule: expr)
   end
 
   @doc """
@@ -1369,7 +1256,7 @@ defmodule NFTables.Builder do
     opts
     |> Keyword.put(:table, set_map.table)
     |> Keyword.put(:set, set_map.name)
-    |> then(&add(builder, &1))
+    |> then(&apply_with_opts(builder, :add, &1))
   end
 
   defp build_set_opts(set_map) do
@@ -1404,7 +1291,7 @@ defmodule NFTables.Builder do
 
       # Modify and reapply
       builder
-      |> Builder.add(
+      |> NFTables.add(
         table: "filter",
         chain: "INPUT",
         rule: [
@@ -1412,7 +1299,7 @@ defmodule NFTables.Builder do
           %{drop: nil}
         ]
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Or start fresh and import specific elements
       {:ok, tables} = Query.list_tables(pid)
@@ -1487,20 +1374,20 @@ defmodule NFTables.Builder do
       # Use default local execution (NFTables.Local)
       {:ok, pid} = NFTables.start_link()
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
-      |> Builder.submit(pid: pid)  # Uses NFTables.Local
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
+      |> NFTables.submit(pid: pid)  # Uses NFTables.Local
 
       # Configure custom requestor when creating builder
       builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
-      |> Builder.add(table: "filter")
-      |> Builder.submit(node: :remote_host)  # Uses MyApp.RemoteRequestor
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit(node: :remote_host)  # Uses MyApp.RemoteRequestor
 
       # Or set requestor later
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       |> Builder.set_requestor(MyApp.AuditRequestor)
-      |> Builder.submit(audit_id: "12345")
+      |> NFTables.submit(audit_id: "12345")
 
   ## See Also
 
@@ -1543,17 +1430,17 @@ defmodule NFTables.Builder do
 
       # Pass options to requestor
       builder
-      |> Builder.submit(node: :firewall@server, timeout: 10_000)
+      |> NFTables.submit(node: :firewall@server, timeout: 10_000)
 
       # Override requestor for this submission only
       builder = Builder.new(requestor: MyApp.DefaultRequestor)
-      |> Builder.add(table: "filter")
-      |> Builder.submit(requestor: MyApp.SpecialRequestor, priority: :high)
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit(requestor: MyApp.SpecialRequestor, priority: :high)
 
       # Use without pre-configured requestor
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.submit(requestor: MyApp.RemoteRequestor, node: :remote_host)
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit(requestor: MyApp.RemoteRequestor, node: :remote_host)
 
   ## See Also
 
@@ -1572,7 +1459,7 @@ defmodule NFTables.Builder do
 
       You must either:
       1. Set requestor in builder: Builder.new(requestor: MyRequestor)
-      2. Pass requestor in options: Builder.submit(builder, requestor: MyRequestor)
+      2. Pass requestor in options: NFTables.submit(builder, requestor: MyRequestor)
 
       See NFTables.Requestor documentation for implementing custom requestors.
       """

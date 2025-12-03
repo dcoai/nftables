@@ -53,8 +53,8 @@ defmodule NFTables.Decoder do
 
       # Write operation
       Builder.new()
-      |> Builder.add(table: "filter", family: :inet)
-      |> Builder.submit(pid: pid)
+      |> NFTables.add(table: "filter", family: :inet)
+      |> NFTables.submit(pid: pid)
       #=> :ok
 
       # Read operation

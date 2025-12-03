@@ -184,7 +184,7 @@ defmodule NFTables.PayloadRawUnitTest do
 
       builder =
         Builder.new()
-        |> Builder.add(rule: dns_rule, table: "filter", chain: "input")
+        |> NFTables.add(rule: dns_rule, table: "filter", chain: "input")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -216,7 +216,7 @@ defmodule NFTables.PayloadRawUnitTest do
 
       builder =
         Builder.new()
-        |> Builder.add(rule: syn_rule, table: "filter", chain: "input")
+        |> NFTables.add(rule: syn_rule, table: "filter", chain: "input")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)

@@ -15,8 +15,8 @@ defmodule NFTables.Policy do
 
       # Create table and chain
       Builder.new()
-      |> Builder.add(table: "filter", family: :inet)
-      |> Builder.add(
+      |> NFTables.add(table: "filter", family: :inet)
+      |> NFTables.add(
         table: "filter",
         chain: "INPUT",
         family: :inet,
@@ -25,14 +25,14 @@ defmodule NFTables.Policy do
         priority: 0,
         policy: :drop
       )
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Apply common policies
       Builder.new()
       |> NFTables.Policy.accept_loopback()
       |> NFTables.Policy.accept_established()
       |> NFTables.Policy.allow_ssh()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
   ## See Also
 
@@ -55,13 +55,13 @@ defmodule NFTables.Policy do
       # Single rule
       Builder.new()
       |> NFTables.Policy.accept_loopback()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Compose with other policies
       Builder.new()
       |> NFTables.Policy.accept_loopback(table: "filter")
       |> NFTables.Policy.accept_established(table: "filter")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec accept_loopback(Builder.t(), keyword()) :: Builder.t()
   def accept_loopback(builder \\ Builder.new(), opts \\ []) do
@@ -75,7 +75,7 @@ defmodule NFTables.Policy do
       |> accept()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -88,12 +88,12 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.accept_established()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With custom table
       Builder.new()
       |> NFTables.Policy.accept_established(table: "myfilter")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec accept_established(Builder.t(), keyword()) :: Builder.t()
   def accept_established(builder \\ Builder.new(), opts \\ []) do
@@ -107,7 +107,7 @@ defmodule NFTables.Policy do
       |> accept()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -126,24 +126,24 @@ defmodule NFTables.Policy do
       # Basic SSH allow
       Builder.new()
       |> NFTables.Policy.allow_ssh()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With rate limiting
       Builder.new()
       |> NFTables.Policy.allow_ssh(rate_limit: 10)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With logging
       Builder.new()
       |> NFTables.Policy.allow_ssh(log: true)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Compose multiple services
       Builder.new()
       |> NFTables.Policy.allow_ssh(rate_limit: 10)
       |> NFTables.Policy.allow_http()
       |> NFTables.Policy.allow_https()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec allow_ssh(Builder.t(), keyword()) :: Builder.t()
   def allow_ssh(builder \\ Builder.new(), opts \\ []) do
@@ -175,7 +175,7 @@ defmodule NFTables.Policy do
       |> accept()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -193,12 +193,12 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.allow_http()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With rate limiting
       Builder.new()
       |> NFTables.Policy.allow_http(rate_limit: 100)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec allow_http(Builder.t(), keyword()) :: Builder.t()
   def allow_http(builder \\ Builder.new(), opts \\ []) do
@@ -212,13 +212,13 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.allow_https()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # Compose HTTP and HTTPS
       Builder.new()
       |> NFTables.Policy.allow_http()
       |> NFTables.Policy.allow_https()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec allow_https(Builder.t(), keyword()) :: Builder.t()
   def allow_https(builder \\ Builder.new(), opts \\ []) do
@@ -232,7 +232,7 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.allow_dns()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec allow_dns(Builder.t(), keyword()) :: Builder.t()
   def allow_dns(builder \\ Builder.new(), opts \\ []) do
@@ -248,7 +248,7 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.drop_invalid()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec drop_invalid(Builder.t(), keyword()) :: Builder.t()
   def drop_invalid(builder \\ Builder.new(), opts \\ []) do
@@ -262,7 +262,7 @@ defmodule NFTables.Policy do
       |> drop()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -283,12 +283,12 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.stateful()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With custom options
       Builder.new()
       |> NFTables.Policy.stateful(table: "filter", chain: "INPUT")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec stateful(Builder.t(), keyword()) :: Builder.t()
   def stateful(builder \\ Builder.new(), opts \\ []) do
@@ -316,12 +316,12 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.allow_any()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With logging
       Builder.new()
       |> NFTables.Policy.allow_any(log: true)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec allow_any(Builder.t(), keyword()) :: Builder.t()
   def allow_any(builder \\ Builder.new(), opts \\ []) do
@@ -343,7 +343,7 @@ defmodule NFTables.Policy do
       |> accept()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -363,12 +363,12 @@ defmodule NFTables.Policy do
 
       Builder.new()
       |> NFTables.Policy.deny_all()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
       # With logging
       Builder.new()
       |> NFTables.Policy.deny_all(log: true)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
   """
   @spec deny_all(Builder.t(), keyword()) :: Builder.t()
   def deny_all(builder \\ Builder.new(), opts \\ []) do
@@ -390,7 +390,7 @@ defmodule NFTables.Policy do
       |> drop()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   @doc """
@@ -466,15 +466,15 @@ defmodule NFTables.Policy do
 
     # Create table first
     table_result = Builder.new()
-    |> Builder.add(table: table, family: family)
+    |> NFTables.add(table: table, family: family)
     |> execute_rule(pid)
 
     # Then create chain separately
     result = case table_result do
       :ok ->
         Builder.new(family: family)
-        |> Builder.add(table: table)
-        |> Builder.add(chain_attrs)
+        |> NFTables.add(table: table)
+        |> NFTables.add(chain_attrs)
         |> execute_rule(pid)
       error -> error
     end
@@ -499,7 +499,7 @@ defmodule NFTables.Policy do
 
   # Execute a Builder and normalize response to :ok for consistent API
   defp execute_rule(builder, pid) do
-    case Builder.submit(builder, pid: pid) do
+    case NFTables.submit(builder, pid: pid) do
       :ok -> :ok
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
@@ -544,7 +544,7 @@ defmodule NFTables.Policy do
       |> accept()
 
     builder
-    |> Builder.add(rule: expr_list, table: table, chain: chain, family: family)
+    |> NFTables.add(rule: expr_list, table: table, chain: chain, family: family)
   end
 
   defp apply_service_rules(builder, services, opts) do
