@@ -131,7 +131,7 @@ defmodule NFTables do
   Stops the NFTables port process.
 
   All nftables objects remain in the kernel after stopping.
-  Use `NFTables.Query.flush_ruleset/2` to clean up if needed.
+  Use `NFTables.Query.flush_ruleset/1` to clean up if needed.
 
   ## Example
 

@@ -14,8 +14,8 @@ NFTables includes comprehensive support for advanced nftables capabilities:
 - **OSF (OS Fingerprinting)** - Passive OS detection
 
 **Documentation:**
-- [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) - Complete feature documentation with examples
-- [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick examples of all features
+- [advanced_features.md](advanced_features.md) - Complete feature documentation with examples
+- [quick_reference.md](quick_reference.md) - Quick examples of all features
 
 ---
 
@@ -894,7 +894,7 @@ value = NFTables.Sysctl.get!(pid, "net.ipv4.ip_forward")
 
 ## See Also
 
-- [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick reference guide
-- [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) - Advanced features documentation
+- [quick_reference.md](quick_reference.md) - Quick reference guide
+- [advanced_features.md](advanced_features.md) - Advanced features documentation
 - [Main README](../README.md) - Overview and quick start
-- [Examples Directory](../examples/) - Complete working examples
+- [Examples Directory](https://github.com/dcoai/nftables/examples) in the github repo- Complete working examples
