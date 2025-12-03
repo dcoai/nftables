@@ -12,14 +12,14 @@ defmodule NFTables.Expr.Verdicts do
 
   @doc "Accept packets"
   @spec accept(Expr.t()) :: Expr.t()
-  def accept(builder) do
+  def accept(builder \\ Expr.expr()) do
     expr = Expr.Structs.verdict("accept")
     Expr.add_expr(builder, expr)
   end
 
   @doc "Drop packets silently"
   @spec drop(Expr.t()) :: Expr.t()
-  def drop(builder) do
+  def drop(builder \\ Expr.expr()) do
     expr = Expr.Structs.verdict("drop")
     Expr.add_expr(builder, expr)
   end
@@ -33,7 +33,7 @@ defmodule NFTables.Expr.Verdicts do
       builder |> reject(:tcp_reset)
   """
   @spec reject(Expr.t(), atom()) :: Expr.t()
-  def reject(builder, type \\ :icmp_port_unreachable) do
+  def reject(builder \\ Expr.expr(), type \\ :icmp_port_unreachable) do
     expr = case type do
       :tcp_reset -> Expr.Structs.reject("tcp reset")
       :icmp_port_unreachable -> Expr.Structs.reject()
@@ -76,7 +76,7 @@ defmodule NFTables.Expr.Verdicts do
   - Audit trails with continued filtering
   """
   @spec continue(Expr.t()) :: Expr.t()
-  def continue(builder) do
+  def continue(builder \\ Expr.expr()) do
     expr = Expr.Structs.verdict("continue")
     Expr.add_expr(builder, expr)
   end
@@ -115,7 +115,7 @@ defmodule NFTables.Expr.Verdicts do
   - No connection limits
   """
   @spec notrack(Expr.t()) :: Expr.t()
-  def notrack(builder) do
+  def notrack(builder \\ Expr.expr()) do
     expr = %{"notrack" => nil}
     Expr.add_expr(builder, expr)
   end
@@ -160,7 +160,7 @@ defmodule NFTables.Expr.Verdicts do
   - Application-level filtering
   """
   @spec queue_to_userspace(Expr.t(), non_neg_integer(), keyword()) :: Expr.t()
-  def queue_to_userspace(builder, queue_num, opts \\ []) when is_integer(queue_num) and queue_num >= 0 do
+  def queue_to_userspace(builder \\ Expr.expr(), queue_num, opts \\ []) when is_integer(queue_num) and queue_num >= 0 do
     bypass = Keyword.get(opts, :bypass, false)
     fanout = Keyword.get(opts, :fanout, false)
 
@@ -230,7 +230,7 @@ defmodule NFTables.Expr.Verdicts do
   - Backend servers see firewall as client
   """
   @spec synproxy(Expr.t(), keyword()) :: Expr.t()
-  def synproxy(builder, opts \\ []) do
+  def synproxy(builder \\ Expr.expr(), opts \\ []) do
     synproxy_expr = %{}
 
     synproxy_expr = if mss = Keyword.get(opts, :mss) do
@@ -291,6 +291,7 @@ defmodule NFTables.Expr.Verdicts do
   - WAN interface MSS clamping
   """
   @spec set_tcp_mss(Expr.t(), non_neg_integer() | :pmtu) :: Expr.t()
+  def set_tcp_mss(builder \\ Expr.expr(), mss)
   def set_tcp_mss(builder, :pmtu) do
     # TCP MSS clamping to PMTU
     expr = %{
@@ -341,7 +342,7 @@ defmodule NFTables.Expr.Verdicts do
   - Compliance and auditing
   """
   @spec duplicate_to(Expr.t(), String.t()) :: Expr.t()
-  def duplicate_to(builder, interface) when is_binary(interface) do
+  def duplicate_to(builder \\ Expr.expr(), interface) when is_binary(interface) do
     expr = %{"dup" => %{"device" => interface}}
     Expr.add_expr(builder, expr)
   end
@@ -382,7 +383,7 @@ defmodule NFTables.Expr.Verdicts do
   - Only works for ESTABLISHED connections
   """
   @spec flow_offload(Expr.t(), keyword()) :: Expr.t()
-  def flow_offload(builder, opts \\ []) do
+  def flow_offload(builder \\ Expr.expr(), opts \\ []) do
     table = Keyword.get(opts, :table)
 
     expr = if table do
@@ -424,7 +425,7 @@ defmodule NFTables.Expr.Verdicts do
   - Conditional rule application
   """
   @spec jump(Expr.t(), String.t()) :: Expr.t()
-  def jump(builder, chain_name) when is_binary(chain_name) do
+  def jump(builder \\ Expr.expr(), chain_name) when is_binary(chain_name) do
     expr = Expr.Structs.jump(chain_name)
     Expr.add_expr(builder, expr)
   end
@@ -449,7 +450,7 @@ defmodule NFTables.Expr.Verdicts do
   - `goto/1`: Never returns (like a goto statement)
   """
   @spec goto(Expr.t(), String.t()) :: Expr.t()
-  def goto(builder, chain_name) when is_binary(chain_name) do
+  def goto(builder \\ Expr.expr(), chain_name) when is_binary(chain_name) do
     expr = Expr.Structs.goto(chain_name)
     Expr.add_expr(builder, expr)
   end
@@ -470,7 +471,7 @@ defmodule NFTables.Expr.Verdicts do
       # Continue processing in calling chain
   """
   @spec return_from_chain(Expr.t()) :: Expr.t()
-  def return_from_chain(builder) do
+  def return_from_chain(builder \\ Expr.expr()) do
     expr = Expr.Structs.verdict("return")
     Expr.add_expr(builder, expr)
   end
@@ -547,7 +548,7 @@ defmodule NFTables.Expr.Verdicts do
         |> accept()
   """
   @spec tproxy(Expr.t(), keyword()) :: Expr.t()
-  def tproxy(builder, opts) do
+  def tproxy(builder \\ Expr.expr(), opts) do
     port = Keyword.fetch!(opts, :to)
     addr = Keyword.get(opts, :addr)
     family = Keyword.get(opts, :family)

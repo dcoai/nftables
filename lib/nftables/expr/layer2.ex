@@ -15,7 +15,7 @@ defmodule NFTables.Expr.Layer2 do
       builder |> source_mac("aa:bb:cc:dd:ee:ff")
   """
   @spec source_mac(Expr.t(), String.t()) :: Expr.t()
-  def source_mac(builder, mac) when is_binary(mac) do
+  def source_mac(builder \\ Expr.expr(), mac) when is_binary(mac) do
     expr = Expr.Structs.payload_match("ether", "saddr", mac)
     Expr.add_expr(builder, expr)
   end
@@ -28,21 +28,21 @@ defmodule NFTables.Expr.Layer2 do
       builder |> dest_mac("aa:bb:cc:dd:ee:ff")
   """
   @spec dest_mac(Expr.t(), String.t()) :: Expr.t()
-  def dest_mac(builder, mac) when is_binary(mac) do
+  def dest_mac(builder \\ Expr.expr(), mac) when is_binary(mac) do
     expr = Expr.Structs.payload_match("ether", "daddr", mac)
     Expr.add_expr(builder, expr)
   end
 
   @doc "Match input interface name"
   @spec iif(Expr.t(), String.t()) :: Expr.t()
-  def iif(builder, ifname) when is_binary(ifname) do
+  def iif(builder \\ Expr.expr(), ifname) when is_binary(ifname) do
     expr = Expr.Structs.meta_match("iifname", ifname)
     Expr.add_expr(builder, expr)
   end
 
   @doc "Match output interface name"
   @spec oif(Expr.t(), String.t()) :: Expr.t()
-  def oif(builder, ifname) when is_binary(ifname) do
+  def oif(builder \\ Expr.expr(), ifname) when is_binary(ifname) do
     expr = Expr.Structs.meta_match("oifname", ifname)
     Expr.add_expr(builder, expr)
   end
@@ -61,7 +61,7 @@ defmodule NFTables.Expr.Layer2 do
       builder |> vlan_id(50) |> jump("vlan_50")
   """
   @spec vlan_id(Expr.t(), non_neg_integer()) :: Expr.t()
-  def vlan_id(builder, vlan_id) when is_integer(vlan_id) and vlan_id >= 0 and vlan_id <= 4095 do
+  def vlan_id(builder \\ Expr.expr(), vlan_id) when is_integer(vlan_id) and vlan_id >= 0 and vlan_id <= 4095 do
     expr = Expr.Structs.payload_match("vlan", "id", vlan_id)
     Expr.add_expr(builder, expr)
   end
@@ -75,7 +75,7 @@ defmodule NFTables.Expr.Layer2 do
       builder |> vlan_pcp(7) |> accept()
   """
   @spec vlan_pcp(Expr.t(), non_neg_integer()) :: Expr.t()
-  def vlan_pcp(builder, pcp) when is_integer(pcp) and pcp >= 0 and pcp <= 7 do
+  def vlan_pcp(builder \\ Expr.expr(), pcp) when is_integer(pcp) and pcp >= 0 and pcp <= 7 do
     expr = Expr.Structs.payload_match("vlan", "pcp", pcp)
     Expr.add_expr(builder, expr)
   end

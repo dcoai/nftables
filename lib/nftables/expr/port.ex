@@ -56,6 +56,7 @@ defmodule NFTables.Expr.Port do
   Raises ArgumentError if called without a protocol context (tcp/udp/sctp/dccp).
   """
   @spec dport(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
+  def dport(builder \\ Expr.expr(), port)
   def dport(builder, port) when is_integer(port) do
     protocol = get_protocol!(builder, "dport")
     validate_port!(port)
@@ -100,6 +101,7 @@ defmodule NFTables.Expr.Port do
   Raises ArgumentError if called without tcp() or udp() first.
   """
   @spec sport(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
+  def sport(builder \\ Expr.expr(), port)
   def sport(builder, port) when is_integer(port) do
     protocol = get_protocol!(builder, "sport")
     validate_port!(port)
@@ -129,7 +131,7 @@ defmodule NFTables.Expr.Port do
       rule() |> udp() |> dst_port(53)
   """
   @spec dst_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
-  def dst_port(builder, port), do: dport(builder, port)
+  def dst_port(builder \\ Expr.expr(), port), do: dport(builder, port)
 
   @doc """
   Alias for sport/2. Match source port.
@@ -140,7 +142,7 @@ defmodule NFTables.Expr.Port do
       rule() |> tcp() |> src_port(1024..65535)
   """
   @spec src_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
-  def src_port(builder, port), do: sport(builder, port)
+  def src_port(builder \\ Expr.expr(), port), do: sport(builder, port)
 
   # Private helpers
 

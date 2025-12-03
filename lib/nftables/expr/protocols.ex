@@ -65,7 +65,7 @@ defmodule NFTables.Expr.Protocols do
   SCTP uses IP protocol number 132.
   """
   @spec sctp(Expr.t()) :: Expr.t()
-  def sctp(builder) do
+  def sctp(builder \\ Expr.expr()) do
     expr = Expr.Structs.payload_match("ip", "protocol", "sctp")
 
     builder
@@ -100,7 +100,7 @@ defmodule NFTables.Expr.Protocols do
   DCCP uses IP protocol number 33.
   """
   @spec dccp(Expr.t()) :: Expr.t()
-  def dccp(builder) do
+  def dccp(builder \\ Expr.expr()) do
     expr = Expr.Structs.payload_match("ip", "protocol", "dccp")
 
     builder
@@ -134,7 +134,7 @@ defmodule NFTables.Expr.Protocols do
   GRE uses IP protocol number 47.
   """
   @spec gre(Expr.t()) :: Expr.t()
-  def gre(builder) do
+  def gre(builder \\ Expr.expr()) do
     expr = Expr.Structs.payload_match("ip", "protocol", "gre")
 
     builder
@@ -163,7 +163,7 @@ defmodule NFTables.Expr.Protocols do
       |> accept()
   """
   @spec gre_version(Expr.t(), non_neg_integer()) :: Expr.t()
-  def gre_version(builder, version) when is_integer(version) and version >= 0 do
+  def gre_version(builder \\ Expr.expr(), version) when is_integer(version) and version >= 0 do
     builder
     |> ensure_gre()
     |> Expr.add_expr(Expr.Structs.payload_match("gre", "version", version))
@@ -197,7 +197,7 @@ defmodule NFTables.Expr.Protocols do
   Not all GRE packets include a key field.
   """
   @spec gre_key(Expr.t(), non_neg_integer()) :: Expr.t()
-  def gre_key(builder, key) when is_integer(key) and key >= 0 do
+  def gre_key(builder \\ Expr.expr(), key) when is_integer(key) and key >= 0 do
     builder
     |> ensure_gre()
     |> Expr.add_expr(Expr.Structs.payload_match("gre", "key", key))
@@ -229,7 +229,7 @@ defmodule NFTables.Expr.Protocols do
   - 0x0800: Strict source route
   """
   @spec gre_flags(Expr.t(), non_neg_integer()) :: Expr.t()
-  def gre_flags(builder, flags) when is_integer(flags) and flags >= 0 do
+  def gre_flags(builder \\ Expr.expr(), flags) when is_integer(flags) and flags >= 0 do
     builder
     |> ensure_gre()
     |> Expr.add_expr(Expr.Structs.payload_match("gre", "flags", flags))
