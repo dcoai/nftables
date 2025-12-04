@@ -71,12 +71,13 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "works with custom options" do
-      builder = Policy.accept_established(
-        Builder.new(),
-        table: "test",
-        chain: "CUSTOM",
-        family: :inet
-      )
+      builder =
+        Policy.accept_established(
+          Builder.new(),
+          table: "test",
+          chain: "CUSTOM",
+          family: :inet
+        )
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)
@@ -130,15 +131,19 @@ defmodule NFTables.PolicyUnitTest do
       assert length(rule.expr) >= 3
 
       # Find TCP protocol match
-      tcp_expr = Enum.find(rule.expr, fn e ->
-        match?(%{match: %{left: %{payload: %{protocol: "tcp"}}}}, e)
-      end)
+      tcp_expr =
+        Enum.find(rule.expr, fn e ->
+          match?(%{match: %{left: %{payload: %{protocol: "tcp"}}}}, e)
+        end)
+
       assert tcp_expr != nil
 
       # Find port 22 match
-      port_expr = Enum.find(rule.expr, fn e ->
-        match?(%{match: %{right: 22}}, e)
-      end)
+      port_expr =
+        Enum.find(rule.expr, fn e ->
+          match?(%{match: %{right: 22}}, e)
+        end)
+
       assert port_expr != nil
 
       # Find accept
@@ -202,9 +207,11 @@ defmodule NFTables.PolicyUnitTest do
       assert %{add: %{rule: rule}} = command
 
       # Find port 80 match
-      port_expr = Enum.find(rule.expr, fn e ->
-        match?(%{match: %{right: 80}}, e)
-      end)
+      port_expr =
+        Enum.find(rule.expr, fn e ->
+          match?(%{match: %{right: 80}}, e)
+        end)
+
       assert port_expr != nil
     end
 
@@ -245,9 +252,11 @@ defmodule NFTables.PolicyUnitTest do
       assert %{add: %{rule: rule}} = command
 
       # Find port 443 match
-      port_expr = Enum.find(rule.expr, fn e ->
-        match?(%{match: %{right: 443}}, e)
-      end)
+      port_expr =
+        Enum.find(rule.expr, fn e ->
+          match?(%{match: %{right: 443}}, e)
+        end)
+
       assert port_expr != nil
     end
 
@@ -275,9 +284,11 @@ defmodule NFTables.PolicyUnitTest do
       assert %{add: %{rule: rule}} = command
 
       # Find port 53 match
-      port_expr = Enum.find(rule.expr, fn e ->
-        match?(%{match: %{right: 53}}, e)
-      end)
+      port_expr =
+        Enum.find(rule.expr, fn e ->
+          match?(%{match: %{right: 53}}, e)
+        end)
+
       assert port_expr != nil
     end
   end
@@ -356,13 +367,14 @@ defmodule NFTables.PolicyUnitTest do
     end
 
     test "merges default and custom options" do
-      builder = Policy.allow_ssh(
-        Builder.new(),
-        table: "test",
-        chain: "INPUT",
-        rate_limit: 5,
-        family: :inet
-      )
+      builder =
+        Policy.allow_ssh(
+          Builder.new(),
+          table: "test",
+          chain: "INPUT",
+          rate_limit: 5,
+          family: :inet
+        )
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json, keys: :atoms)

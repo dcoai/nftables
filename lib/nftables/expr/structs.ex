@@ -240,7 +240,7 @@ defmodule NFTables.Expr.Structs do
   @spec ct_match(String.t(), term(), String.t() | nil) :: map()
   def ct_match(key, value, op \\ nil) do
     # Auto-determine operator if not specified
-    op = op || (if is_list(value), do: "in", else: "==")
+    op = op || if is_list(value), do: "in", else: "=="
 
     %{
       match: %{
@@ -473,7 +473,7 @@ defmodule NFTables.Expr.Structs do
   def bitwise_and_match(left_expr, mask, value) do
     %{
       match: %{
-        left: %{"&": [left_expr, normalize_value(mask)]},
+        left: %{&: [left_expr, normalize_value(mask)]},
         right: normalize_value(value),
         op: "=="
       }
@@ -760,10 +760,11 @@ defmodule NFTables.Expr.Structs do
   @spec set_update(term(), String.t(), list(map())) :: map()
   def set_update(elem, set_name, statements) when is_list(statements) do
     # For composite keys (lists), wrap in concat expression
-    normalized_elem = case elem do
-      list when is_list(list) and length(list) > 1 -> %{concat: list}
-      other -> normalize_value(other)
-    end
+    normalized_elem =
+      case elem do
+        list when is_list(list) and length(list) > 1 -> %{concat: list}
+        other -> normalize_value(other)
+      end
 
     %{
       set: %{
@@ -792,10 +793,11 @@ defmodule NFTables.Expr.Structs do
   @spec set_add_operation(term(), String.t(), list(map())) :: map()
   def set_add_operation(elem, set_name, statements) when is_list(statements) do
     # For composite keys (lists), wrap in concat expression
-    normalized_elem = case elem do
-      list when is_list(list) and length(list) > 1 -> %{concat: list}
-      other -> normalize_value(other)
-    end
+    normalized_elem =
+      case elem do
+        list when is_list(list) and length(list) > 1 -> %{concat: list}
+        other -> normalize_value(other)
+      end
 
     %{
       set: %{
@@ -835,8 +837,12 @@ defmodule NFTables.Expr.Structs do
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   # Convert payload base atoms to strings
-  defp base_to_string(:ll), do: "ll"  # Link layer
-  defp base_to_string(:nh), do: "nh"  # Network header
-  defp base_to_string(:th), do: "th"  # Transport header
-  defp base_to_string(:ih), do: "ih"  # Inner header
+  # Link layer
+  defp base_to_string(:ll), do: "ll"
+  # Network header
+  defp base_to_string(:nh), do: "nh"
+  # Transport header
+  defp base_to_string(:th), do: "th"
+  # Inner header
+  defp base_to_string(:ih), do: "ih"
 end

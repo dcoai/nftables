@@ -114,17 +114,17 @@ defmodule NFTables.Local do
   @impl true
   def submit(builder_or_command, opts) when is_list(opts) do
     # Convert Builder struct to command map if needed
-    command = case builder_or_command do
-      %{__struct__: Builder} -> Builder.to_map(builder_or_command)
-      map when is_map(map) -> map
-    end
+    command =
+      case builder_or_command do
+        %{__struct__: Builder} -> Builder.to_map(builder_or_command)
+        map when is_map(map) -> map
+      end
 
     submit_command(command, opts)
   end
 
   # Private function that does the actual execution
   defp submit_command(command, opts) when is_map(command) do
-
     # Encode Elixir map to JSON (this is the ONLY place JSON encoding happens)
     json_string = JSON.encode!(command)
 
@@ -134,7 +134,9 @@ defmodule NFTables.Local do
 
     # submit to NFTables.Port
     case NFTables.Port.commit(pid, json_string, timeout) do
-      {:ok, ""} -> :ok     # Empty response is success (write operations)
+      # Empty response is success (write operations)
+      {:ok, ""} ->
+        :ok
 
       {:ok, response_json} ->
         # Decode JSON response to Elixir structures (ONLY place JSON decoding happens)
@@ -143,7 +145,8 @@ defmodule NFTables.Local do
             # Check if any item contains an error
             case Enum.find(items, fn item -> Map.has_key?(item, :error) end) do
               %{error: error} -> {:error, error}
-              nil -> {:ok, decoded}  # Return decoded Elixir map
+              # Return decoded Elixir map
+              nil -> {:ok, decoded}
             end
 
           {:ok, %{error: error}} ->
@@ -156,9 +159,9 @@ defmodule NFTables.Local do
           {:error, _reason} ->
             # Not valid JSON, could be plain error text
             if String.contains?(response_json, "does not exist") or
-               String.contains?(response_json, "No such") or
-               String.contains?(response_json, "not found") or
-               String.contains?(response_json, "Error:") do
+                 String.contains?(response_json, "No such") or
+                 String.contains?(response_json, "not found") or
+                 String.contains?(response_json, "Error:") do
               {:error, response_json}
             else
               # Return raw response wrapped in a map

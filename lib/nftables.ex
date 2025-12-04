@@ -163,7 +163,6 @@ defmodule NFTables do
   """
   def add(opts), do: Builder.new(opts) |> add(opts)
 
-  
   @doc """
   Contextual add operation (arity-2) - continues existing builder.
 
@@ -206,14 +205,16 @@ defmodule NFTables do
   def flush(%Builder{} = builder, opts) when is_list(opts) do
     # If specific object is provided (table, chain, etc), use regular flush
     # Otherwise default scope to :all for flush_ruleset
-    has_object = Keyword.has_key?(opts, :table) or
-                 Keyword.has_key?(opts, :chain) or
-                 Keyword.has_key?(opts, :set) or
-                 Keyword.has_key?(opts, :map)
+    has_object =
+      Keyword.has_key?(opts, :table) or
+        Keyword.has_key?(opts, :chain) or
+        Keyword.has_key?(opts, :set) or
+        Keyword.has_key?(opts, :map)
 
     case {Keyword.get(opts, :scope), has_object} do
       {:all, _} -> Builder.flush_ruleset(builder, opts)
-      {nil, false} -> Builder.flush_ruleset(builder, opts)  # Default to flush_ruleset when no object
+      # Default to flush_ruleset when no object
+      {nil, false} -> Builder.flush_ruleset(builder, opts)
       _ -> Builder.apply_with_opts(builder, :flush, opts)
     end
   end

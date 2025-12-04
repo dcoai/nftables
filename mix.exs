@@ -58,7 +58,7 @@ defmodule NFTables.MixProject do
       files: ~w(lib examples .formatter.exs mix.exs README.md LICENSE),
       licenses: ["MIT"],
       links: %{
-        "GitHub" => @source_url,
+        "GitHub" => @source_url
       },
       maintainers: ["Doug ClymerOlson"],
       source_url: @source_url
@@ -74,7 +74,7 @@ defmodule NFTables.MixProject do
         "README.md",
         "LICENSE",
         "dev_docs/architecture.md",
-        "dev_docs/quick_reference.md",
+        "dev_docs/quick_reference.md"
       ],
       groups_for_modules: [
         "Core API": [
@@ -86,7 +86,7 @@ defmodule NFTables.MixProject do
           NFTables.Policy,
           NFTables.NAT
         ],
-        "Requests": [
+        Requests: [
           NFTables.Local,
           NFTables.Requestor,
           NFTables.Decoder

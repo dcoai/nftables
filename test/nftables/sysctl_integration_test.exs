@@ -36,6 +36,7 @@ defmodule NFTables.SysctlIntegrationTest do
         {:ok, value} ->
           assert is_binary(value)
           assert value in ["0", "1"]
+
         {:error, reason} ->
           # Some systems may not support this parameter
           # Reason can be binary or atom
@@ -50,6 +51,7 @@ defmodule NFTables.SysctlIntegrationTest do
           # Restore
           assert :ok = Sysctl.set(pid, @test_param, "0")
           assert {:ok, "0"} = Sysctl.get(pid, @test_param)
+
         {:error, _reason} ->
           # May fail due to permissions or kernel config
           :ok
@@ -79,6 +81,7 @@ defmodule NFTables.SysctlIntegrationTest do
   end
 
   defp restore_sysctl_value(_pid, _param, nil), do: :ok
+
   defp restore_sysctl_value(pid, param, value) do
     Sysctl.set(pid, param, value)
     :ok

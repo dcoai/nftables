@@ -153,7 +153,8 @@ defmodule NFTables.TestHelpers do
     policy = Keyword.get(opts, :policy, :accept)
 
     with {:ok, table_name} <- setup_test_table(pid, test_name, family: family),
-         {:ok, chain_name} <- create_test_chain(pid, table_name, test_name, hook, type, priority, policy, family) do
+         {:ok, chain_name} <-
+           create_test_chain(pid, table_name, test_name, hook, type, priority, policy, family) do
       {:ok, table_name, chain_name}
     else
       {:error, reason} -> {:error, reason}
@@ -234,7 +235,7 @@ defmodule NFTables.TestHelpers do
   """
   def safe_table_name?(table_name) do
     production_tables = ["filter", "nat", "raw", "mangle", "security"]
-    not (table_name in production_tables)
+    table_name not in production_tables
   end
 
   @doc """

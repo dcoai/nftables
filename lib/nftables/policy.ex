@@ -158,17 +158,19 @@ defmodule NFTables.Policy do
       |> tcp()
       |> dport(22)
 
-    expr_builder = if rate_limit_val do
-      limit(expr_builder, rate_limit_val, :minute)
-    else
-      expr_builder
-    end
+    expr_builder =
+      if rate_limit_val do
+        limit(expr_builder, rate_limit_val, :minute)
+      else
+        expr_builder
+      end
 
-    expr_builder = if log_enabled do
-      log(expr_builder, "SSH: ")
-    else
-      expr_builder
-    end
+    expr_builder =
+      if log_enabled do
+        log(expr_builder, "SSH: ")
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
@@ -332,11 +334,12 @@ defmodule NFTables.Policy do
 
     expr_builder = expr(family: family)
 
-    expr_builder = if log_enabled do
-      log(expr_builder, "ALLOW ANY: ")
-    else
-      expr_builder
-    end
+    expr_builder =
+      if log_enabled do
+        log(expr_builder, "ALLOW ANY: ")
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
@@ -379,11 +382,12 @@ defmodule NFTables.Policy do
 
     expr_builder = expr(family: family)
 
-    expr_builder = if log_enabled do
-      log(expr_builder, "DENY ALL: ")
-    else
-      expr_builder
-    end
+    expr_builder =
+      if log_enabled do
+        log(expr_builder, "DENY ALL: ")
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
@@ -444,40 +448,45 @@ defmodule NFTables.Policy do
     table = if test_mode, do: ensure_test_prefix(base_table), else: base_table
 
     # Build chain attributes as keyword list (Builder expects chain: not name:)
-    chain_attrs = if test_mode do
-      # Test mode: Create regular chain WITHOUT hook (safe - won't filter traffic)
-      [
-        table: table,
-        chain: "INPUT",
-        family: family
-      ]
-    else
-      # Production mode: Create base chain WITH hook (filters traffic)
-      [
-        table: table,
-        chain: "INPUT",
-        family: family,
-        type: :filter,
-        hook: :input,
-        priority: 0,
-        policy: :drop
-      ]
-    end
+    chain_attrs =
+      if test_mode do
+        # Test mode: Create regular chain WITHOUT hook (safe - won't filter traffic)
+        [
+          table: table,
+          chain: "INPUT",
+          family: family
+        ]
+      else
+        # Production mode: Create base chain WITH hook (filters traffic)
+        [
+          table: table,
+          chain: "INPUT",
+          family: family,
+          type: :filter,
+          hook: :input,
+          priority: 0,
+          policy: :drop
+        ]
+      end
 
     # Create table first
-    table_result = Builder.new()
-    |> NFTables.add(table: table, family: family)
-    |> execute_rule(pid)
+    table_result =
+      Builder.new()
+      |> NFTables.add(table: table, family: family)
+      |> execute_rule(pid)
 
     # Then create chain separately
-    result = case table_result do
-      :ok ->
-        Builder.new(family: family)
-        |> NFTables.add(table: table)
-        |> NFTables.add(chain_attrs)
-        |> execute_rule(pid)
-      error -> error
-    end
+    result =
+      case table_result do
+        :ok ->
+          Builder.new(family: family)
+          |> NFTables.add(table: table)
+          |> NFTables.add(chain_attrs)
+          |> execute_rule(pid)
+
+        error ->
+          error
+      end
 
     # Now apply policy rules using builder composition
     case result do
@@ -491,7 +500,9 @@ defmodule NFTables.Policy do
         |> drop_invalid(policy_opts)
         |> apply_service_rules(services, service_opts)
         |> execute_rule(pid)
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -527,17 +538,19 @@ defmodule NFTables.Policy do
       |> tcp()
       |> dport(port)
 
-    expr_builder = if rate_limit_val do
-      limit(expr_builder, rate_limit_val, :minute)
-    else
-      expr_builder
-    end
+    expr_builder =
+      if rate_limit_val do
+        limit(expr_builder, rate_limit_val, :minute)
+      else
+        expr_builder
+      end
 
-    expr_builder = if log_enabled do
-      log(expr_builder, "#{service}: ")
-    else
-      expr_builder
-    end
+    expr_builder =
+      if log_enabled do
+        log(expr_builder, "#{service}: ")
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
@@ -554,7 +567,8 @@ defmodule NFTables.Policy do
         :http -> allow_http(acc, opts)
         :https -> allow_https(acc, opts)
         :dns -> allow_dns(acc, opts)
-        _ -> acc  # Ignore unknown services
+        # Ignore unknown services
+        _ -> acc
       end
     end)
   end
