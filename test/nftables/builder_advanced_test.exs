@@ -6,9 +6,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Maps - add(map:)" do
     test "adds a map with key-value type" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(map: "port_map", type: {:inet_service, :verdict})
+        NFTables.add(table: "filter")
+        |> NFTables.add(map: "port_map", type: {:inet_service, :verdict})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -34,8 +33,8 @@ defmodule NFTables.BuilderAdvancedTest do
     test "adds map with different types" do
       builder =
         Builder.new(family: :ip)
-        |> Builder.add(table: "nat")
-        |> Builder.add(map: "addr_map", type: {:ipv4_addr, :ipv4_addr})
+        |> NFTables.add(table: "nat")
+        |> NFTables.add(map: "addr_map", type: {:ipv4_addr, :ipv4_addr})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -47,16 +46,14 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "raises when table not specified" do
       assert_raise ArgumentError, ~r/table must be specified/, fn ->
-        Builder.new()
-        |> Builder.add(map: "test_map", type: {:ipv4_addr, :verdict})
+        NFTables.add(map: "test_map", type: {:ipv4_addr, :verdict})
       end
     end
 
     test "raises when type not provided" do
       assert_raise ArgumentError, ~r/type must be/, fn ->
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(map: "test_map")
+        NFTables.add(table: "filter")
+        |> NFTables.add(map: "test_map")
       end
     end
   end
@@ -64,9 +61,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Maps - delete(map:)" do
     test "deletes a map" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.delete(map: "port_map", type: {:inet_service, :verdict})
+        NFTables.add(table: "filter")
+        |> NFTables.delete(map: "port_map", type: {:inet_service, :verdict})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -91,13 +87,14 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Maps - add(element:) for maps" do
     test "adds elements to a map" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter", map: "port_map", type: {:inet_service, :verdict})
-        |> Builder.add(element: [
-          {80, "accept"},
-          {443, "accept"},
-          {8080, "drop"}
-        ])
+        NFTables.add(table: "filter", map: "port_map", type: {:inet_service, :verdict})
+        |> NFTables.add(
+          element: [
+            {80, "accept"},
+            {443, "accept"},
+            {8080, "drop"}
+          ]
+        )
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -105,14 +102,18 @@ defmodule NFTables.BuilderAdvancedTest do
       element_cmd = Enum.at(decoded["nftables"], 1)
 
       assert element_cmd["add"]["element"]["name"] == "port_map"
-      assert element_cmd["add"]["element"]["elem"] == [[80, "accept"], [443, "accept"], [8080, "drop"]]
+
+      assert element_cmd["add"]["element"]["elem"] == [
+               [80, "accept"],
+               [443, "accept"],
+               [8080, "drop"]
+             ]
     end
 
     test "handles single element" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter", map: "test_map", type: {:inet_service, :verdict})
-        |> Builder.add(element: [{22, "accept"}])
+        NFTables.add(table: "filter", map: "test_map", type: {:inet_service, :verdict})
+        |> NFTables.add(element: [{22, "accept"}])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -125,9 +126,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Maps - delete(element:) for maps" do
     test "deletes elements from a map" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter", map: "port_map", type: {:inet_service, :verdict})
-        |> Builder.delete(element: [80, 443])
+        NFTables.add(table: "filter", map: "port_map", type: {:inet_service, :verdict})
+        |> NFTables.delete(element: [80, 443])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -142,9 +142,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Named Counters - add(counter:)" do
     test "adds a counter with default values" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(counter: "http_counter")
+        NFTables.add(table: "filter")
+        |> NFTables.add(counter: "http_counter")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -169,9 +168,8 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "adds counter with initial values" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(counter: "test_counter", packets: 100, bytes: 5000)
+        NFTables.add(table: "filter")
+        |> NFTables.add(counter: "test_counter", packets: 100, bytes: 5000)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -183,8 +181,7 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "raises when table not specified" do
       assert_raise ArgumentError, ~r/table must be specified/, fn ->
-        Builder.new()
-        |> Builder.add(counter: "test_counter")
+        NFTables.add(counter: "test_counter")
       end
     end
   end
@@ -192,9 +189,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Named Counters - delete(counter:)" do
     test "deletes a counter" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.delete(counter: "http_counter")
+        NFTables.add(table: "filter")
+        |> NFTables.delete(counter: "http_counter")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -219,9 +215,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Quotas - add(quota:)" do
     test "adds a quota with default values" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(quota: "monthly_limit", bytes: 1_000_000_000)
+        NFTables.add(table: "filter")
+        |> NFTables.add(quota: "monthly_limit", bytes: 1_000_000_000)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -247,9 +242,8 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "adds quota with custom values" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(quota: "test_quota", bytes: 500_000, used: 100_000, over: true)
+        NFTables.add(table: "filter")
+        |> NFTables.add(quota: "test_quota", bytes: 500_000, used: 100_000, over: true)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -262,17 +256,15 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "raises when table not specified" do
       assert_raise ArgumentError, ~r/table must be specified/, fn ->
-        Builder.new()
-        |> Builder.add(quota: "test_quota", bytes: 1000)
+        NFTables.add(quota: "test_quota", bytes: 1000)
       end
     end
 
     test "validates non-negative bytes" do
       # This should work
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(quota: "test", bytes: 0)
+        NFTables.add(table: "filter")
+        |> NFTables.add(quota: "test", bytes: 0)
 
       assert %Builder{} = builder
     end
@@ -281,9 +273,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Quotas - delete(quota:)" do
     test "deletes a quota" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.delete(quota: "monthly_limit")
+        NFTables.add(table: "filter")
+        |> NFTables.delete(quota: "monthly_limit")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -308,9 +299,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Named Limits - add(limit:)" do
     test "adds a limit with default burst" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(limit: "ssh_limit", rate: 10, unit: :minute)
+        NFTables.add(table: "filter")
+        |> NFTables.add(limit: "ssh_limit", rate: 10, unit: :minute)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -336,9 +326,8 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "adds limit with burst value" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(limit: "http_limit", rate: 100, unit: :second, burst: 50)
+        NFTables.add(table: "filter")
+        |> NFTables.add(limit: "http_limit", rate: 100, unit: :second, burst: 50)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -354,9 +343,8 @@ defmodule NFTables.BuilderAdvancedTest do
 
       for unit <- units do
         builder =
-          Builder.new()
-          |> Builder.add(table: "filter")
-          |> Builder.add(limit: "test_limit", rate: 5, unit: unit)
+          NFTables.add(table: "filter")
+          |> NFTables.add(limit: "test_limit", rate: 5, unit: unit)
 
         json = Builder.to_json(builder)
         decoded = Jason.decode!(json)
@@ -368,8 +356,7 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "raises when table not specified" do
       assert_raise ArgumentError, ~r/table must be specified/, fn ->
-        Builder.new()
-        |> Builder.add(limit: "test_limit", rate: 10, unit: :minute)
+        NFTables.add(limit: "test_limit", rate: 10, unit: :minute)
       end
     end
   end
@@ -377,9 +364,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Named Limits - delete(limit:)" do
     test "deletes a limit" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.delete(limit: "ssh_limit", rate: 10, unit: :minute)
+        NFTables.add(table: "filter")
+        |> NFTables.delete(limit: "ssh_limit", rate: 10, unit: :minute)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -404,14 +390,15 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Advanced features integration" do
     test "combines map creation with element addition" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(map: "port_verdict", type: {:inet_service, :verdict})
-        |> Builder.add(element: [
-          {22, "accept"},
-          {80, "accept"},
-          {443, "accept"}
-        ])
+        NFTables.add(table: "filter")
+        |> NFTables.add(map: "port_verdict", type: {:inet_service, :verdict})
+        |> NFTables.add(
+          element: [
+            {22, "accept"},
+            {80, "accept"},
+            {443, "accept"}
+          ]
+        )
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -423,11 +410,10 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "creates multiple named objects in sequence" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(counter: "web_counter")
-        |> Builder.add(quota: "daily_quota", bytes: 10_000_000_000)
-        |> Builder.add(limit: "rate_limit", rate: 100, unit: :second, burst: 50)
+        NFTables.add(table: "filter")
+        |> NFTables.add(counter: "web_counter")
+        |> NFTables.add(quota: "daily_quota", bytes: 10_000_000_000)
+        |> NFTables.add(limit: "rate_limit", rate: 100, unit: :second, burst: 50)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -440,12 +426,11 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "mixes advanced features with basic operations" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
-        |> Builder.add(counter: "input_counter")
-        |> Builder.add(set: "blocklist", type: :ipv4_addr)
-        |> Builder.add(limit: "ssh_limit", rate: 10, unit: :minute, burst: 5)
+        NFTables.add(table: "filter")
+        |> NFTables.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+        |> NFTables.add(counter: "input_counter")
+        |> NFTables.add(set: "blocklist", type: :ipv4_addr)
+        |> NFTables.add(limit: "ssh_limit", rate: 10, unit: :minute, burst: 5)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -453,11 +438,26 @@ defmodule NFTables.BuilderAdvancedTest do
       assert length(decoded["nftables"]) == 5
       # Verify each type of operation exists
       commands = decoded["nftables"]
-      assert Enum.any?(commands, fn cmd -> Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "table") end)
-      assert Enum.any?(commands, fn cmd -> Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "chain") end)
-      assert Enum.any?(commands, fn cmd -> Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "counter") end)
-      assert Enum.any?(commands, fn cmd -> Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "set") end)
-      assert Enum.any?(commands, fn cmd -> Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "limit") end)
+
+      assert Enum.any?(commands, fn cmd ->
+               Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "table")
+             end)
+
+      assert Enum.any?(commands, fn cmd ->
+               Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "chain")
+             end)
+
+      assert Enum.any?(commands, fn cmd ->
+               Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "counter")
+             end)
+
+      assert Enum.any?(commands, fn cmd ->
+               Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "set")
+             end)
+
+      assert Enum.any?(commands, fn cmd ->
+               Map.has_key?(cmd, "add") and Map.has_key?(cmd["add"], "limit")
+             end)
     end
   end
 
@@ -465,8 +465,8 @@ defmodule NFTables.BuilderAdvancedTest do
     test "uses builder's family for map operations" do
       builder =
         Builder.new(family: :ip6)
-        |> Builder.add(table: "filter")
-        |> Builder.add(map: "ipv6_map", type: {:ipv6_addr, :verdict})
+        |> NFTables.add(table: "filter")
+        |> NFTables.add(map: "ipv6_map", type: {:ipv6_addr, :verdict})
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -478,8 +478,8 @@ defmodule NFTables.BuilderAdvancedTest do
     test "allows family override for counter" do
       builder =
         Builder.new(family: :inet)
-        |> Builder.add(table: "filter")
-        |> Builder.add(counter: "test", family: :ip)
+        |> NFTables.add(table: "filter")
+        |> NFTables.add(counter: "test", family: :ip)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -492,9 +492,8 @@ defmodule NFTables.BuilderAdvancedTest do
   describe "Table specification" do
     test "uses table context when set" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "nat")
-        |> Builder.add(counter: "nat_counter")
+        NFTables.add(table: "nat")
+        |> NFTables.add(counter: "nat_counter")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -505,18 +504,19 @@ defmodule NFTables.BuilderAdvancedTest do
 
     test "allows table override" do
       builder =
-        Builder.new()
-        |> Builder.add(table: "filter")
-        |> Builder.add(table: "nat")
-        |> Builder.add(counter: "other_counter", table: "nat")
+        NFTables.add(table: "filter")
+        |> NFTables.add(table: "nat")
+        |> NFTables.add(counter: "other_counter", table: "nat")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
 
       # Find the counter command (skip the two table commands)
-      counter_cmd = Enum.find(decoded["nftables"], fn cmd ->
-        Map.has_key?(cmd, "add") && Map.has_key?(cmd["add"], "counter")
-      end)
+      counter_cmd =
+        Enum.find(decoded["nftables"], fn cmd ->
+          Map.has_key?(cmd, "add") && Map.has_key?(cmd["add"], "counter")
+        end)
+
       assert counter_cmd["add"]["counter"]["table"] == "nat"
     end
   end

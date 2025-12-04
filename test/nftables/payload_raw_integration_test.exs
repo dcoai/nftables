@@ -8,20 +8,18 @@ defmodule NFTables.PayloadRawIntegrationTest do
   @moduletag :slow
 
   setup do
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
     test_table = "raw_test_#{:rand.uniform(1_000_000)}"
 
     # Create test table
-    Builder.new()
-    |> Builder.add(table: test_table)
-    |> Builder.submit(pid: pid)
+    NFTables.add(table: test_table)
+    |> NFTables.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
-        Builder.new()
-        |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.submit(pid: pid)
+        NFTables.delete(table: test_table, family: :inet)
+        |> NFTables.submit(pid: pid)
       end
     end)
 
@@ -37,15 +35,13 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw(:th, 16, 16, 53)
         |> counter()
         |> accept()
-        
 
       # Create a simple chain without hooks to avoid Builder bug
       result =
-        Builder.new()
-        |> Builder.add(table: table)
-        |> Builder.add(chain: "test_chain")
-        |> Builder.add(rule: dns_rule)
-        |> Builder.submit(pid: pid)
+        NFTables.add(table: table)
+        |> NFTables.add(chain: "test_chain")
+        |> NFTables.add(rule: dns_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -59,14 +55,12 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw(:ih, 0, 32, "GET ")
         |> log("HTTP GET detected: ")
         |> accept()
-        
 
       result =
-        Builder.new()
-        |> Builder.add(table: table)
-        |> Builder.add(chain: "test_chain")
-        |> Builder.add(rule: http_get_rule)
-        |> Builder.submit(pid: pid)
+        NFTables.add(table: table)
+        |> NFTables.add(chain: "test_chain")
+        |> NFTables.add(rule: http_get_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -81,14 +75,12 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> counter()
         |> accept()
-        
 
       result =
-        Builder.new()
-        |> Builder.add(table: table)
-        |> Builder.add(chain: "test_chain")
-        |> Builder.add(rule: syn_rule)
-        |> Builder.submit(pid: pid)
+        NFTables.add(table: table)
+        |> NFTables.add(chain: "test_chain")
+        |> NFTables.add(rule: syn_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -100,14 +92,12 @@ defmodule NFTables.PayloadRawIntegrationTest do
         expr()
         |> payload_raw(:nh, 96, 32, <<192, 168, 1, 1>>)
         |> drop()
-        
 
       result =
-        Builder.new()
-        |> Builder.add(table: table)
-        |> Builder.add(chain: "test_chain")
-        |> Builder.add(rule: ip_rule)
-        |> Builder.submit(pid: pid)
+        NFTables.add(table: table)
+        |> NFTables.add(chain: "test_chain")
+        |> NFTables.add(rule: ip_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -121,14 +111,12 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> payload_raw_masked(:nh, 48, 16, 0x4000, 0x4000)
         |> counter()
         |> accept()
-        
 
       result =
-        Builder.new()
-        |> Builder.add(table: table)
-        |> Builder.add(chain: "test_chain")
-        |> Builder.add(rule: df_rule)
-        |> Builder.submit(pid: pid)
+        NFTables.add(table: table)
+        |> NFTables.add(chain: "test_chain")
+        |> NFTables.add(rule: df_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -141,22 +129,19 @@ defmodule NFTables.PayloadRawIntegrationTest do
         |> udp()
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
-        
 
       http_rule =
         expr()
         |> tcp()
         |> payload_raw(:th, 16, 16, 80)
         |> accept()
-        
 
       result =
-        Builder.new()
-        |> Builder.add(table: table)
-        |> Builder.add(chain: "test_chain")
-        |> Builder.add(rule: dns_rule)
-        |> Builder.add(rule: http_rule)
-        |> Builder.submit(pid: pid)
+        NFTables.add(table: table)
+        |> NFTables.add(chain: "test_chain")
+        |> NFTables.add(rule: dns_rule)
+        |> NFTables.add(rule: http_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end

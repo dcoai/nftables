@@ -16,7 +16,7 @@
 #   mix run examples/03_firewall_rules.exs
 
 # Start NFTables (JSON-based port)
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 IO.puts("✓ NFTables started (JSON-based port)\n")
 
 table = "filter"

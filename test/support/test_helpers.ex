@@ -40,7 +40,7 @@ defmodule NFTables.TestHelpers do
   ## Usage
 
       setup do
-        {:ok, pid} = NFTables.start_link()
+        {:ok, pid} = NFTables.Port.start_link()
 
         # Create isolated test infrastructure WITHOUT hooks (safe)
         {:ok, table, chain} = NFTables.TestHelpers.setup_test_table_and_chain(
@@ -90,12 +90,12 @@ defmodule NFTables.TestHelpers do
 
     # Clean up if exists from previous failed test
     Builder.new()
-    |> Builder.delete(table: table_name, family: family)
-    |> Builder.submit(pid: pid)
+    |> NFTables.delete(table: table_name, family: family)
+    |> NFTables.submit(pid: pid)
 
     Builder.new()
-    |> Builder.add(table: table_name, family: family)
-    |> Builder.submit(pid: pid)
+    |> NFTables.add(table: table_name, family: family)
+    |> NFTables.submit(pid: pid)
     |> case do
       :ok -> {:ok, table_name}
       {:error, reason} -> {:error, reason}
@@ -153,7 +153,8 @@ defmodule NFTables.TestHelpers do
     policy = Keyword.get(opts, :policy, :accept)
 
     with {:ok, table_name} <- setup_test_table(pid, test_name, family: family),
-         {:ok, chain_name} <- create_test_chain(pid, table_name, test_name, hook, type, priority, policy, family) do
+         {:ok, chain_name} <-
+           create_test_chain(pid, table_name, test_name, hook, type, priority, policy, family) do
       {:ok, table_name, chain_name}
     else
       {:error, reason} -> {:error, reason}
@@ -191,8 +192,8 @@ defmodule NFTables.TestHelpers do
       end
 
     Builder.new()
-    |> Builder.add(chain_attrs)
-    |> Builder.submit(pid: pid)
+    |> NFTables.add(chain_attrs)
+    |> NFTables.submit(pid: pid)
     |> case do
       :ok -> {:ok, chain_name}
       {:error, reason} -> {:error, reason}
@@ -214,8 +215,8 @@ defmodule NFTables.TestHelpers do
   """
   def cleanup_test_table(pid, table_name, family \\ :inet) do
     Builder.new()
-    |> Builder.delete(table: table_name, family: family)
-    |> Builder.submit(pid: pid)
+    |> NFTables.delete(table: table_name, family: family)
+    |> NFTables.submit(pid: pid)
   end
 
   @doc """
@@ -234,7 +235,7 @@ defmodule NFTables.TestHelpers do
   """
   def safe_table_name?(table_name) do
     production_tables = ["filter", "nat", "raw", "mangle", "security"]
-    not (table_name in production_tables)
+    table_name not in production_tables
   end
 
   @doc """

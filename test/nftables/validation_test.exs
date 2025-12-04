@@ -23,7 +23,7 @@ defmodule NFTables.ValidationTest do
 
   describe "validate_ipv6/1" do
     test "accepts valid IPv6 address" do
-      ipv6 = <<0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>>
+      ipv6 = <<0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1>>
       assert :ok = Validation.validate_ipv6(ipv6)
     end
 
@@ -83,7 +83,10 @@ defmodule NFTables.ValidationTest do
     end
 
     test "enhances EPERM error with capability instructions" do
-      result = Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{operation: :rule_add})
+      result =
+        Validation.enhance_netlink_error("Operation not permitted (EPERM)", %{
+          operation: :rule_add
+        })
 
       assert result =~ "Failed to add rule"
       assert result =~ "CAP_NET_ADMIN"
@@ -131,11 +134,12 @@ defmodule NFTables.ValidationTest do
 
   describe "enhance_netlink_error/2 with errno integers" do
     test "enhances ENOENT (errno 2) with context" do
-      result = Validation.enhance_netlink_error(2, %{
-        operation: :rule_add,
-        table: "filter",
-        chain: "INPUT"
-      })
+      result =
+        Validation.enhance_netlink_error(2, %{
+          operation: :rule_add,
+          table: "filter",
+          chain: "INPUT"
+        })
 
       assert result =~ "Failed to add rule to filter/INPUT"
       assert result =~ "Table or chain not found"
@@ -151,10 +155,11 @@ defmodule NFTables.ValidationTest do
     end
 
     test "enhances EEXIST (errno 17)" do
-      result = Validation.enhance_netlink_error(17, %{
-        operation: :table_add,
-        table: "filter"
-      })
+      result =
+        Validation.enhance_netlink_error(17, %{
+          operation: :table_add,
+          table: "filter"
+        })
 
       assert result =~ "Failed to add table"
       assert result =~ "Already exists"
@@ -168,11 +173,12 @@ defmodule NFTables.ValidationTest do
     end
 
     test "handles negative errno values" do
-      result = Validation.enhance_netlink_error(-2, %{
-        operation: :rule_add,
-        table: "filter",
-        chain: "INPUT"
-      })
+      result =
+        Validation.enhance_netlink_error(-2, %{
+          operation: :rule_add,
+          table: "filter",
+          chain: "INPUT"
+        })
 
       assert result =~ "Failed to add rule to filter/INPUT"
       assert result =~ "Table or chain not found"

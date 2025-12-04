@@ -57,7 +57,7 @@ defmodule ConnectionTrackingExample do
     IO.puts("║   Multi-WAN Load Balancing & Failover        ║")
     IO.puts("╚═══════════════════════════════════════════════╝\n")
 
-    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    {:ok, pid} = NFTables.Port.start_link(check_capabilities: false)
     IO.puts("✓ NFTables started (JSON-based port)\n")
 
     # Cleanup and setup

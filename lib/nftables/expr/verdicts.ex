@@ -34,12 +34,13 @@ defmodule NFTables.Expr.Verdicts do
   """
   @spec reject(Expr.t(), atom()) :: Expr.t()
   def reject(builder \\ Expr.expr(), type \\ :icmp_port_unreachable) do
-    expr = case type do
-      :tcp_reset -> Expr.Structs.reject("tcp reset")
-      :icmp_port_unreachable -> Expr.Structs.reject()
-      :icmpx_port_unreachable -> Expr.Structs.reject("icmpx type port-unreachable")
-      other -> Expr.Structs.reject(to_string(other))
-    end
+    expr =
+      case type do
+        :tcp_reset -> Expr.Structs.reject("tcp reset")
+        :icmp_port_unreachable -> Expr.Structs.reject()
+        :icmpx_port_unreachable -> Expr.Structs.reject("icmpx type port-unreachable")
+        other -> Expr.Structs.reject(to_string(other))
+      end
 
     Expr.add_expr(builder, expr)
   end
@@ -160,7 +161,8 @@ defmodule NFTables.Expr.Verdicts do
   - Application-level filtering
   """
   @spec queue_to_userspace(Expr.t(), non_neg_integer(), keyword()) :: Expr.t()
-  def queue_to_userspace(builder \\ Expr.expr(), queue_num, opts \\ []) when is_integer(queue_num) and queue_num >= 0 do
+  def queue_to_userspace(builder \\ Expr.expr(), queue_num, opts \\ [])
+      when is_integer(queue_num) and queue_num >= 0 do
     bypass = Keyword.get(opts, :bypass, false)
     fanout = Keyword.get(opts, :fanout, false)
 
@@ -170,11 +172,12 @@ defmodule NFTables.Expr.Verdicts do
     flags = if bypass, do: ["bypass" | flags], else: flags
     flags = if fanout, do: ["fanout" | flags], else: flags
 
-    queue_expr = if not Enum.empty?(flags) do
-      Map.put(queue_expr, "flags", Enum.join(flags, ","))
-    else
-      queue_expr
-    end
+    queue_expr =
+      if not Enum.empty?(flags) do
+        Map.put(queue_expr, "flags", Enum.join(flags, ","))
+      else
+        queue_expr
+      end
 
     expr = %{"queue" => queue_expr}
     Expr.add_expr(builder, expr)
@@ -233,29 +236,33 @@ defmodule NFTables.Expr.Verdicts do
   def synproxy(builder \\ Expr.expr(), opts \\ []) do
     synproxy_expr = %{}
 
-    synproxy_expr = if mss = Keyword.get(opts, :mss) do
-      Map.put(synproxy_expr, "mss", mss)
-    else
-      synproxy_expr
-    end
+    synproxy_expr =
+      if mss = Keyword.get(opts, :mss) do
+        Map.put(synproxy_expr, "mss", mss)
+      else
+        synproxy_expr
+      end
 
-    synproxy_expr = if wscale = Keyword.get(opts, :wscale) do
-      Map.put(synproxy_expr, "wscale", wscale)
-    else
-      synproxy_expr
-    end
+    synproxy_expr =
+      if wscale = Keyword.get(opts, :wscale) do
+        Map.put(synproxy_expr, "wscale", wscale)
+      else
+        synproxy_expr
+      end
 
-    synproxy_expr = if Keyword.get(opts, :sack_perm) do
-      Map.put(synproxy_expr, "sack-perm", true)
-    else
-      synproxy_expr
-    end
+    synproxy_expr =
+      if Keyword.get(opts, :sack_perm) do
+        Map.put(synproxy_expr, "sack-perm", true)
+      else
+        synproxy_expr
+      end
 
-    synproxy_expr = if Keyword.get(opts, :timestamp) do
-      Map.put(synproxy_expr, "timestamp", true)
-    else
-      synproxy_expr
-    end
+    synproxy_expr =
+      if Keyword.get(opts, :timestamp) do
+        Map.put(synproxy_expr, "timestamp", true)
+      else
+        synproxy_expr
+      end
 
     synproxy_expr = if map_size(synproxy_expr) == 0, do: nil, else: synproxy_expr
     expr = %{"synproxy" => synproxy_expr}
@@ -292,6 +299,7 @@ defmodule NFTables.Expr.Verdicts do
   """
   @spec set_tcp_mss(Expr.t(), non_neg_integer() | :pmtu) :: Expr.t()
   def set_tcp_mss(builder \\ Expr.expr(), mss)
+
   def set_tcp_mss(builder, :pmtu) do
     # TCP MSS clamping to PMTU
     expr = %{
@@ -300,8 +308,10 @@ defmodule NFTables.Expr.Verdicts do
         "value" => %{"rt" => "mtu"}
       }
     }
+
     Expr.add_expr(builder, expr)
   end
+
   def set_tcp_mss(builder, mss) when is_integer(mss) and mss > 0 and mss <= 65535 do
     # TCP MSS clamping to specific value
     expr = %{
@@ -310,6 +320,7 @@ defmodule NFTables.Expr.Verdicts do
         "value" => mss
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -386,11 +397,12 @@ defmodule NFTables.Expr.Verdicts do
   def flow_offload(builder \\ Expr.expr(), opts \\ []) do
     table = Keyword.get(opts, :table)
 
-    expr = if table do
-      %{"flow" => %{"op" => "add", "flowtable" => "@#{table}"}}
-    else
-      %{"flow" => %{"op" => "offload"}}
-    end
+    expr =
+      if table do
+        %{"flow" => %{"op" => "add", "flowtable" => "@#{table}"}}
+      else
+        %{"flow" => %{"op" => "offload"}}
+      end
 
     Expr.add_expr(builder, expr)
   end

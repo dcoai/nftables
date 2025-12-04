@@ -122,7 +122,7 @@ defmodule DistributedQueryExample do
 
     defmodule MyApp.FirewallNode do
       def execute_command(json_cmd) do
-        {:ok, pid} = NFTables.start_link()
+        {:ok, pid} = NFTables.Port.start_link()
 
         # Execute the pre-built command
         case NFTables.Port.commit(pid, json_cmd, 5000) do

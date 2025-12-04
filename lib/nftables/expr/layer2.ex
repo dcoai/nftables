@@ -61,7 +61,8 @@ defmodule NFTables.Expr.Layer2 do
       builder |> vlan_id(50) |> jump("vlan_50")
   """
   @spec vlan_id(Expr.t(), non_neg_integer()) :: Expr.t()
-  def vlan_id(builder \\ Expr.expr(), vlan_id) when is_integer(vlan_id) and vlan_id >= 0 and vlan_id <= 4095 do
+  def vlan_id(builder \\ Expr.expr(), vlan_id)
+      when is_integer(vlan_id) and vlan_id >= 0 and vlan_id <= 4095 do
     expr = Expr.Structs.payload_match("vlan", "id", vlan_id)
     Expr.add_expr(builder, expr)
   end

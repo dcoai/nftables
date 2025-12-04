@@ -45,21 +45,19 @@ chmod 700 deps/nftables_port/priv/port_nftables
 **Note** - before running examples on a remote machine, *be aware* you are able block your remote access.  You may want to start by experimenting in a VM or local machine.
 
 ```elixir
-alias NFTables.Builder
 import NFTables.Expr
 
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 
 def ssh(rule), do: rule |> tcp() |> dport(22)
 
 response =
-  Builder.new()
-  |> Builder.add(table: "filter", family: :inet)
-  |> Builder.add(chain: "INPUT", hook: :input)
-  |> Builder.add(rule: expr() |> ssh() |> accept())
-  |> Builder.commit(pid: pid)
+  NFTables.add(table: "filter", family: :inet)
+  |> NFTables.add(chain: "INPUT", hook: :input)
+  |> NFTables.add(rule: expr() |> ssh() |> accept())
+  |> NFTables.submit(pid: pid)
 
-IO.inspect(response}
+IO.inspect(response)
 ```
 
 ## Features
@@ -90,7 +88,7 @@ json_cmd = ~s({"nftables": [{"list": {"tables": {}}}]})
 {:ok, json_response} = NFTables.Port.call(pid, json_cmd)
 ```
 
-Visit the [NFTables.Port](https://github.com/dcoai/nftables_port) project page for details.  Take some time to review the [Security](https://github.com/dcoai/nftables_port/dev_docs/security.md) document found there.
+Visit the [NFTables.Port GitHub project](https://github.com/dcoai/nftables_port) for details.  Take some time to review the [Security](https://github.com/dcoai/nftables_port/blob/main/dev_docs/security.md) document found there.
 
 ### NFTables
 
@@ -100,11 +98,10 @@ NFTables.Port takes JSON requests and passes them on to the Linux nftables servi
 
 ```elixir
 json =
-  Builder.new()
-  |> Builder.add(table: "filter", family: :inet)
-  |> Builder.add(chain: "INPUT", hook: :input, policy: :drop)
-  |> Builder.add(rule: tcp() |> dport(22) |> accept())
-  |> Builder.to_json()
+  NFTables.add(table: "filter", family: :inet)
+  |> NFTables.add(chain: "INPUT", hook: :input, policy: :drop)
+  |> NFTables.add(rule: tcp() |> dport(22) |> accept())
+  |> NFTables.to_json()
 ```
 
 **Putting these together**
@@ -112,14 +109,10 @@ json =
 ```elixir
 {:ok, pid} = NFTables.Port.start_link()
 
-json_cmd =
-  Builder.new()
-  |> Builder.add(table: "filter", family: :inet)
-  |> Builder.add(chain: "INPUT", hook: :input, policy: :drop)
-  |> Builder.add(rule: tcp() |> dport(22) |> accept())
-  |> Builder.to_json()
-
-{:ok, json_response} = NFTables.Port.call(pid, json_cmd)
+NFTables.add(table: "filter", family: :inet)
+|> NFTables.add(chain: "INPUT", hook: :input, policy: :drop)
+|> NFTables.add(rule: tcp() |> dport(22) |> accept())
+|> NFTables.submit(pid: pid)
 ```
 
 Using this we can manage a local firewall from Elixir.

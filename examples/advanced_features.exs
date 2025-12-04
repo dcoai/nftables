@@ -24,7 +24,7 @@ defmodule AdvancedFeaturesDemo do
     IO.puts("\n=== Advanced NFTables Features Demo ===\n")
 
     # Start NFTables with Port (JSON-based communication)
-    {:ok, pid} = NFTables.start_link(check_capabilities: false)
+    {:ok, pid} = NFTables.Port.start_link(check_capabilities: false)
     IO.puts("✓ NFTables started\n")
 
     # Clean up any existing test tables
@@ -156,20 +156,20 @@ defmodule AdvancedFeaturesDemo do
     IO.puts("1. Internet Sharing (Masquerade)")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.setup_masquerade("eth0")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("   ✓ Masquerade on eth0 (internet sharing)")
 
     IO.puts("\n2. Port Forwarding (DNAT)")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.port_forward(80, "192.168.1.100", 8080)
       |> NAT.port_forward(443, "192.168.1.100", 8443)
       |> NAT.port_forward(53, "192.168.1.1", 53, protocol: :udp)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("   ✓ Forward port 80 → 192.168.1.100:8080")
     IO.puts("   ✓ Forward port 443 → 192.168.1.100:8443")
@@ -178,27 +178,27 @@ defmodule AdvancedFeaturesDemo do
     IO.puts("\n3. Static 1:1 NAT")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.static_nat("203.0.113.100", "192.168.1.100")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("   ✓ 1:1 NAT: 203.0.113.100 ↔ 192.168.1.100")
 
     IO.puts("\n4. Source NAT for subnet")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.source_nat("10.0.0.0/24", "203.0.113.1")
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("   ✓ SNAT: 10.0.0.0/24 → 203.0.113.1")
 
     IO.puts("\n5. Transparent Proxy (Redirect)")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> NAT.redirect_port(80, 3128)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("   ✓ Redirect port 80 → 3128 (transparent proxy)")
 

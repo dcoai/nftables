@@ -78,12 +78,13 @@ defmodule NFTables.PayloadRawUnitTest do
         |> to_list()
 
       # Should contain match with raw payload
-      raw_match = Enum.find(expr, fn e ->
-        Map.has_key?(e, :match) and
-          is_map(e[:match][:left]) and
-          Map.has_key?(e[:match][:left], :payload) and
-          Map.has_key?(e[:match][:left][:payload], :base)
-      end)
+      raw_match =
+        Enum.find(expr, fn e ->
+          Map.has_key?(e, :match) and
+            is_map(e[:match][:left]) and
+            Map.has_key?(e[:match][:left], :payload) and
+            Map.has_key?(e[:match][:left][:payload], :base)
+        end)
 
       assert raw_match != nil
       assert raw_match[:match][:left][:payload][:base] == "th"
@@ -100,11 +101,12 @@ defmodule NFTables.PayloadRawUnitTest do
         |> to_list()
 
       # Should contain match with bitwise AND
-      masked_match = Enum.find(expr, fn e ->
-        Map.has_key?(e, :match) and
-          is_map(e[:match][:left]) and
-          Map.has_key?(e[:match][:left], :&)
-      end)
+      masked_match =
+        Enum.find(expr, fn e ->
+          Map.has_key?(e, :match) and
+            is_map(e[:match][:left]) and
+            Map.has_key?(e[:match][:left], :&)
+        end)
 
       assert masked_match != nil
       assert masked_match[:match][:right] == 0x02
@@ -118,11 +120,12 @@ defmodule NFTables.PayloadRawUnitTest do
         |> payload_raw(:ll, 96, 32, <<0x00, 0x11, 0x22, 0x33>>)
         |> to_list()
 
-      raw_match = Enum.find(expr, fn e ->
-        Map.has_key?(e, :match) and
-          is_map(e[:match][:left][:payload]) and
-          e[:match][:left][:payload][:base] == "ll"
-      end)
+      raw_match =
+        Enum.find(expr, fn e ->
+          Map.has_key?(e, :match) and
+            is_map(e[:match][:left][:payload]) and
+            e[:match][:left][:payload][:base] == "ll"
+        end)
 
       assert raw_match != nil
     end
@@ -133,11 +136,12 @@ defmodule NFTables.PayloadRawUnitTest do
         |> payload_raw(:nh, 96, 32, <<192, 168, 1, 1>>)
         |> to_list()
 
-      raw_match = Enum.find(expr, fn e ->
-        Map.has_key?(e, :match) and
-          is_map(e[:match][:left][:payload]) and
-          e[:match][:left][:payload][:base] == "nh"
-      end)
+      raw_match =
+        Enum.find(expr, fn e ->
+          Map.has_key?(e, :match) and
+            is_map(e[:match][:left][:payload]) and
+            e[:match][:left][:payload][:base] == "nh"
+        end)
 
       assert raw_match != nil
     end
@@ -149,11 +153,12 @@ defmodule NFTables.PayloadRawUnitTest do
         |> payload_raw(:th, 16, 16, 80)
         |> to_list()
 
-      raw_match = Enum.find(expr, fn e ->
-        Map.has_key?(e, :match) and
-          is_map(e[:match][:left][:payload]) and
-          e[:match][:left][:payload][:base] == "th"
-      end)
+      raw_match =
+        Enum.find(expr, fn e ->
+          Map.has_key?(e, :match) and
+            is_map(e[:match][:left][:payload]) and
+            e[:match][:left][:payload][:base] == "th"
+        end)
 
       assert raw_match != nil
     end
@@ -164,11 +169,12 @@ defmodule NFTables.PayloadRawUnitTest do
         |> payload_raw(:ih, 0, 32, "GET ")
         |> to_list()
 
-      raw_match = Enum.find(expr, fn e ->
-        Map.has_key?(e, :match) and
-          is_map(e[:match][:left][:payload]) and
-          e[:match][:left][:payload][:base] == "ih"
-      end)
+      raw_match =
+        Enum.find(expr, fn e ->
+          Map.has_key?(e, :match) and
+            is_map(e[:match][:left][:payload]) and
+            e[:match][:left][:payload][:base] == "ih"
+        end)
 
       assert raw_match != nil
     end
@@ -183,8 +189,7 @@ defmodule NFTables.PayloadRawUnitTest do
         |> accept()
 
       builder =
-        Builder.new()
-        |> Builder.add(rule: dns_rule, table: "filter", chain: "input")
+        NFTables.add(rule: dns_rule, table: "filter", chain: "input")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -193,12 +198,13 @@ defmodule NFTables.PayloadRawUnitTest do
       assert %{"add" => %{"rule" => rule}} = command
 
       # Find raw payload expression
-      raw_expr = Enum.find(rule["expr"], fn e ->
-        Map.has_key?(e, "match") and
-          is_map(e["match"]["left"]) and
-          Map.has_key?(e["match"]["left"], "payload") and
-          Map.has_key?(e["match"]["left"]["payload"], "base")
-      end)
+      raw_expr =
+        Enum.find(rule["expr"], fn e ->
+          Map.has_key?(e, "match") and
+            is_map(e["match"]["left"]) and
+            Map.has_key?(e["match"]["left"], "payload") and
+            Map.has_key?(e["match"]["left"]["payload"], "base")
+        end)
 
       assert raw_expr != nil
       assert raw_expr["match"]["left"]["payload"]["base"] == "th"
@@ -215,8 +221,7 @@ defmodule NFTables.PayloadRawUnitTest do
         |> accept()
 
       builder =
-        Builder.new()
-        |> Builder.add(rule: syn_rule, table: "filter", chain: "input")
+        NFTables.add(rule: syn_rule, table: "filter", chain: "input")
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -225,11 +230,12 @@ defmodule NFTables.PayloadRawUnitTest do
       assert %{"add" => %{"rule" => rule}} = command
 
       # Find bitwise AND expression
-      bitwise_expr = Enum.find(rule["expr"], fn e ->
-        Map.has_key?(e, "match") and
-          is_map(e["match"]["left"]) and
-          Map.has_key?(e["match"]["left"], "&")
-      end)
+      bitwise_expr =
+        Enum.find(rule["expr"], fn e ->
+          Map.has_key?(e, "match") and
+            is_map(e["match"]["left"]) and
+            Map.has_key?(e["match"]["left"], "&")
+        end)
 
       assert bitwise_expr != nil
       assert bitwise_expr["match"]["right"] == 0x02

@@ -56,6 +56,7 @@ defmodule NFTables.Expr.Advanced do
   """
   @spec fragmented(Expr.t(), boolean()) :: Expr.t()
   def fragmented(builder \\ Expr.expr(), is_fragmented)
+
   def fragmented(builder, true) do
     # ip frag-off & 0x1fff != 0
     expr = %{
@@ -70,8 +71,10 @@ defmodule NFTables.Expr.Advanced do
         "op" => "!="
       }
     }
+
     Expr.add_expr(builder, expr)
   end
+
   def fragmented(builder, false) do
     # ip frag-off & 0x1fff == 0
     expr = %{
@@ -86,6 +89,7 @@ defmodule NFTables.Expr.Advanced do
         "op" => "=="
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -114,25 +118,27 @@ defmodule NFTables.Expr.Advanced do
   """
   @spec icmp_type(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def icmp_type(builder \\ Expr.expr(), type) do
-    type_val = case type do
-      :echo_reply -> "echo-reply"
-      :dest_unreachable -> "destination-unreachable"
-      :source_quench -> "source-quench"
-      :redirect -> "redirect"
-      :echo_request -> "echo-request"
-      :router_advertisement -> "router-advertisement"
-      :router_solicitation -> "router-solicitation"
-      :time_exceeded -> "time-exceeded"
-      :parameter_problem -> "parameter-problem"
-      :timestamp_request -> "timestamp-request"
-      :timestamp_reply -> "timestamp-reply"
-      :info_request -> "info-request"
-      :info_reply -> "info-reply"
-      :address_mask_request -> "address-mask-request"
-      :address_mask_reply -> "address-mask-reply"
-      num when is_integer(num) -> num
-      other -> to_string(other)
-    end
+    type_val =
+      case type do
+        :echo_reply -> "echo-reply"
+        :dest_unreachable -> "destination-unreachable"
+        :source_quench -> "source-quench"
+        :redirect -> "redirect"
+        :echo_request -> "echo-request"
+        :router_advertisement -> "router-advertisement"
+        :router_solicitation -> "router-solicitation"
+        :time_exceeded -> "time-exceeded"
+        :parameter_problem -> "parameter-problem"
+        :timestamp_request -> "timestamp-request"
+        :timestamp_reply -> "timestamp-reply"
+        :info_request -> "info-request"
+        :info_reply -> "info-reply"
+        :address_mask_request -> "address-mask-request"
+        :address_mask_reply -> "address-mask-reply"
+        num when is_integer(num) -> num
+        other -> to_string(other)
+      end
+
     expr = Expr.Structs.payload_match("icmp", "type", type_val)
     Expr.add_expr(builder, expr)
   end
@@ -151,7 +157,8 @@ defmodule NFTables.Expr.Advanced do
       |> accept()
   """
   @spec icmp_code(Expr.t(), non_neg_integer()) :: Expr.t()
-  def icmp_code(builder \\ Expr.expr(), code) when is_integer(code) and code >= 0 and code <= 255 do
+  def icmp_code(builder \\ Expr.expr(), code)
+      when is_integer(code) and code >= 0 and code <= 255 do
     expr = Expr.Structs.payload_match("icmp", "code", code)
     Expr.add_expr(builder, expr)
   end
@@ -180,21 +187,23 @@ defmodule NFTables.Expr.Advanced do
   """
   @spec icmpv6_type(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def icmpv6_type(builder \\ Expr.expr(), type) do
-    type_val = case type do
-      :dest_unreachable -> "destination-unreachable"
-      :packet_too_big -> "packet-too-big"
-      :time_exceeded -> "time-exceeded"
-      :param_problem -> "parameter-problem"
-      :echo_request -> "echo-request"
-      :echo_reply -> "echo-reply"
-      :router_solicit -> "nd-router-solicit"
-      :router_advert -> "nd-router-advert"
-      :neighbour_solicit -> "nd-neighbor-solicit"
-      :neighbour_advert -> "nd-neighbor-advert"
-      :redirect -> "nd-redirect"
-      num when is_integer(num) -> num
-      other -> to_string(other)
-    end
+    type_val =
+      case type do
+        :dest_unreachable -> "destination-unreachable"
+        :packet_too_big -> "packet-too-big"
+        :time_exceeded -> "time-exceeded"
+        :param_problem -> "parameter-problem"
+        :echo_request -> "echo-request"
+        :echo_reply -> "echo-reply"
+        :router_solicit -> "nd-router-solicit"
+        :router_advert -> "nd-router-advert"
+        :neighbour_solicit -> "nd-neighbor-solicit"
+        :neighbour_advert -> "nd-neighbor-advert"
+        :redirect -> "nd-redirect"
+        num when is_integer(num) -> num
+        other -> to_string(other)
+      end
+
     expr = Expr.Structs.payload_match("icmpv6", "type", type_val)
     Expr.add_expr(builder, expr)
   end
@@ -212,7 +221,8 @@ defmodule NFTables.Expr.Advanced do
       |> drop()
   """
   @spec icmpv6_code(Expr.t(), non_neg_integer()) :: Expr.t()
-  def icmpv6_code(builder \\ Expr.expr(), code) when is_integer(code) and code >= 0 and code <= 255 do
+  def icmpv6_code(builder \\ Expr.expr(), code)
+      when is_integer(code) and code >= 0 and code <= 255 do
     expr = Expr.Structs.payload_match("icmpv6", "code", code)
     Expr.add_expr(builder, expr)
   end
@@ -241,7 +251,8 @@ defmodule NFTables.Expr.Advanced do
       builder |> pkttype(:unicast) |> accept()
   """
   @spec pkttype(Expr.t(), atom()) :: Expr.t()
-  def pkttype(builder \\ Expr.expr(), pkttype) when pkttype in [:unicast, :broadcast, :multicast, :other] do
+  def pkttype(builder \\ Expr.expr(), pkttype)
+      when pkttype in [:unicast, :broadcast, :multicast, :other] do
     expr = Expr.Structs.meta_match("pkttype", to_string(pkttype))
     Expr.add_expr(builder, expr)
   end
@@ -258,15 +269,18 @@ defmodule NFTables.Expr.Advanced do
       builder |> priority(:eq, 7) |> log("PRIO-7: ")
   """
   @spec priority(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def priority(builder \\ Expr.expr(), op, priority) when is_integer(priority) and priority >= 0 do
-    op_str = case op do
-      :eq -> "=="
-      :ne -> "!="
-      :lt -> "<"
-      :gt -> ">"
-      :le -> "<="
-      :ge -> ">="
-    end
+  def priority(builder \\ Expr.expr(), op, priority)
+      when is_integer(priority) and priority >= 0 do
+    op_str =
+      case op do
+        :eq -> "=="
+        :ne -> "!="
+        :lt -> "<"
+        :gt -> ">"
+        :le -> "<="
+        :ge -> ">="
+      end
+
     expr = Expr.Structs.meta_match("priority", priority, op_str)
     Expr.add_expr(builder, expr)
   end
@@ -361,15 +375,20 @@ defmodule NFTables.Expr.Advanced do
   """
   @spec ah_spi(Expr.t(), non_neg_integer() | :any) :: Expr.t()
   def ah_spi(builder \\ Expr.expr(), spi)
+
   def ah_spi(builder, :any) do
     # Match any AH SPI (just check if AH header exists)
-    expr = %{"match" => %{
-      "left" => %{"payload" => %{"protocol" => "ah", "field" => "spi"}},
-      "right" => 0,
-      "op" => ">="
-    }}
+    expr = %{
+      "match" => %{
+        "left" => %{"payload" => %{"protocol" => "ah", "field" => "spi"}},
+        "right" => 0,
+        "op" => ">="
+      }
+    }
+
     Expr.add_expr(builder, expr)
   end
+
   def ah_spi(builder, spi) when is_integer(spi) and spi >= 0 do
     expr = Expr.Structs.payload_match("ah", "spi", spi)
     Expr.add_expr(builder, expr)
@@ -388,15 +407,20 @@ defmodule NFTables.Expr.Advanced do
   """
   @spec esp_spi(Expr.t(), non_neg_integer() | :any) :: Expr.t()
   def esp_spi(builder \\ Expr.expr(), spi)
+
   def esp_spi(builder, :any) do
     # Match any ESP SPI (just check if ESP header exists)
-    expr = %{"match" => %{
-      "left" => %{"payload" => %{"protocol" => "esp", "field" => "spi"}},
-      "right" => 0,
-      "op" => ">="
-    }}
+    expr = %{
+      "match" => %{
+        "left" => %{"payload" => %{"protocol" => "esp", "field" => "spi"}},
+        "right" => 0,
+        "op" => ">="
+      }
+    }
+
     Expr.add_expr(builder, expr)
   end
+
   def esp_spi(builder, spi) when is_integer(spi) and spi >= 0 do
     expr = Expr.Structs.payload_match("esp", "spi", spi)
     Expr.add_expr(builder, expr)
@@ -423,12 +447,14 @@ defmodule NFTables.Expr.Advanced do
   """
   @spec arp_operation(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def arp_operation(builder \\ Expr.expr(), operation) do
-    op_val = case operation do
-      :request -> 1
-      :reply -> 2
-      num when is_integer(num) -> num
-      _ -> raise ArgumentError, "Invalid ARP operation: #{inspect(operation)}"
-    end
+    op_val =
+      case operation do
+        :request -> 1
+        :reply -> 2
+        num when is_integer(num) -> num
+        _ -> raise ArgumentError, "Invalid ARP operation: #{inspect(operation)}"
+      end
+
     expr = Expr.Structs.payload_match("arp", "operation", op_val)
     Expr.add_expr(builder, expr)
   end
@@ -482,45 +508,55 @@ defmodule NFTables.Expr.Advanced do
     # Ensure set name starts with @
     set_ref = if String.starts_with?(set_name, "@"), do: set_name, else: "@#{set_name}"
 
-    expr = case match_type do
-      :saddr ->
-        ip_proto = get_ip_protocol(builder)
-        %{
-          "match" => %{
-            "left" => %{"payload" => %{"protocol" => ip_proto, "field" => "saddr"}},
-            "right" => set_ref,
-            "op" => "=="
+    expr =
+      case match_type do
+        :saddr ->
+          ip_proto = get_ip_protocol(builder)
+
+          %{
+            "match" => %{
+              "left" => %{"payload" => %{"protocol" => ip_proto, "field" => "saddr"}},
+              "right" => set_ref,
+              "op" => "=="
+            }
           }
-        }
-      :daddr ->
-        ip_proto = get_ip_protocol(builder)
-        %{
-          "match" => %{
-            "left" => %{"payload" => %{"protocol" => ip_proto, "field" => "daddr"}},
-            "right" => set_ref,
-            "op" => "=="
+
+        :daddr ->
+          ip_proto = get_ip_protocol(builder)
+
+          %{
+            "match" => %{
+              "left" => %{"payload" => %{"protocol" => ip_proto, "field" => "daddr"}},
+              "right" => set_ref,
+              "op" => "=="
+            }
           }
-        }
-      :sport ->
-        port_proto = get_port_protocol!(builder, :sport)
-        %{
-          "match" => %{
-            "left" => %{"payload" => %{"protocol" => port_proto, "field" => "sport"}},
-            "right" => set_ref,
-            "op" => "=="
+
+        :sport ->
+          port_proto = get_port_protocol!(builder, :sport)
+
+          %{
+            "match" => %{
+              "left" => %{"payload" => %{"protocol" => port_proto, "field" => "sport"}},
+              "right" => set_ref,
+              "op" => "=="
+            }
           }
-        }
-      :dport ->
-        port_proto = get_port_protocol!(builder, :dport)
-        %{
-          "match" => %{
-            "left" => %{"payload" => %{"protocol" => port_proto, "field" => "dport"}},
-            "right" => set_ref,
-            "op" => "=="
+
+        :dport ->
+          port_proto = get_port_protocol!(builder, :dport)
+
+          %{
+            "match" => %{
+              "left" => %{"payload" => %{"protocol" => port_proto, "field" => "dport"}},
+              "right" => set_ref,
+              "op" => "=="
+            }
           }
-        }
-      other -> raise ArgumentError, "Invalid set match type: #{inspect(other)}"
-    end
+
+        other ->
+          raise ArgumentError, "Invalid set match type: #{inspect(other)}"
+      end
 
     Expr.add_expr(builder, expr)
   end
@@ -884,8 +920,8 @@ defmodule NFTables.Expr.Advanced do
       nil ->
         raise ArgumentError,
               "set/3 with :#{field_name} requires protocol context. " <>
-              "Call tcp(), udp(), sctp(), or dccp() before using set/3 with :#{field_name}.\n\n" <>
-              "Example: rule() |> tcp() |> set(\"@ports\", :#{field_name})"
+                "Call tcp(), udp(), sctp(), or dccp() before using set/3 with :#{field_name}.\n\n" <>
+                "Example: rule() |> tcp() |> set(\"@ports\", :#{field_name})"
 
       protocol when protocol in [:tcp, :udp, :sctp, :dccp] ->
         to_string(protocol)
@@ -893,7 +929,7 @@ defmodule NFTables.Expr.Advanced do
       other ->
         raise ArgumentError,
               "set/3 with :#{field_name} requires a protocol with port fields (tcp, udp, sctp, dccp), got: #{inspect(other)}\n\n" <>
-              "Use tcp(), udp(), sctp(), or dccp() before calling set/3 with :#{field_name}."
+                "Use tcp(), udp(), sctp(), or dccp() before calling set/3 with :#{field_name}."
     end
   end
 
@@ -902,7 +938,8 @@ defmodule NFTables.Expr.Advanced do
     case builder.family do
       :ip6 -> "ip6"
       :inet6 -> "ip6"
-      _ -> "ip"  # Default to IPv4 (includes :inet, :ip, :arp, :bridge, etc.)
+      # Default to IPv4 (includes :inet, :ip, :arp, :bridge, etc.)
+      _ -> "ip"
     end
   end
 end

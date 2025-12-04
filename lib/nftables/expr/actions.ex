@@ -45,23 +45,26 @@ defmodule NFTables.Expr.Actions do
   def log(builder \\ Expr.expr(), prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
 
-    json_opts = if level do
-      level_str = case level do
-        :emerg -> "emerg"
-        :alert -> "alert"
-        :crit -> "crit"
-        :err -> "err"
-        :warning -> "warn"
-        :warn -> "warn"
-        :notice -> "notice"
-        :info -> "info"
-        :debug -> "debug"
-        other -> to_string(other)
+    json_opts =
+      if level do
+        level_str =
+          case level do
+            :emerg -> "emerg"
+            :alert -> "alert"
+            :crit -> "crit"
+            :err -> "err"
+            :warning -> "warn"
+            :warn -> "warn"
+            :notice -> "notice"
+            :info -> "info"
+            :debug -> "debug"
+            other -> to_string(other)
+          end
+
+        [level: level_str]
+      else
+        []
       end
-      [level: level_str]
-    else
-      []
-    end
 
     expr = Expr.Structs.log(prefix, json_opts)
     Expr.add_expr(builder, expr)
@@ -77,20 +80,22 @@ defmodule NFTables.Expr.Actions do
   """
   @spec rate_limit(Expr.t(), non_neg_integer(), atom(), keyword()) :: Expr.t()
   def rate_limit(builder \\ Expr.expr(), rate, unit, opts \\ []) do
-    unit_str = case unit do
-      :second -> "second"
-      :minute -> "minute"
-      :hour -> "hour"
-      :day -> "day"
-      :week -> "week"
-      other -> to_string(other)
-    end
+    unit_str =
+      case unit do
+        :second -> "second"
+        :minute -> "minute"
+        :hour -> "hour"
+        :day -> "day"
+        :week -> "week"
+        other -> to_string(other)
+      end
 
-    json_opts = if burst = Keyword.get(opts, :burst) do
-      [burst: burst]
-    else
-      []
-    end
+    json_opts =
+      if burst = Keyword.get(opts, :burst) do
+        [burst: burst]
+      else
+        []
+      end
 
     expr = Expr.Structs.limit(rate, unit_str, json_opts)
     Expr.add_expr(builder, expr)
@@ -158,6 +163,7 @@ defmodule NFTables.Expr.Actions do
         "value" => %{"ct" => %{"key" => "mark"}}
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -193,6 +199,7 @@ defmodule NFTables.Expr.Actions do
         "value" => %{"meta" => %{"key" => "mark"}}
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -341,16 +348,17 @@ defmodule NFTables.Expr.Actions do
   """
   @spec set_dscp(Expr.t(), atom() | non_neg_integer()) :: Expr.t()
   def set_dscp(builder \\ Expr.expr(), dscp) do
-    dscp_val = case dscp do
-      :ef -> 46
-      :af41 -> 34
-      :af31 -> 26
-      :af21 -> 18
-      :af11 -> 10
-      :cs0 -> 0
-      num when is_integer(num) and num >= 0 and num <= 63 -> num
-      _ -> raise ArgumentError, "Invalid DSCP value: #{inspect(dscp)}"
-    end
+    dscp_val =
+      case dscp do
+        :ef -> 46
+        :af41 -> 34
+        :af31 -> 26
+        :af21 -> 18
+        :af11 -> 10
+        :cs0 -> 0
+        num when is_integer(num) and num >= 0 and num <= 63 -> num
+        _ -> raise ArgumentError, "Invalid DSCP value: #{inspect(dscp)}"
+      end
 
     expr = %{
       "mangle" => %{
@@ -358,6 +366,7 @@ defmodule NFTables.Expr.Actions do
         "value" => dscp_val
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -388,6 +397,7 @@ defmodule NFTables.Expr.Actions do
         "value" => ttl
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -405,13 +415,15 @@ defmodule NFTables.Expr.Actions do
       builder |> set_hoplimit(255) |> accept()
   """
   @spec set_hoplimit(Expr.t(), non_neg_integer()) :: Expr.t()
-  def set_hoplimit(builder \\ Expr.expr(), hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
+  def set_hoplimit(builder \\ Expr.expr(), hoplimit)
+      when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
     expr = %{
       "mangle" => %{
         "key" => %{"payload" => %{"protocol" => "ip6", "field" => "hoplimit"}},
         "value" => hoplimit
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -436,6 +448,7 @@ defmodule NFTables.Expr.Actions do
         }
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -460,6 +473,7 @@ defmodule NFTables.Expr.Actions do
         }
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -484,6 +498,7 @@ defmodule NFTables.Expr.Actions do
         }
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -508,6 +523,7 @@ defmodule NFTables.Expr.Actions do
         }
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 end

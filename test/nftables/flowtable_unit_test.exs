@@ -6,12 +6,12 @@ defmodule NFTables.FlowtableUnitTest do
   describe "flowtable validation" do
     test "rejects invalid hook" do
       assert_raise ArgumentError, ~r/Invalid flowtable hook/, fn ->
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           flowtable: "invalid_hook",
           table: "test",
           family: :inet,
-          hook: :input,  # Invalid: only :ingress allowed
+          # Invalid: only :ingress allowed
+          hook: :input,
           priority: 0,
           devices: ["lo"]
         )
@@ -20,42 +20,42 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "rejects empty devices list" do
       assert_raise ArgumentError, ~r/Invalid flowtable devices: empty list/, fn ->
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           flowtable: "no_devices",
           table: "test",
           family: :inet,
           hook: :ingress,
           priority: 0,
-          devices: []  # Invalid: empty list
+          # Invalid: empty list
+          devices: []
         )
       end
     end
 
     test "rejects non-list devices" do
       assert_raise ArgumentError, ~r/Invalid flowtable devices.*expected list/, fn ->
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           flowtable: "bad_devices",
           table: "test",
           family: :inet,
           hook: :ingress,
           priority: 0,
-          devices: "lo"  # Invalid: should be list
+          # Invalid: should be list
+          devices: "lo"
         )
       end
     end
 
     test "rejects devices with non-string elements" do
       assert_raise ArgumentError, ~r/Invalid flowtable devices.*must be strings/, fn ->
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           flowtable: "bad_device_type",
           table: "test",
           family: :inet,
           hook: :ingress,
           priority: 0,
-          devices: [:lo, :eth0]  # Invalid: atoms instead of strings
+          # Invalid: atoms instead of strings
+          devices: [:lo, :eth0]
         )
       end
     end
@@ -64,8 +64,7 @@ defmodule NFTables.FlowtableUnitTest do
   describe "JSON generation" do
     test "generates correct JSON for flowtable add" do
       builder =
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           flowtable: "test_flow",
           table: "filter",
           hook: :ingress,
@@ -89,8 +88,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "generates correct JSON for flowtable delete" do
       builder =
-        Builder.new()
-        |> Builder.delete(flowtable: "test_flow", table: "filter", family: :inet)
+        NFTables.delete(flowtable: "test_flow", table: "filter", family: :inet)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -105,8 +103,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "generates correct JSON with hardware offload flag" do
       builder =
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           flowtable: "hw_flow",
           table: "filter",
           hook: :ingress,

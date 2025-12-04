@@ -48,7 +48,7 @@ defmodule BasicFirewall do
 
   defp setup_firewall do
     # Start NFTables (JSON-based port)
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
 
     IO.puts("✓ NFTables started (JSON-based port)")
 
@@ -98,19 +98,19 @@ defmodule BasicFirewall do
     #
     # # 3. Apply policy rules (composable - all in one transaction)
     # :ok =
-    #   Builder.new()
+    #   NFTables.add(table: "filter")
     #   |> Policy.accept_loopback()
     #   |> Policy.accept_established()
     #   |> Policy.drop_invalid()
     #   |> Policy.allow_ssh(rate_limit: 10, log: true)
-    #   |> Builder.submit(pid: pid)
+    #   |> NFTables.submit(pid: pid)
     #
     # # 4. Optionally allow web services
     # # :ok =
-    # #   Builder.new()
+    # #   NFTables.add(table: "filter")
     # #   |> Policy.allow_http()
     # #   |> Policy.allow_https()
-    # #   |> Builder.submit(pid: pid)
+    # #   |> NFTables.submit(pid: pid)
     """)
 
     # Display current rules

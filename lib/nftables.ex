@@ -7,52 +7,50 @@ defmodule NFTables do
 
   ## Quick Start
 
-      {:ok, pid} = NFTables.start_link()
+  Start the NFTables port process and build firewall rules:
 
-      # Create table, chain, and set using Builder
-      alias NFTables.Builder
+      # Start the port process
+      {:ok, pid} = NFTables.Port.start_link()
 
-      Builder.new()
-      |> Builder.add(table: "filter", family: :inet)
-      |> Builder.add(
-        table: "filter",
-        chain: "input",
-        family: :inet,
-        type: :filter,
-        hook: :input,
-        priority: 0,
-        policy: :accept
-      )
-      |> Builder.add(
-        set: "blocklist",
-        table: "filter",
-        family: :inet,
-        type: :ipv4_addr
-      )
-      |> Builder.add(
-        element: ["192.168.1.100", "10.0.0.50"],
-        set: "blocklist",
-        table: "filter",
-        family: :inet
-      )
-      |> Builder.submit(pid: pid)
-
-      # Or use high-level convenience APIs
+      # Create a simple firewall
       import NFTables.Expr
 
-      block_rule = rule()
-      |> source_ip_set("@blocklist")
-      |> drop()
+      NFTables.add(table: "filter", family: :inet)
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input, priority: 0, policy: :drop)
+      |> NFTables.add(rule: state([:established, :related]) |> accept())
+      |> NFTables.add(rule: tcp() |> dport(22) |> accept())
+      |> NFTables.submit(pid: pid)
 
-      Builder.new()
-      |> Builder.add(rule: block_rule, table: "filter", chain: "input")
-      |> Builder.submit(pid: pid)
+      # Clean up when done
+      NFTables.Port.stop(pid)
+
+  ## Main API Functions
+
+  ### Building Rules
+
+  - `add/1-2` - Add tables, chains, rules, sets, etc.
+  - `delete/1-2` - Delete objects
+  - `flush/1-2` - Flush objects (remove contents)
+  - `flush_ruleset/0-2` - Flush entire ruleset
+  - `insert/1-2` - Insert rules at specific positions
+  - `replace/1-2` - Replace rules at specific handles
+  - `rename/1-2` - Rename chains
+
+  ### Submitting Changes
+
+  - `submit/1-2` - Submit configuration to nftables
+
+  ### Helper Functions
+
+  - `to_json/1` - Convert to JSON string
+  - `to_map/1` - Convert to Elixir map
+  - `set_family/2` - Set address family
 
   ## Module Organization
 
   ### Core APIs
 
-  - `NFTables.Builder` - Unified API for building nftables configurations (tables, chains, sets, rules)
+  - `NFTables` - Main public API (this module)
   - `NFTables.Expr` - Fluent API for building rule expressions
   - `NFTables.Query` - Query tables, chains, rules, and sets
 
@@ -61,90 +59,79 @@ defmodule NFTables do
   - `NFTables.Policy` - Pre-built security policies (accept_established, allow_ssh, etc.)
   - `NFTables.NAT` - NAT operations (port forwarding, masquerading, etc.)
 
-  ### Low-Level APIs
+  ### Execution & Port Management
 
-  - `NFTables.Port` - JSON-based port communication (from NFTables.Port package)
-  - `NFTables.Local` - Execute nftables commands locally
+  - `NFTables.Port` - Port process management (start_link, stop)
+  - `NFTables.Local` - Local execution requestor
+
+  ### Internal APIs
+
+  - `NFTables.Builder` - Internal builder implementation (use NFTables API instead)
   - `NFTables.Decoder` - Decode nftables responses
+  - `NFTables.Requestor` - Behaviour for custom submission handlers
 
-  ## Architecture
+  ## Pipeline Pattern
 
-  NFTables uses a port-based architecture for fault isolation and security:
+  All functions return a builder struct that can be piped:
 
-  - The Zig port process runs with CAP_NET_ADMIN capability
-  - Port binary: `priv/port_nftables` - JSON-only communication
-  - All operations go through `libnftables` library (same as `nft` command)
-  - No manual netlink message construction
+      NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rule: tcp() |> dport(80) |> accept())
+      |> NFTables.add(rule: tcp() |> dport(443) |> accept())
+      |> NFTables.submit(pid: pid)
+
+  ## Context Tracking
+
+  The builder automatically tracks context (table, chain) so you don't need to repeat it:
+
+      NFTables.add(table: "filter", chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rule: tcp() |> dport(22) |> accept())
+      |> NFTables.add(rule: tcp() |> dport(80) |> accept())
+      # Both rules automatically use filter/INPUT
+
+  ## Examples
+
+  ### Basic Firewall
+
+      import NFTables.Expr
+
+      NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input, policy: :drop)
+      |> NFTables.add(chain: "FORWARD", type: :filter, hook: :forward, policy: :drop)
+      |> NFTables.add(chain: "OUTPUT", type: :filter, hook: :output, policy: :accept)
+      |> NFTables.add(rule: iif("lo") |> accept())
+      |> NFTables.add(rule: state([:established, :related]) |> accept())
+      |> NFTables.add(rule: tcp() |> dport(22) |> accept())
+      |> NFTables.submit(pid: pid)
+
+  ### IP Blocking with Sets
+
+      NFTables.add(table: "filter")
+      |> NFTables.add(set: "blocklist", type: :ipv4_addr)
+      |> NFTables.add(element: ["1.2.3.4", "5.6.7.8"], set: "blocklist")
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rule: ip_saddr() |> set_lookup("@blocklist") |> drop())
+      |> NFTables.submit(pid: pid)
+
+  ### NAT / Port Forwarding
+
+      NFTables.add(table: "nat", family: :ip)
+      |> NFTables.add(chain: "PREROUTING", type: :nat, hook: :prerouting)
+      |> NFTables.add(rule: tcp() |> dport(8080) |> dnat("192.168.1.100:80"))
+      |> NFTables.submit(pid: pid)
 
   ## JSON API
 
   The underlying JSON format follows the official nftables JSON schema.
   See: https://wiki.nftables.org/wiki-nftables/index.php/JSON_API
 
-  For advanced use cases, you can use `NFTables.Builder` to construct custom
-  firewall configurations with a fluent, functional interface.
-
-  ## Migration from v0.3.x
-
-  v0.4.0 introduces a complete rewrite using JSON instead of ETF/netlink:
-
-  - **Removed**: All `NFTables.Kernel.*` modules (no longer needed with JSON approach)
-  - **Removed**: Resource ID-based API (libnftables handles resources internally)
-  - **Removed**: `NFTables.Table`, `NFTables.Chain`, `NFTables.Set` (replaced by unified `NFTables.Builder` API)
-  - **Changed**: High-level APIs simplified (no resource management)
-  - **Added**: JSON-based port for simpler, more maintainable implementation
-  - **Added**: Unified `Builder` API for all nftables objects
-
-  See the `NFTables.Builder` documentation for the new unified API.
+  For advanced use cases requiring direct builder access, see `NFTables.Builder` documentation.
   """
-
-  alias NFTables.Port
 
   @type nft_family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
 
-  @doc """
-  Starts the NFTables port process.
-
-  ## Options
-
-    * `:name` - Register the process with a name (optional)
-    * `:check_capabilities` - If `true`, checks CAP_NET_ADMIN on startup (default: `true`)
-
-  ## Examples
-
-      # Default behavior
-      {:ok, pid} = NFTables.start_link()
-
-      # Skip capability check (not recommended for production)
-      {:ok, pid} = NFTables.start_link(check_capabilities: false)
-
-      # With name registration
-      {:ok, pid} = NFTables.start_link(name: :nftables_ex)
-
-  """
-  @spec start_link(keyword()) :: GenServer.on_start()
-  def start_link(opts \\ []) do
-    Port.start_link(opts)
-  end
-
-  @doc """
-  Stops the NFTables port process.
-
-  All nftables objects remain in the kernel after stopping.
-  Use `NFTables.Query.flush_ruleset/1` to clean up if needed.
-
-  ## Example
-
-      NFTables.stop(pid)
-
-  """
-  @spec stop(pid()) :: :ok
-  def stop(pid) do
-    GenServer.stop(pid)
-  end
-
   # ============================================================================
-  # Dual-Arity Builder API
+  # Main Public API
   # ============================================================================
 
   alias NFTables.Builder
@@ -174,9 +161,8 @@ defmodule NFTables do
         rule() |> tcp() |> dport(80) |> accept()
       ])
   """
-  def add(opts) when is_list(opts), do: Builder.new(opts) |> add(opts)
+  def add(opts), do: Builder.new(opts) |> add(opts)
 
-  
   @doc """
   Contextual add operation (arity-2) - continues existing builder.
 
@@ -186,95 +172,172 @@ defmodule NFTables do
       |> NFTables.add(chain: "INPUT")
       |> NFTables.add(rule: [%{accept: nil}])
   """
-  def add(%Builder{} = builder, opts) when is_list(opts) do
-    # Handle :rules as batch operation
-    if Keyword.has_key?(opts, :rules) do
-      add_rule_set(builder, opts)
-    else
-      # Handle Match struct conversion for :rule
-      opts = if Keyword.has_key?(opts, :rule) do
-        rule_spec = Keyword.get(opts, :rule)
-        case rule_spec do
-          %NFTables.Expr{expr_list: expr_list} ->
-            Keyword.put(opts, :rule, expr_list)
-          _ ->
-            opts
-        end
-      else
-        opts
-      end
-
-      # Delegate to unified Builder API
-      Builder.add(builder, opts)
-    end
-  end
+  def add(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :add, opts)
 
   @doc """
-  Contextual delete operation (arity-1) - starts new builder.
+  delete/1 delete an object, starts a new builder.
+
+  ## Examples
+
+      builder |> delete(table: "filter")
+      builder |> delete(chain: "input")
+      builder |> delete(rule: [...], handle: 123)
   """
-  def delete(opts) when is_list(opts) do
-    Builder.new()
-    |> delete(opts)
-  end
+  def delete(opts), do: Builder.new() |> delete(opts)
 
   @doc """
-  Contextual delete operation (arity-2) - continues existing builder.
+  delete/2 operation same as delete/1 but continues existing builder.
   """
-  def delete(%Builder{} = builder, opts) when is_list(opts) do
-    Builder.delete(builder, opts)
-  end
+  def delete(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :delete, opts)
 
   @doc """
   Contextual flush operation (arity-1) - starts new builder.
   """
-  def flush(opts) when is_list(opts) or is_atom(opts) do
-    Builder.new()
-    |> flush(opts)
-  end
+  def flush(opts), do: Builder.new() |> flush(opts)
 
   @doc """
   Contextual flush operation (arity-2) - continues existing builder.
+
+  options:
+    :scope - when set to :all will flush everything (limited by :family option if that is specified)
+    :family - limits flush to particular nft family: :inet | :ip | :ip6 | :arp | :bridge | :netdev
   """
-  def flush(%Builder{} = builder, opts) do
-    case opts do
-      :ruleset -> Builder.flush_ruleset(builder)
-      :all -> Builder.flush(builder, [:all])
-      opts when is_list(opts) -> Builder.flush(builder, opts)
+  def flush(%Builder{} = builder, opts) when is_list(opts) do
+    # If specific object is provided (table, chain, etc), use regular flush
+    # Otherwise default scope to :all for flush_ruleset
+    has_object =
+      Keyword.has_key?(opts, :table) or
+        Keyword.has_key?(opts, :chain) or
+        Keyword.has_key?(opts, :set) or
+        Keyword.has_key?(opts, :map)
+
+    case {Keyword.get(opts, :scope), has_object} do
+      {:all, _} -> Builder.flush_ruleset(builder, opts)
+      # Default to flush_ruleset when no object
+      {nil, false} -> Builder.flush_ruleset(builder, opts)
+      _ -> Builder.apply_with_opts(builder, :flush, opts)
     end
   end
 
-  # Helper function for bulk rule addition
-  defp add_rule_set(%Builder{} = builder, opts) do
-    rules_list = Keyword.fetch!(opts, :rules)
-    base_opts = Keyword.drop(opts, [:rules])
+  @doc """
+  Contextual insert operation (arity-1) - starts new builder.
 
-    Enum.reduce(rules_list, builder, fn rule_spec, acc ->
-      rule_expr = case rule_spec do
-        %NFTables.Expr{expr_list: expr_list} -> expr_list
-        expr_list when is_list(expr_list) -> expr_list
-      end
+  Inserts a rule at a specific position in a chain.
 
-      Builder.add(acc, Keyword.put(base_opts, :rule, rule_expr))
-    end)
+  ## Examples
+
+      import NFTables.Expr
+      NFTables.insert(table: "filter", chain: "INPUT", rule: tcp() |> dport(22) |> accept(), index: 0)
+  """
+  def insert(opts), do: Builder.new() |> insert(opts)
+
+  @doc """
+  Contextual insert operation (arity-2) - continues existing builder.
+  """
+  def insert(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :insert, opts)
+
+  @doc """
+  Contextual replace operation (arity-1) - starts new builder.
+
+  Replaces a rule at a specific handle.
+
+  ## Examples
+
+      import NFTables.Expr
+      NFTables.replace(table: "filter", chain: "INPUT", rule: tcp() |> dport(80) |> accept(), handle: 123)
+  """
+  def replace(opts), do: Builder.new() |> replace(opts)
+
+  @doc """
+  Contextual replace operation (arity-2) - continues existing builder.
+  """
+  def replace(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :replace, opts)
+
+  @doc """
+  Contextual rename operation (arity-1) - starts new builder.
+
+  Renames a chain.
+
+  ## Examples
+
+      NFTables.rename(table: "filter", chain: "input", newname: "INPUT")
+  """
+  def rename(opts), do: Builder.new() |> rename(opts)
+
+  @doc """
+  Contextual rename operation (arity-2) - continues existing builder.
+  """
+  def rename(%Builder{} = builder, opts), do: Builder.apply_with_opts(builder, :rename, opts)
+
+  @doc """
+  Submit the builder configuration using the configured requestor.
+
+  Uses the requestor module specified in the builder's `requestor` field
+  (defaults to `NFTables.Local` for local execution).
+
+  ## Examples
+
+      {:ok, pid} = NFTables.Port.start_link()
+
+      NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
+      |> NFTables.submit(pid: pid)
+  """
+  @spec submit(Builder.t()) :: :ok | {:ok, term()} | {:error, term()}
+  def submit(%Builder{} = builder) do
+    Builder.submit(builder)
+  end
+
+  @doc """
+  Submit the builder configuration with options or override requestor.
+
+  ## Examples
+
+      NFTables.add(table: "filter")
+      |> NFTables.submit(pid: pid, timeout: 10_000)
+
+      # Override requestor
+      NFTables.add(table: "filter")
+      |> NFTables.submit(requestor: MyApp.RemoteRequestor, node: :remote)
+  """
+  @spec submit(Builder.t(), keyword()) :: :ok | {:ok, term()} | {:error, term()}
+  def submit(%Builder{} = builder, opts) when is_list(opts) do
+    Builder.submit(builder, opts)
+  end
+
+  @doc """
+  Flush the entire ruleset (remove all tables, chains, and rules).
+
+  ## Options
+
+  - `:family` - Optional family to flush (default: all families)
+
+  ## Examples
+
+      # Flush all tables/chains/rules for all families
+      NFTables.flush_ruleset()
+      |> NFTables.submit(pid: pid)
+
+      # Flush only inet family
+      NFTables.flush_ruleset(family: :inet)
+      |> NFTables.submit(pid: pid)
+  """
+  @spec flush_ruleset(keyword()) :: Builder.t()
+  def flush_ruleset(opts \\ []) do
+    Builder.new()
+    |> Builder.flush_ruleset(opts)
+  end
+
+  @doc """
+  Flush the entire ruleset (arity-2) - continues existing builder.
+  """
+  @spec flush_ruleset(Builder.t(), keyword()) :: Builder.t()
+  def flush_ruleset(%Builder{} = builder, opts) when is_list(opts) do
+    Builder.flush_ruleset(builder, opts)
   end
 
   # Delegate other Builder functions for advanced use
   defdelegate to_json(builder), to: Builder
   defdelegate to_map(builder), to: Builder
   defdelegate set_family(builder, family), to: Builder
-
-  # ============================================================================
-  # Policy & NAT Helpers (delegated)
-  # ============================================================================
-
-  defdelegate allow_ssh(pid, opts \\ []), to: NFTables.Policy
-  defdelegate allow_http(pid, opts \\ []), to: NFTables.Policy
-  defdelegate allow_https(pid, opts \\ []), to: NFTables.Policy
-  defdelegate accept_established(pid, opts \\ []), to: NFTables.Policy
-  defdelegate drop_invalid(pid, opts \\ []), to: NFTables.Policy
-  defdelegate setup_basic_firewall(pid, opts \\ []), to: NFTables.Policy
-
-  # NAT helpers - note: setup_masquerade requires (pid, interface, opts)
-  # so we only delegate those that match the simple pattern
-  # Users can call NFTables.NAT.* directly for more complex functions
 end

@@ -19,22 +19,22 @@ defmodule NFTables.Local do
 
       # Uses NFTables.Local by default
       Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.submit()
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit()
 
   You can also use it explicitly:
 
       Builder.new(requestor: NFTables.Local)
-      |> Builder.add(table: "filter")
-      |> Builder.submit(pid: custom_pid, timeout: 10_000)
+      |> NFTables.add(table: "filter")
+      |> NFTables.submit(pid: custom_pid, timeout: 10_000)
 
   Or override at submit time:
 
       builder = Builder.new(requestor: MyApp.RemoteRequestor)
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
 
       # Override to use local execution
-      Builder.submit(builder, requestor: NFTables.Local)
+      NFTables.submit(builder, requestor: NFTables.Local)
 
   ## Options
 
@@ -47,20 +47,20 @@ defmodule NFTables.Local do
 
       # Basic usage with default options (write operation)
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      :ok = Builder.submit(builder)
+      |> NFTables.add(table: "filter")
+      :ok = NFTables.submit(builder)
 
       # With specific port process
       {:ok, pid} = NFTables.start_link()
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      Builder.submit(builder, pid: pid)
+      |> NFTables.add(table: "filter")
+      NFTables.submit(builder, pid: pid)
 
       # Custom timeout for long operations
       builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
-      Builder.submit(builder, timeout: 30_000)
+      |> NFTables.add(table: "filter")
+      |> NFTables.add(chain: "INPUT")
+      NFTables.submit(builder, timeout: 30_000)
 
   ## Return Values
 
@@ -101,7 +101,7 @@ defmodule NFTables.Local do
 
       # With Builder struct (write operation)
       builder = Builder.new()
-      |> Builder.add(table: "filter")
+      |> NFTables.add(table: "filter")
       :ok = NFTables.Local.submit(builder, [])
 
       # With raw command map (query operation)
@@ -114,17 +114,17 @@ defmodule NFTables.Local do
   @impl true
   def submit(builder_or_command, opts) when is_list(opts) do
     # Convert Builder struct to command map if needed
-    command = case builder_or_command do
-      %{__struct__: Builder} -> Builder.to_map(builder_or_command)
-      map when is_map(map) -> map
-    end
+    command =
+      case builder_or_command do
+        %{__struct__: Builder} -> Builder.to_map(builder_or_command)
+        map when is_map(map) -> map
+      end
 
     submit_command(command, opts)
   end
 
   # Private function that does the actual execution
   defp submit_command(command, opts) when is_map(command) do
-
     # Encode Elixir map to JSON (this is the ONLY place JSON encoding happens)
     json_string = JSON.encode!(command)
 
@@ -134,7 +134,9 @@ defmodule NFTables.Local do
 
     # submit to NFTables.Port
     case NFTables.Port.commit(pid, json_string, timeout) do
-      {:ok, ""} -> :ok     # Empty response is success (write operations)
+      # Empty response is success (write operations)
+      {:ok, ""} ->
+        :ok
 
       {:ok, response_json} ->
         # Decode JSON response to Elixir structures (ONLY place JSON decoding happens)
@@ -143,7 +145,8 @@ defmodule NFTables.Local do
             # Check if any item contains an error
             case Enum.find(items, fn item -> Map.has_key?(item, :error) end) do
               %{error: error} -> {:error, error}
-              nil -> {:ok, decoded}  # Return decoded Elixir map
+              # Return decoded Elixir map
+              nil -> {:ok, decoded}
             end
 
           {:ok, %{error: error}} ->
@@ -156,9 +159,9 @@ defmodule NFTables.Local do
           {:error, _reason} ->
             # Not valid JSON, could be plain error text
             if String.contains?(response_json, "does not exist") or
-               String.contains?(response_json, "No such") or
-               String.contains?(response_json, "not found") or
-               String.contains?(response_json, "Error:") do
+                 String.contains?(response_json, "No such") or
+                 String.contains?(response_json, "not found") or
+                 String.contains?(response_json, "Error:") do
               {:error, response_json}
             else
               # Return raw response wrapped in a map
@@ -186,7 +189,7 @@ defmodule NFTables.Local do
             raise ArgumentError, """
             No NFTables.Port process found. Either:
             1. Start NFTables with: NFTables.start_link()
-            2. Pass pid explicitly: Builder.submit(builder, pid: pid)
+            2. Pass pid explicitly: NFTables.submit(builder, pid: pid)
             """
 
           pid ->

@@ -15,7 +15,7 @@
 #   mix run examples/06_query_tables.exs
 
 # Start NFTables (JSON-based port)
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 IO.puts("NFTables Query Examples (JSON-based port)\n")
 IO.puts(String.duplicate("=", 60))
 
