@@ -78,7 +78,7 @@ defmodule NFTables.MixProject do
       ],
       groups_for_modules: [
         "Core API": [
-          NFTables.Builder,
+          NFTables,
           NFTables.Expr,
           NFTables.Query
         ],
@@ -86,12 +86,13 @@ defmodule NFTables.MixProject do
           NFTables.Policy,
           NFTables.NAT
         ],
-        Requests: [
-          NFTables.Local,
+        "Requests": [
           NFTables.Requestor,
+          NFTables.Local,
           NFTables.Decoder
         ],
         "Internal API": [
+          NFTables.Builder,
           NFTables.Validation,
           NFTables.Expr.Structs,
           NFTables.Formatter
