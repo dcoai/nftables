@@ -11,15 +11,13 @@ defmodule NFTables.FlowtableIntegrationTest do
     test_table = "flowtable_test_#{:rand.uniform(1_000_000)}"
 
     # Create test table
-    Builder.new()
-    |> NFTables.add(table: test_table)
+        NFTables.add(table: test_table)
     |> NFTables.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
-        Builder.new()
-        |> NFTables.delete(table: test_table, family: :inet)
+                NFTables.delete(table: test_table, family: :inet)
         |> NFTables.submit(pid: pid)
       end
     end)
@@ -30,8 +28,7 @@ defmodule NFTables.FlowtableIntegrationTest do
   describe "flowtable creation" do
     test "creates flowtable with valid parameters", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "fastpath",
           table: table,
           family: :inet,
@@ -46,8 +43,7 @@ defmodule NFTables.FlowtableIntegrationTest do
 
     test "creates flowtable with single device (lo)", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "multi_dev",
           table: table,
           family: :inet,
@@ -63,8 +59,7 @@ defmodule NFTables.FlowtableIntegrationTest do
 
     test "creates flowtable with hardware offload flag", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "hwoffload",
           table: table,
           family: :inet,
@@ -81,8 +76,7 @@ defmodule NFTables.FlowtableIntegrationTest do
 
     test "creates flowtable with different priority", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "highprio",
           table: table,
           family: :inet,
@@ -100,8 +94,7 @@ defmodule NFTables.FlowtableIntegrationTest do
     test "deletes flowtable", %{pid: pid, table: table} do
       # Create flowtable
       :ok =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "to_delete",
           table: table,
           family: :inet,
@@ -113,8 +106,7 @@ defmodule NFTables.FlowtableIntegrationTest do
 
       # Delete flowtable
       result =
-        Builder.new()
-        |> NFTables.delete(flowtable: "to_delete", table: table, family: :inet)
+                NFTables.delete(flowtable: "to_delete", table: table, family: :inet)
         |> NFTables.submit(pid: pid)
 
       assert :ok == result
@@ -124,8 +116,7 @@ defmodule NFTables.FlowtableIntegrationTest do
   describe "context tracking" do
     test "uses table from context", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(
           flowtable: "context_test",
           hook: :ingress,
@@ -139,8 +130,7 @@ defmodule NFTables.FlowtableIntegrationTest do
 
     test "uses family from context", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(
           flowtable: "family_context",
           hook: :ingress,
@@ -158,8 +148,7 @@ defmodule NFTables.FlowtableIntegrationTest do
       batch_table = "batch_test_#{:rand.uniform(1_000_000)}"
 
       result =
-        Builder.new()
-        |> NFTables.add(table: batch_table)
+                NFTables.add(table: batch_table)
         |> NFTables.add(
           flowtable: "batch_flow",
           hook: :ingress,
@@ -178,8 +167,7 @@ defmodule NFTables.FlowtableIntegrationTest do
       assert :ok == result
 
       # Cleanup
-      Builder.new()
-      |> NFTables.delete(table: batch_table, family: :inet)
+            NFTables.delete(table: batch_table, family: :inet)
       |> NFTables.submit(pid: pid)
     end
   end

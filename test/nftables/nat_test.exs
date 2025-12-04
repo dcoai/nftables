@@ -17,8 +17,7 @@ defmodule NFTables.NATTest do
     cleanup_tables(pid)
 
     # Create NAT table and chains using Builder
-    Builder.new()
-    |> NFTables.add(table: "nftables_test_nat", family: :inet)
+        NFTables.add(table: "nftables_test_nat", family: :inet)
     |> NFTables.add(
       table: "nftables_test_nat",
       chain: "prerouting",
@@ -188,8 +187,7 @@ defmodule NFTables.NATTest do
 
   defp cleanup_tables(pid) do
     try do
-      Builder.new()
-      |> NFTables.delete(table: "nftables_test_nat", family: :inet)
+            NFTables.delete(table: "nftables_test_nat", family: :inet)
       |> NFTables.submit(pid: pid)
     rescue
       _ -> :ok

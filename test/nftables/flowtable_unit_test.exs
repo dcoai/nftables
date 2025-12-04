@@ -6,8 +6,7 @@ defmodule NFTables.FlowtableUnitTest do
   describe "flowtable validation" do
     test "rejects invalid hook" do
       assert_raise ArgumentError, ~r/Invalid flowtable hook/, fn ->
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "invalid_hook",
           table: "test",
           family: :inet,
@@ -20,8 +19,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "rejects empty devices list" do
       assert_raise ArgumentError, ~r/Invalid flowtable devices: empty list/, fn ->
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "no_devices",
           table: "test",
           family: :inet,
@@ -34,8 +32,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "rejects non-list devices" do
       assert_raise ArgumentError, ~r/Invalid flowtable devices.*expected list/, fn ->
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "bad_devices",
           table: "test",
           family: :inet,
@@ -48,8 +45,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "rejects devices with non-string elements" do
       assert_raise ArgumentError, ~r/Invalid flowtable devices.*must be strings/, fn ->
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "bad_device_type",
           table: "test",
           family: :inet,
@@ -64,8 +60,7 @@ defmodule NFTables.FlowtableUnitTest do
   describe "JSON generation" do
     test "generates correct JSON for flowtable add" do
       builder =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "test_flow",
           table: "filter",
           hook: :ingress,
@@ -89,8 +84,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "generates correct JSON for flowtable delete" do
       builder =
-        Builder.new()
-        |> NFTables.delete(flowtable: "test_flow", table: "filter", family: :inet)
+                NFTables.delete(flowtable: "test_flow", table: "filter", family: :inet)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -105,8 +99,7 @@ defmodule NFTables.FlowtableUnitTest do
 
     test "generates correct JSON with hardware offload flag" do
       builder =
-        Builder.new()
-        |> NFTables.add(
+                NFTables.add(
           flowtable: "hw_flow",
           table: "filter",
           hook: :ingress,

@@ -52,8 +52,7 @@ match_expr
 
 # Step 3: Commit - Builder automatically extracts expression list
 |> then(fn rule ->
-  Builder.new()
-  |> NFTables.add(rule: rule, table: "filter", chain: "INPUT", family: :inet)
+  NFTables.add(rule: rule, table: "filter", chain: "INPUT", family: :inet)
   |> NFTables.submit(pid)
 end)
 ```
@@ -101,8 +100,7 @@ expr =
   |> log("SSH_RATELIMIT: ", level: :warn)
   |> drop()
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -120,8 +118,7 @@ expr =
   |> ct_state([:new])
   |> dnat_to("10.0.0.10", port: 80)
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "nat", chain: "prerouting", family: :inet)
+NFTables. NFTables.add(rule: expr, table: "nat", chain: "prerouting", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -140,8 +137,7 @@ expr =
   |> log("BLOCKED_IP: ", level: :info)
   |> drop()
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -164,8 +160,7 @@ expr =
   |> synproxy(mss: 1460, wscale: 7, timestamp: true, sack_perm: true)
   |> accept()
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -437,8 +432,7 @@ expr = expr()
   |> state([:established, :related])
   |> accept()
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -465,8 +459,7 @@ expr = expr()
   |> oif("eth0")
   |> masquerade()
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "nat", chain: "postrouting", family: :inet)
+NFTables. NFTables.add(rule: expr, table: "nat", chain: "postrouting", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -489,8 +482,7 @@ alias NFTables.{Policy, Builder}
 
 # These use the Expr API internally (composable)
 :ok =
-  Builder.new()
-  |> Policy.accept_loopback()
+  Policy.accept_loopback()
   |> Policy.accept_established()
   |> Policy.drop_invalid()
   |> Policy.allow_ssh(rate_limit: 10)

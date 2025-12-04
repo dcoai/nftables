@@ -87,8 +87,7 @@ expr = expr()
   |> accept()
 
 # Execute separately
-Builder.new()
-|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 
@@ -127,8 +126,7 @@ expr = expr()
   |> log("SSH_RATELIMIT: ", level: :warn)
   |> drop()
 
-Builder.new()
-|> NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
+NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
 |> Local.submit(pid)
 ```
 

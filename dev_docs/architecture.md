@@ -112,7 +112,7 @@ The separation enables alternative execution backends:
 ```elixir
 # Local execution via port
 {:ok, pid} = NFTables.Port.start_link()
-Builder.new() |> NFTables.add(table: "filter") |> NFTables.submit(pid: pid)
+NFTables.add(table: "filter") |> NFTables.submit(pid: pid)
 
 # Could implement remote execution without port
 defmodule MyApp.RemoteRequestor do
@@ -153,7 +153,7 @@ Response: [4-byte length][JSON string]
 
 ```elixir
 # 1. Builder creates Elixir data structures
-builder = Builder.new() |> NFTables.add(table: "filter", family: :inet)
+builder = NFTables.add(table: "filter", family: :inet)
 
 # 2. Local requestor converts to JSON and sends to port
 json = Jason.encode!(%{nftables: [%{add: %{table: %{family: :inet, name: "filter"}}}]})
@@ -672,8 +672,7 @@ ssh_rule = expr()
   |> accept()
 
 # Combining both
-Builder.new()
-  |> NFTables.add(table: "filter")
+NFTables.add(table: "filter")
   |> NFTables.add(chain: "INPUT")
   |> NFTables.add(rule: ssh_rule)
   |> NFTables.submit(pid: pid)
@@ -794,7 +793,7 @@ expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1")
 ```
 User Code
     ↓
-Builder.new() |> NFTables.add(table: "filter")
+NFTables.add(table: "filter")
     ↓ (accumulates Elixir maps)
 Builder{commands: [%{add: %{table: %{...}}}]}
     ↓
@@ -905,8 +904,7 @@ Instead of always executing locally via `NFTables.submit(builder, pid: pid)`, yo
 
 ```elixir
 # Traditional local execution
-Builder.new()
-|> NFTables.add(table: "filter")
+NFTables. NFTables.add(table: "filter")
 |> NFTables.submit(pid: pid)  # Goes to NFTables.Port
 
 # Custom requestor submission
@@ -1083,8 +1081,7 @@ builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
 #### 2. Via set_requestor/2
 
 ```elixir
-builder = Builder.new()
-|> NFTables.add(table: "filter")
+builder = NFTables.add(table: "filter")
 |> Builder.set_requestor(MyApp.AuditRequestor)
 ```
 
@@ -1118,8 +1115,7 @@ builder |> NFTables.submit(node: :remote_host, timeout: 10_000)
 builder |> NFTables.submit(requestor: MyApp.SpecialRequestor, opt: "value")
 
 # Use without pre-configured requestor
-Builder.new()
-|> NFTables.add(table: "filter")
+NFTables. NFTables.add(table: "filter")
 |> NFTables.submit(requestor: MyApp.TestRequestor)
 ```
 
@@ -1150,8 +1146,7 @@ Both approaches can coexist in the same codebase:
 
 ```elixir
 # Local execution for immediate changes
-Builder.new()
-|> NFTables.add(table: "filter")
+NFTables. NFTables.add(table: "filter")
 |> NFTables.submit(pid: pid)
 
 # Remote execution for distributed deployments
@@ -1281,7 +1276,7 @@ Configuration is just data until executed:
 
 ```elixir
 # Just data structures
-config = Builder.new() |> NFTables.add(table: "filter")
+config = NFTables.add(table: "filter")
 
 # Can be inspected
 IO.inspect(config.commands)
@@ -1307,7 +1302,7 @@ NFTables.setup_basic_firewall(pid)
 
 # Level 2: Builder + Match (flexible)
 ssh_rule = expr() |> tcp() |> dport(22) |> accept()
-Builder.new() |> NFTables.add(rule: ssh_rule) |> NFTables.submit(pid: pid)
+NFTables.add(rule: ssh_rule) |> NFTables.submit(pid: pid)
 
 # Level 3: Direct expression building (full control)
 expr = Expr.payload_match("tcp", "dport", 22)
