@@ -76,8 +76,7 @@ fastpath_rule = expr()
 |> ct_state([:established, :related])
 |> flow_offload("fastpath")
 
-Builder.new()
-|> NFTables.add(
+NFTables.add(
   rule: fastpath_rule,
   table: "filter",
   chain: "forward",
@@ -167,7 +166,7 @@ ssh_rule = expr()
 )
 |> accept()
 
-Builder.new()
+NFTables.add(table: "filter")
 |> NFTables.add(
   rule: ssh_rule,
   table: "filter",
@@ -566,8 +565,7 @@ Enum.each(tunnel_endpoints, fn endpoint ->
   |> log("GRE tunnel from #{endpoint}")
   |> accept()
 
-  Builder.new()
-  |> NFTables.add(rule: gre_rule, table: "filter", chain: "INPUT")
+  NFTables.add(rule: gre_rule, table: "filter", chain: "INPUT")
   |> NFTables.submit(pid: pid)
 end)
 ```
@@ -657,8 +655,7 @@ os_qos_rules = [
 ]
 
 Enum.each(os_qos_rules, fn qos_rule ->
-  Builder.new()
-  |> NFTables.add(rule: qos_rule, table: "filter", chain: "FORWARD")
+  NFTables.add(rule: qos_rule, table: "filter", chain: "FORWARD")
   |> NFTables.submit(pid: pid)
 end)
 ```

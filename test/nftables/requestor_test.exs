@@ -104,8 +104,7 @@ defmodule NFTables.RequestorTest do
     end
 
     test "chains with other builder operations" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.set_requestor(CaptureRequestor)
       |> NFTables.add(chain: "INPUT")
 
@@ -126,8 +125,7 @@ defmodule NFTables.RequestorTest do
     end
 
     test "submits with default requestor (NFTables.Local) when not explicitly set" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
 
       # Should not raise - uses NFTables.Local by default
       # We can't actually test the submit here without a running NFTables.Port,
@@ -190,8 +188,7 @@ defmodule NFTables.RequestorTest do
     end
 
     test "uses default requestor (NFTables.Local) when no override provided" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
 
       # Builder has NFTables.Local as default, so no error should be raised
       # We can't actually test the submit here without a running NFTables.Port,
@@ -200,8 +197,7 @@ defmodule NFTables.RequestorTest do
     end
 
     test "validates requestor implements submit/2" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
 
       assert_raise ArgumentError, ~r/does not implement NFTables.Requestor/, fn ->
         Builder.submit(builder, requestor: NotARequestor)
@@ -209,8 +205,7 @@ defmodule NFTables.RequestorTest do
     end
 
     test "allows requestor override without pre-configured requestor" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
 
       result = Builder.submit(builder,
         requestor: CaptureRequestor,

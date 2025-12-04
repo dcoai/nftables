@@ -73,8 +73,7 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 789
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
@@ -97,8 +96,7 @@ defmodule NFTables.BuilderRoundtripTest do
         policy: :drop
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
@@ -122,8 +120,7 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 202
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
@@ -151,8 +148,7 @@ defmodule NFTables.BuilderRoundtripTest do
         ]
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> NFTables.add(chain: "INPUT")
       |> Builder.import_rule(rule_map)
 
@@ -180,8 +176,7 @@ defmodule NFTables.BuilderRoundtripTest do
         ]
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> NFTables.add(chain: "INPUT")
       |> Builder.import_rule(rule_map)
 
@@ -199,8 +194,7 @@ defmodule NFTables.BuilderRoundtripTest do
         %{family: :inet, table: "filter", chain: "INPUT", handle: 3, expr: [%{reject: nil}]}
       ]
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> NFTables.add(chain: "INPUT")
 
       builder = Enum.reduce(rules, builder, fn rule, b ->
@@ -225,8 +219,7 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 555
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
@@ -247,8 +240,7 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 666
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
@@ -273,8 +265,7 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 777
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
@@ -321,8 +312,7 @@ defmodule NFTables.BuilderRoundtripTest do
         policy: :accept
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_chain(chain_map)
       |> NFTables.add(rule: [%{drop: nil}])
 
@@ -411,8 +401,7 @@ defmodule NFTables.BuilderRoundtripTest do
         policy: :drop
       }
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
       |> Builder.import_chain(original_chain)
 
       json = Builder.to_json(builder)

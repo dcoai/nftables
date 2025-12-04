@@ -12,15 +12,13 @@ defmodule NFTables.PayloadRawIntegrationTest do
     test_table = "raw_test_#{:rand.uniform(1_000_000)}"
 
     # Create test table
-    Builder.new()
-    |> NFTables.add(table: test_table)
+        NFTables.add(table: test_table)
     |> NFTables.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
-        Builder.new()
-        |> NFTables.delete(table: test_table, family: :inet)
+                NFTables.delete(table: test_table, family: :inet)
         |> NFTables.submit(pid: pid)
       end
     end)
@@ -41,8 +39,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
 
       # Create a simple chain without hooks to avoid Builder bug
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(chain: "test_chain")
         |> NFTables.add(rule: dns_rule)
         |> NFTables.submit(pid: pid)
@@ -62,8 +59,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         
 
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(chain: "test_chain")
         |> NFTables.add(rule: http_get_rule)
         |> NFTables.submit(pid: pid)
@@ -84,8 +80,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         
 
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(chain: "test_chain")
         |> NFTables.add(rule: syn_rule)
         |> NFTables.submit(pid: pid)
@@ -103,8 +98,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         
 
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(chain: "test_chain")
         |> NFTables.add(rule: ip_rule)
         |> NFTables.submit(pid: pid)
@@ -124,8 +118,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         
 
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(chain: "test_chain")
         |> NFTables.add(rule: df_rule)
         |> NFTables.submit(pid: pid)
@@ -151,8 +144,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
         
 
       result =
-        Builder.new()
-        |> NFTables.add(table: table)
+                NFTables.add(table: table)
         |> NFTables.add(chain: "test_chain")
         |> NFTables.add(rule: dns_rule)
         |> NFTables.add(rule: http_rule)

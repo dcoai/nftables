@@ -220,15 +220,13 @@ defmodule NFTables.BuilderTest do
 
   describe "context tracking" do
     test "sets table context when adding table" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
 
       assert builder.table == "filter"
     end
 
     test "sets chain context when adding chain" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter", chain: "INPUT")
+      builder =       NFTables.add(table: "filter", chain: "INPUT")
 
       assert builder.chain == "INPUT"
     end
@@ -332,16 +330,14 @@ defmodule NFTables.BuilderTest do
 
     test "requires table to be set" do
       assert_raise ArgumentError, ~r/table must be specified/, fn ->
-        Builder.new()
-        |> NFTables.add(chain: "INPUT")
+                NFTables.add(chain: "INPUT")
       end
     end
 
     test "requires chain to be set" do
       expr_list = [%{accept: nil}]
 
-      builder = Builder.new()
-      |> NFTables.add(table: "filter")
+      builder =       NFTables.add(table: "filter")
 
       assert_raise ArgumentError, ~r/chain must be specified/, fn ->
         NFTables.add(builder, rule: expr_list)
@@ -500,8 +496,7 @@ defmodule NFTables.BuilderTest do
 
   describe "context management" do
     test "maintains separate table and chain contexts" do
-      builder = Builder.new()
-      |> NFTables.add(table: "filter", chain: "INPUT")
+      builder =       NFTables.add(table: "filter", chain: "INPUT")
 
       assert builder.table == "filter"
       assert builder.chain == "INPUT"
