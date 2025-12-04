@@ -10,7 +10,7 @@ Add `nftables` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:nftables, "~> 0.6.6"}
+    {:nftables, "~> 0.7.0"}
   ]
 end
 ```
