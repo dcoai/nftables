@@ -109,6 +109,7 @@ defmodule NFTables.Sysctl do
     case Local.submit(command_map, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
         parse_get_response(response, parameter)
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -141,6 +142,7 @@ defmodule NFTables.Sysctl do
     case Local.submit(command_map, normalize_opts(pid_or_opts)) do
       {:ok, response} ->
         parse_set_response(response)
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -204,8 +206,10 @@ defmodule NFTables.Sysctl do
     case response do
       %{"sysctl" => %{"value" => value}} ->
         {:ok, value}
+
       %{"error" => error} ->
         {:error, error}
+
       _ ->
         {:error, :invalid_response}
     end
@@ -215,8 +219,10 @@ defmodule NFTables.Sysctl do
     case response do
       %{"sysctl" => %{"status" => "ok"}} ->
         :ok
+
       %{"error" => error} ->
         {:error, error}
+
       _ ->
         {:error, :invalid_response}
     end

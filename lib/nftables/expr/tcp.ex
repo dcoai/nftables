@@ -49,6 +49,7 @@ defmodule NFTables.Expr.TCP do
         "op" => "=="
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -123,7 +124,8 @@ defmodule NFTables.Expr.TCP do
   - TTL normalization checks
   """
   @spec hoplimit(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def hoplimit(builder \\ Expr.expr(), op, hoplimit) when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
+  def hoplimit(builder \\ Expr.expr(), op, hoplimit)
+      when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
     op_str = atom_to_op(op)
     expr = Expr.Structs.payload_match("ip6", "hoplimit", hoplimit, op_str)
     Expr.add_expr(builder, expr)

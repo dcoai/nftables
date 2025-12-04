@@ -54,22 +54,18 @@ defmodule NFTables.Formatter do
       Map.has_key?(expr, "reject") -> format_reject(expr["reject"])
       Map.has_key?(expr, "jump") -> format_jump(expr["jump"])
       Map.has_key?(expr, "goto") -> format_goto(expr["goto"])
-
       # Statements
       Map.has_key?(expr, "counter") -> "counter"
       Map.has_key?(expr, "log") -> format_log(expr["log"])
       Map.has_key?(expr, "limit") -> format_limit(expr["limit"])
       Map.has_key?(expr, "mangle") -> format_mangle(expr["mangle"])
       Map.has_key?(expr, "ct") && is_map(expr["ct"]) -> format_ct_set(expr["ct"])
-
       # NAT
       Map.has_key?(expr, "snat") -> format_snat(expr["snat"])
       Map.has_key?(expr, "dnat") -> format_dnat(expr["dnat"])
       Map.has_key?(expr, "masquerade") -> format_masquerade(expr["masquerade"])
-
       # Matches
       Map.has_key?(expr, "match") -> format_match(expr["match"])
-
       # Unknown/unsupported
       true -> format_fallback(expr)
     end

@@ -26,9 +26,9 @@ defmodule NFTables.Expr do
 
       # Use with Builder
       Builder.new()
-      |> Builder.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> Builder.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> Builder.submit(pid: pid)
+      |> NFTables.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> NFTables.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
+      |> NFTables.submit(pid: pid)
 
   ## Import for Concise Syntax
 
@@ -47,13 +47,27 @@ defmodule NFTables.Expr do
   - `NFTables.Policy` - Pre-built common policies
   """
 
-  alias NFTables.Expr.{IP, Port, TCP, Layer2, CT, Advanced, Actions, NAT, Verdicts, Meter, Protocols}
+  alias NFTables.Expr.{
+    IP,
+    Port,
+    TCP,
+    Layer2,
+    CT,
+    Advanced,
+    Actions,
+    NAT,
+    Verdicts,
+    Meter,
+    Protocols
+  }
 
   defstruct [
     :family,
     :comment,
-    :protocol,        # Current protocol context (nil, :tcp, :udp, etc.)
-    expr_list: []      # JSON expression maps
+    # Current protocol context (nil, :tcp, :udp, etc.)
+    :protocol,
+    # JSON expression maps
+    expr_list: []
   ]
 
   @type t :: %__MODULE__{
@@ -146,7 +160,10 @@ defmodule NFTables.Expr do
 
   def mark(builder \\ expr(), mark), do: Advanced.mark(builder, mark)
   def dscp(builder \\ expr(), dscp), do: Advanced.dscp(builder, dscp)
-  def fragmented(builder \\ expr(), is_fragmented), do: Advanced.fragmented(builder, is_fragmented)
+
+  def fragmented(builder \\ expr(), is_fragmented),
+    do: Advanced.fragmented(builder, is_fragmented)
+
   def icmp_type(builder \\ expr(), type), do: Advanced.icmp_type(builder, type)
   def icmp_code(builder \\ expr(), code), do: Advanced.icmp_code(builder, code)
   def icmpv6_type(builder \\ expr(), type), do: Advanced.icmpv6_type(builder, type)
@@ -159,8 +176,13 @@ defmodule NFTables.Expr do
   def ah_spi(builder \\ expr(), spi), do: Advanced.ah_spi(builder, spi)
   def esp_spi(builder \\ expr(), spi), do: Advanced.esp_spi(builder, spi)
   def arp_operation(builder \\ expr(), operation), do: Advanced.arp_operation(builder, operation)
-  def set(builder \\ expr(), set_name, match_type), do: Advanced.set(builder, set_name, match_type)
-  def payload_raw(builder \\ expr(), base, offset, length, value), do: Advanced.payload_raw(builder, base, offset, length, value)
+
+  def set(builder \\ expr(), set_name, match_type),
+    do: Advanced.set(builder, set_name, match_type)
+
+  def payload_raw(builder \\ expr(), base, offset, length, value),
+    do: Advanced.payload_raw(builder, base, offset, length, value)
+
   defdelegate payload_raw_masked(builder, base, offset, length, mask, value), to: Advanced
   defdelegate payload_raw_expr(base, offset, length), to: Advanced
   def socket_transparent(builder \\ expr()), do: Advanced.socket_transparent(builder)
@@ -205,9 +227,14 @@ defmodule NFTables.Expr do
 
   ## Meter Operations (delegated to Meter)
 
-  def meter_update(builder \\ expr(), key_expr, set_name, rate, per), do: Meter.meter_update(builder, key_expr, set_name, rate, per)
+  def meter_update(builder \\ expr(), key_expr, set_name, rate, per),
+    do: Meter.meter_update(builder, key_expr, set_name, rate, per)
+
   defdelegate meter_update(builder, key_expr, set_name, rate, per, opts), to: Meter
-  def meter_add(builder \\ expr(), key_expr, set_name, rate, per), do: Meter.meter_add(builder, key_expr, set_name, rate, per)
+
+  def meter_add(builder \\ expr(), key_expr, set_name, rate, per),
+    do: Meter.meter_add(builder, key_expr, set_name, rate, per)
+
   defdelegate meter_add(builder, key_expr, set_name, rate, per, opts), to: Meter
 
   ## NAT Actions (delegated to NAT)
@@ -229,7 +256,10 @@ defmodule NFTables.Expr do
   def continue(builder \\ expr()), do: Verdicts.continue(builder)
   def notrack(builder \\ expr()), do: Verdicts.notrack(builder)
   def queue_to_userspace(builder, queue_num), do: Verdicts.queue_to_userspace(builder, queue_num)
-  def queue_to_userspace(builder, queue_num, opts), do: Verdicts.queue_to_userspace(builder, queue_num, opts)
+
+  def queue_to_userspace(builder, queue_num, opts),
+    do: Verdicts.queue_to_userspace(builder, queue_num, opts)
+
   def synproxy(builder), do: Verdicts.synproxy(builder)
   def synproxy(builder, opts), do: Verdicts.synproxy(builder, opts)
   def set_tcp_mss(builder \\ expr(), mss), do: Verdicts.set_tcp_mss(builder, mss)
@@ -275,7 +305,7 @@ defmodule NFTables.Expr do
   """
   @spec src(t(), String.t()) :: t()
   def src(builder \\ expr(), ip), do: IP.source_ip(builder, ip)
-  
+
   @doc """
   Alias for `dest_ip/2`. Match destination IP address.
 
@@ -286,7 +316,7 @@ defmodule NFTables.Expr do
   """
   @spec dst(t(), String.t()) :: t()
   def dst(builder \\ expr(), ip), do: IP.dest_ip(builder, ip)
-  
+
   @doc """
   Convenience function for matching destination port (same as `dport/2`).
 
@@ -325,7 +355,7 @@ defmodule NFTables.Expr do
   """
   @spec new(t()) :: t()
   def new(builder \\ expr()), do: CT.ct_state(builder, [:new])
-  
+
   @doc """
   Alias for `ct_state(builder, [:established])`. Match connection tracking state [:new].
 
@@ -335,7 +365,7 @@ defmodule NFTables.Expr do
   """
   @spec established(t()) :: t()
   def established(builder \\ expr()), do: CT.ct_state(builder, [:established])
-  
+
   @doc """
   Alias for `ct_state(builder, [:established])`. Match connection tracking state [:related].
 
@@ -365,7 +395,7 @@ defmodule NFTables.Expr do
   """
   @spec rel(t()) :: t()
   def rel(builder \\ expr()), do: CT.ct_state(builder, [:related])
-  
+
   @doc """
   Alias for `ct_state(builder, [:established, :related])`. Match connection tracking state [:established, :related].
 
@@ -385,7 +415,7 @@ defmodule NFTables.Expr do
   """
   @spec est_rel(t()) :: t()
   def est_rel(builder \\ expr()), do: CT.ct_state(builder, [:established, :related])
-  
+
   @doc """
   Alias for `ct_state(builder, [:invalid])`. Match connection tracking state [:invalid].
 
@@ -487,7 +517,8 @@ defmodule NFTables.Expr do
       expr() |> in_set("allowed_ports", :dport)
   """
   @spec in_set(t(), String.t(), atom()) :: t()
-  def in_set(builder \\ expr(), set_name, match_type), do: Advanced.set(builder, set_name, match_type)
+  def in_set(builder \\ expr(), set_name, match_type),
+    do: Advanced.set(builder, set_name, match_type)
 
   @doc """
   Alias for `return_from_chain/1`. Return from current chain.
@@ -510,7 +541,7 @@ defmodule NFTables.Expr do
 
       expression = expr() |> tcp() |> dport(22) |> accept()
       expr_list = to_list(expression)
-      # Use expr_list with Builder: Builder.add(builder, rule: expr_list)
+      # Use expr_list with Builder: NFTables.add(builder, rule: expr_list)
   """
   @spec to_list(t()) :: list(map())
   def to_list(%__MODULE__{expr_list: expr_list}), do: expr_list

@@ -37,13 +37,15 @@ defmodule NFTables.ExprTest do
     test "sport/2 adds expression to builder" do
       builder = expr() |> tcp() |> sport(1234)
 
-      assert length(builder.expr_list) == 2  # tcp() + sport()
+      # tcp() + sport()
+      assert length(builder.expr_list) == 2
     end
 
     test "dport/2 adds expression to builder" do
       builder = expr() |> tcp() |> dport(80)
 
-      assert length(builder.expr_list) == 2  # tcp() + dport()
+      # tcp() + dport()
+      assert length(builder.expr_list) == 2
     end
 
     test "dport/2 validates port range" do
@@ -71,13 +73,15 @@ defmodule NFTables.ExprTest do
     test "dport/2 works with ranges" do
       builder = expr() |> tcp() |> dport(8000..9000)
 
-      assert length(builder.expr_list) == 2  # tcp() + dport()
+      # tcp() + dport()
+      assert length(builder.expr_list) == 2
     end
 
     test "sport/2 works with ranges" do
       builder = expr() |> tcp() |> sport(1024..65535)
 
-      assert length(builder.expr_list) == 2  # tcp() + sport()
+      # tcp() + sport()
+      assert length(builder.expr_list) == 2
     end
 
     test "ct_state/2 with single state" do
@@ -185,19 +189,22 @@ defmodule NFTables.ExprTest do
     test "sport/2 matches source port" do
       builder = expr() |> tcp() |> sport(1024)
 
-      assert length(builder.expr_list) == 2  # tcp() + sport()
+      # tcp() + sport()
+      assert length(builder.expr_list) == 2
     end
 
     test "dport/2 matches destination port" do
       builder = expr() |> tcp() |> dport(443)
 
-      assert length(builder.expr_list) == 2  # tcp() + dport()
+      # tcp() + dport()
+      assert length(builder.expr_list) == 2
     end
 
     test "port/2 is alias for dport/2" do
       builder = expr() |> tcp() |> port(22)
 
-      assert length(builder.expr_list) == 2  # tcp() + port()
+      # tcp() + port()
+      assert length(builder.expr_list) == 2
     end
 
     test "state/2 is alias for ct_state/2" do
@@ -241,7 +248,8 @@ defmodule NFTables.ExprTest do
         |> tcp()
         |> dport(22)
 
-      assert length(builder.expr_list) == 3  # source() + tcp() + dport()
+      # source() + tcp() + dport()
+      assert length(builder.expr_list) == 3
     end
 
     test "chains match, action, and verdict" do
@@ -252,7 +260,8 @@ defmodule NFTables.ExprTest do
         |> counter()
         |> accept()
 
-      assert length(builder.expr_list) == 4  # tcp() + dport() + counter() + accept()
+      # tcp() + dport() + counter() + accept()
+      assert length(builder.expr_list) == 4
     end
 
     test "preserves expression order" do
@@ -264,7 +273,8 @@ defmodule NFTables.ExprTest do
         |> log("SSH: ")
         |> drop()
 
-      assert length(builder.expr_list) == 5  # source() + tcp() + dport() + log() + drop()
+      # source() + tcp() + dport() + log() + drop()
+      assert length(builder.expr_list) == 5
       # Expressions should be in the order they were added
     end
   end
@@ -306,7 +316,8 @@ defmodule NFTables.ExprTest do
         |> log("SSH: ")
         |> accept()
 
-      assert length(builder.expr_list) == 5  # tcp() + dport() + limit() + log() + accept()
+      # tcp() + dport() + limit() + log() + accept()
+      assert length(builder.expr_list) == 5
     end
 
     test "builds IP blocking rule with logging" do
@@ -348,7 +359,8 @@ defmodule NFTables.ExprTest do
         |> counter()
         |> accept()
 
-      assert length(builder.expr_list) == 5  # tcp() + dport() + limit() + counter() + accept()
+      # tcp() + dport() + limit() + counter() + accept()
+      assert length(builder.expr_list) == 5
     end
   end
 end

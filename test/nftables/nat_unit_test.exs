@@ -17,8 +17,9 @@ defmodule NFTables.NATUnitTest do
 
       # Should have oifname match and masquerade
       assert Enum.any?(rule.expr, fn e ->
-        match?(%{match: %{left: %{meta: %{key: "oifname"}}, right: "eth0"}}, e)
-      end)
+               match?(%{match: %{left: %{meta: %{key: "oifname"}}, right: "eth0"}}, e)
+             end)
+
       assert Enum.any?(rule.expr, fn e -> Map.has_key?(e, :masquerade) end)
     end
   end
@@ -34,8 +35,9 @@ defmodule NFTables.NATUnitTest do
 
       # Should have TCP match, port match, and DNAT
       assert Enum.any?(rule.expr, fn e ->
-        match?(%{match: %{left: %{payload: %{protocol: "tcp"}}}}, e)
-      end)
+               match?(%{match: %{left: %{payload: %{protocol: "tcp"}}}}, e)
+             end)
+
       assert Enum.any?(rule.expr, fn e -> Map.has_key?(e, :dnat) end)
     end
 
@@ -49,8 +51,8 @@ defmodule NFTables.NATUnitTest do
 
       # Should have UDP match
       assert Enum.any?(rule.expr, fn e ->
-        match?(%{match: %{left: %{payload: %{protocol: "udp"}}}}, e)
-      end)
+               match?(%{match: %{left: %{payload: %{protocol: "udp"}}}}, e)
+             end)
     end
   end
 

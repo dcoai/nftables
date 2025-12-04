@@ -9,20 +9,19 @@ defmodule NFTables.MeterIntegrationTest do
   @moduletag :slow
 
   setup do
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
     test_table = "meter_test_#{:rand.uniform(1_000_000)}"
 
     # Create test table
     Builder.new(family: :inet)
-    |> Builder.add(table: test_table)
-    |> Builder.submit(pid: pid)
+    |> NFTables.add(table: test_table)
+    |> NFTables.submit(pid: pid)
 
     on_exit(fn ->
       # Cleanup: delete test table
       if Process.alive?(pid) do
-        Builder.new()
-        |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.submit(pid: pid)
+        NFTables.delete(table: test_table, family: :inet)
+        |> NFTables.submit(pid: pid)
       end
     end)
 
@@ -32,8 +31,7 @@ defmodule NFTables.MeterIntegrationTest do
   describe "dynamic set creation" do
     test "creates dynamic set with all parameters", %{pid: pid, table: table} do
       result =
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           set: "full_set",
           table: table,
           family: :inet,
@@ -42,7 +40,7 @@ defmodule NFTables.MeterIntegrationTest do
           timeout: 120,
           size: 5000
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -52,14 +50,12 @@ defmodule NFTables.MeterIntegrationTest do
     test "creates dynamic set and uses it in rule", %{pid: pid, table: table} do
       # Step 1: Create simple chain (avoid Builder bug with hooks)
       :ok =
-        Builder.new()
-        |> Builder.add(chain: "input", table: table, family: :inet)
-        |> Builder.submit(pid: pid)
+        NFTables.add(chain: "input", table: table, family: :inet)
+        |> NFTables.submit(pid: pid)
 
       # Step 2: Create dynamic set
       :ok =
-        Builder.new()
-        |> Builder.add(
+        NFTables.add(
           set: "ssh_ratelimit",
           table: table,
           family: :inet,
@@ -68,7 +64,7 @@ defmodule NFTables.MeterIntegrationTest do
           timeout: 60,
           size: 10000
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       # Step 3: Create rule using meter
       ssh_rule =
@@ -80,9 +76,8 @@ defmodule NFTables.MeterIntegrationTest do
         |> accept()
 
       result =
-        Builder.new()
-        |> Builder.add(rule: ssh_rule, table: table, chain: "input", family: :inet)
-        |> Builder.submit(pid: pid)
+        NFTables.add(rule: ssh_rule, table: table, chain: "input", family: :inet)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
     end
@@ -99,24 +94,24 @@ defmodule NFTables.MeterIntegrationTest do
 
       result =
         Builder.new(family: :inet)
-        |> Builder.add(table: batch_table)
-        |> Builder.add(chain: "input")  # Simple chain without hooks
-        |> Builder.add(
+        |> NFTables.add(table: batch_table)
+        # Simple chain without hooks
+        |> NFTables.add(chain: "input")
+        |> NFTables.add(
           set: "http_limits",
           type: :ipv4_addr,
           flags: [:dynamic],
           timeout: 60,
-          size: 100000
+          size: 100_000
         )
-        |> Builder.add(rule: meter_rule)
-        |> Builder.submit(pid: pid)
+        |> NFTables.add(rule: meter_rule)
+        |> NFTables.submit(pid: pid)
 
       assert :ok == result
 
       # Cleanup
-      Builder.new()
-      |> Builder.delete(table: batch_table, family: :inet)
-      |> Builder.submit(pid: pid)
+      NFTables.delete(table: batch_table, family: :inet)
+      |> NFTables.submit(pid: pid)
     end
   end
 end

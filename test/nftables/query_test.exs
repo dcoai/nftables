@@ -15,17 +15,20 @@ defmodule NFTables.QueryTest do
 
   describe "list_tables/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
+
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
+
       {:ok, pid: pid}
     end
 
     test "lists tables for inet family", %{pid: pid} do
-      {:ok, decoded} = Query.list_tables(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_tables(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
       assert is_list(tables)
@@ -38,9 +41,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "lists tables for ip6 family", %{pid: pid} do
-      result = Query.list_tables(family: :ip6)
-               |> Local.submit(pid: pid)
-               |> Decoder.decode()
+      result =
+        Query.list_tables(family: :ip6)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       case result do
         {:ok, decoded} ->
@@ -54,9 +58,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "accepts timeout option", %{pid: pid} do
-      {:ok, decoded} = Query.list_tables(family: :inet)
-                       |> Local.submit(pid: pid, timeout: 10_000)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_tables(family: :inet)
+        |> Local.submit(pid: pid, timeout: 10_000)
+        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
       assert is_list(tables)
@@ -64,9 +69,10 @@ defmodule NFTables.QueryTest do
 
     test "parse: false option is no longer supported - decoder always transforms", %{pid: pid} do
       # The new architecture always decodes responses
-      {:ok, decoded} = Query.list_tables(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_tables(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
       assert is_list(tables)
@@ -75,17 +81,20 @@ defmodule NFTables.QueryTest do
 
   describe "list_chains/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
+
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
+
       {:ok, pid: pid}
     end
 
     test "lists chains for inet family", %{pid: pid} do
-      {:ok, decoded} = Query.list_chains(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_chains(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       chains = Map.get(decoded, :chains, [])
       assert is_list(chains)
@@ -98,9 +107,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "chain has expected fields", %{pid: pid} do
-      {:ok, decoded} = Query.list_chains(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_chains(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       chains = Map.get(decoded, :chains, [])
 
@@ -122,17 +132,20 @@ defmodule NFTables.QueryTest do
 
   describe "list_rules/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
+
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
+
       {:ok, pid: pid}
     end
 
     test "lists rules for inet family", %{pid: pid} do
-      {:ok, decoded} = Query.list_rules(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_rules(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       rules = Map.get(decoded, :rules, [])
       assert is_list(rules)
@@ -145,9 +158,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "rule has expected fields", %{pid: pid} do
-      {:ok, decoded} = Query.list_rules(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_rules(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       rules = Map.get(decoded, :rules, [])
 
@@ -161,9 +175,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "accepts timeout option", %{pid: pid} do
-      {:ok, decoded} = Query.list_rules(family: :inet)
-                       |> Local.submit(pid: pid, timeout: 10_000)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_rules(family: :inet)
+        |> Local.submit(pid: pid, timeout: 10_000)
+        |> Decoder.decode()
 
       rules = Map.get(decoded, :rules, [])
       assert is_list(rules)
@@ -172,17 +187,20 @@ defmodule NFTables.QueryTest do
 
   describe "list_sets/1" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
+
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
+
       {:ok, pid: pid}
     end
 
     test "lists sets for inet family", %{pid: pid} do
-      {:ok, decoded} = Query.list_sets(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_sets(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       sets = Map.get(decoded, :sets, [])
       assert is_list(sets)
@@ -195,9 +213,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "set has expected fields", %{pid: pid} do
-      {:ok, decoded} = Query.list_sets(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_sets(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       sets = Map.get(decoded, :sets, [])
 
@@ -214,10 +233,12 @@ defmodule NFTables.QueryTest do
 
   describe "list_set_elements/3" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
+
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
+
       {:ok, pid: pid}
     end
 
@@ -228,9 +249,10 @@ defmodule NFTables.QueryTest do
       # and: nft add element filter test_set { 192.168.1.1 }
 
       # Try to list elements (will succeed even if set doesn't exist, returning empty or error)
-      result = Query.list_set_elements("filter", "test_set")
-               |> Local.submit(pid: pid)
-               |> Decoder.decode()
+      result =
+        Query.list_set_elements("filter", "test_set")
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       case result do
         {:ok, decoded} ->
@@ -244,9 +266,10 @@ defmodule NFTables.QueryTest do
     end
 
     test "returns error for non-existent set", %{pid: pid} do
-      result = Query.list_set_elements("nonexistent_table", "nonexistent_set")
-               |> Local.submit(pid: pid)
-               |> Decoder.decode()
+      result =
+        Query.list_set_elements("nonexistent_table", "nonexistent_set")
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       # Should return error for non-existent set
       assert match?({:error, _}, result)
@@ -255,18 +278,21 @@ defmodule NFTables.QueryTest do
 
   describe "integration test" do
     setup do
-      {:ok, pid} = NFTables.start_link()
+      {:ok, pid} = NFTables.Port.start_link()
+
       on_exit(fn ->
-        if Process.alive?(pid), do: NFTables.stop(pid)
+        if Process.alive?(pid), do: NFTables.Port.stop(pid)
       end)
+
       {:ok, pid: pid}
     end
 
     test "can query multiple resource types", %{pid: pid} do
       # Query all major resource types using list_ruleset
-      {:ok, decoded} = Query.list_ruleset(family: :inet)
-                       |> Local.submit(pid: pid)
-                       |> Decoder.decode()
+      {:ok, decoded} =
+        Query.list_ruleset(family: :inet)
+        |> Local.submit(pid: pid)
+        |> Decoder.decode()
 
       tables = Map.get(decoded, :tables, [])
       chains = Map.get(decoded, :chains, [])
@@ -280,7 +306,9 @@ defmodule NFTables.QueryTest do
       assert is_list(sets)
 
       # Log counts for visibility
-      Logger.info("Query results: #{length(tables)} tables, #{length(chains)} chains, #{length(rules)} rules, #{length(sets)} sets")
+      Logger.info(
+        "Query results: #{length(tables)} tables, #{length(chains)} chains, #{length(rules)} rules, #{length(sets)} sets"
+      )
     end
   end
 end

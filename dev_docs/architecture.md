@@ -55,7 +55,7 @@ The port process runs as a separate OS process. If the native code crashes (due 
 
 ```elixir
 # Port crashes are isolated - BEAM continues running
-{:ok, pid} = NFTables.start_link()
+{:ok, pid} = NFTables.Port.start_link()
 # If port crashes, only this GenServer crashes
 # Supervisor can restart it without affecting the rest of the application
 ```
@@ -111,8 +111,8 @@ The separation enables alternative execution backends:
 
 ```elixir
 # Local execution via port
-{:ok, pid} = NFTables.start_link()
-Builder.new() |> Builder.add(table: "filter") |> Builder.submit(pid: pid)
+{:ok, pid} = NFTables.Port.start_link()
+NFTables.add(table: "filter") |> NFTables.submit(pid: pid)
 
 # Could implement remote execution without port
 defmodule MyApp.RemoteRequestor do
@@ -153,7 +153,7 @@ Response: [4-byte length][JSON string]
 
 ```elixir
 # 1. Builder creates Elixir data structures
-builder = Builder.new() |> Builder.add(table: "filter", family: :inet)
+builder = NFTables.add(table: "filter", family: :inet)
 
 # 2. Local requestor converts to JSON and sends to port
 json = Jason.encode!(%{nftables: [%{add: %{table: %{family: :inet, name: "filter"}}}]})
@@ -182,7 +182,7 @@ defmodule NFTables do
 
   # Dual-arity Builder API
   def add(opts), do: Builder.new(opts) |> add(opts)
-  def add(%Builder{} = builder, opts), do: Builder.add(builder, opts)
+  def add(%Builder{} = builder, opts), do: NFTables.add(builder, opts)
 
   # Policy helpers
   defdelegate allow_ssh(pid, opts \\ []), to: NFTables.Policy
@@ -374,7 +374,7 @@ Builder automatically detects which object type you're operating on using a **pr
 
 ```elixir
 # When you write:
-Builder.add(builder, table: "filter", chain: "INPUT", rule: [...])
+NFTables.add(builder, table: "filter", chain: "INPUT", rule: [...])
 
 # Builder detects:
 # - table: priority 0 (context)
@@ -390,11 +390,11 @@ Builder tracks context so you don't repeat yourself:
 
 ```elixir
 builder
-|> Builder.add(table: "filter", chain: "INPUT")  # Sets context
-|> Builder.add(rule: ssh_rule)                   # Uses filter/INPUT
-|> Builder.add(rule: http_rule)                  # Still uses filter/INPUT
-|> Builder.add(chain: "OUTPUT")                  # Changes chain context
-|> Builder.add(rule: outbound_rule)              # Uses filter/OUTPUT
+|> NFTables.add(table: "filter", chain: "INPUT")  # Sets context
+|> NFTables.add(rule: ssh_rule)                   # Uses filter/INPUT
+|> NFTables.add(rule: http_rule)                  # Still uses filter/INPUT
+|> NFTables.add(chain: "OUTPUT")                  # Changes chain context
+|> NFTables.add(rule: outbound_rule)              # Uses filter/OUTPUT
 ```
 
 ### Automatic Rule Conversion
@@ -404,7 +404,7 @@ Builder automatically converts `NFTables.Expr` structs to expression lists:
 ```elixir
 # You write:
 ssh_rule = expr() |> tcp() |> dport(22) |> accept()
-Builder.add(builder, rule: ssh_rule)
+NFTables.add(builder, rule: ssh_rule)
 
 # Builder automatically calls:
 NFTables.Expr.to_list(ssh_rule)  # → [%{match: ...}, %{accept: nil}]
@@ -414,7 +414,7 @@ NFTables.Expr.to_list(ssh_rule)  # → [%{match: ...}, %{accept: nil}]
 
 ### Command Building Pipeline
 
-When you call `Builder.add(builder, opts)`, this happens:
+When you call `NFTables.add(builder, opts)`, this happens:
 
 ```elixir
 # Step 1: Detect main object type
@@ -479,12 +479,12 @@ builder |> delete(element: ["192.168.1.1"], set: "blocklist")
 ```elixir
 # Build up commands (pure)
 builder = Builder.new(family: :inet)
-  |> Builder.add(table: "filter")
-  |> Builder.add(chain: "INPUT", type: :filter, hook: :input)
-  |> Builder.add(rule: accept_established)
+  |> NFTables.add(table: "filter")
+  |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+  |> NFTables.add(rule: accept_established)
 
 # Execute all at once (side effect)
-Builder.submit(builder, pid: pid)
+NFTables.submit(builder, pid: pid)
 
 # Internally:
 # 1. Wraps commands: %{nftables: builder.commands}
@@ -658,10 +658,10 @@ Both Builder and Match/Rule use functional composition patterns extensively.
 ```elixir
 # Builder composition
 config = Builder.new(family: :inet)
-  |> Builder.add(table: "filter")
-  |> Builder.add(chain: "INPUT", type: :filter, hook: :input)
-  |> Builder.add(chain: "FORWARD", type: :filter, hook: :forward)
-  |> Builder.add(chain: "OUTPUT", type: :filter, hook: :output)
+  |> NFTables.add(table: "filter")
+  |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+  |> NFTables.add(chain: "FORWARD", type: :filter, hook: :forward)
+  |> NFTables.add(chain: "OUTPUT", type: :filter, hook: :output)
 
 # Match composition
 ssh_rule = expr()
@@ -672,11 +672,10 @@ ssh_rule = expr()
   |> accept()
 
 # Combining both
-Builder.new()
-  |> Builder.add(table: "filter")
-  |> Builder.add(chain: "INPUT")
-  |> Builder.add(rule: ssh_rule)
-  |> Builder.submit(pid: pid)
+NFTables.add(table: "filter")
+  |> NFTables.add(chain: "INPUT")
+  |> NFTables.add(rule: ssh_rule)
+  |> NFTables.submit(pid: pid)
 ```
 
 ### 2. Functional Transformation
@@ -724,11 +723,11 @@ end)
 
 # Add all rules to builder
 builder = Enum.reduce(rules, builder, fn rule, acc ->
-  Builder.add(acc, rule: rule)
+  NFTables.add(acc, rule: rule)
 end)
 
-# Or use add_rules convenience
-builder |> Builder.add_rules(rules)
+# Or use batch rules
+builder |> NFTables.add(rules: rules)
 ```
 
 ### 5. Partial Application Patterns
@@ -794,11 +793,11 @@ expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1")
 ```
 User Code
     ↓
-Builder.new() |> Builder.add(table: "filter")
+NFTables.add(table: "filter")
     ↓ (accumulates Elixir maps)
 Builder{commands: [%{add: %{table: %{...}}}]}
     ↓
-Builder.submit(pid: pid)
+NFTables.submit(pid: pid)
     ↓
 Local.submit(builder, pid)
     ↓ (converts to JSON)
@@ -856,10 +855,10 @@ ssh_rule = expr() |> tcp() |> dport(22) |> accept()
 http_rule = expr() |> tcp() |> dport(80) |> accept()
 
 config = Builder.new(family: :inet)
-  |> Builder.add(table: "filter")
-  |> Builder.add(chain: "INPUT", type: :filter, hook: :input, policy: :drop)
-  |> Builder.add(rule: ssh_rule)
-  |> Builder.add(rule: http_rule)
+  |> NFTables.add(table: "filter")
+  |> NFTables.add(chain: "INPUT", type: :filter, hook: :input, policy: :drop)
+  |> NFTables.add(rule: ssh_rule)
+  |> NFTables.add(rule: http_rule)
 
 # At this point:
 # config.commands = [
@@ -870,8 +869,8 @@ config = Builder.new(family: :inet)
 # ]
 
 # 2. Execute (side effect - applies to kernel)
-{:ok, pid} = NFTables.start_link()
-Builder.submit(config, pid: pid)
+{:ok, pid} = NFTables.Port.start_link()
+NFTables.submit(config, pid: pid)
 
 # Internally:
 # 1. Local.submit(%{nftables: config.commands}, pid)
@@ -901,18 +900,17 @@ The Requestor pattern provides a flexible, behaviour-based mechanism for submitt
 
 ### Overview
 
-Instead of always executing locally via `Builder.submit(builder, pid: pid)`, you can define custom "requestors" that handle submission in different ways:
+Instead of always executing locally via `NFTables.submit(builder, pid: pid)`, you can define custom "requestors" that handle submission in different ways:
 
 ```elixir
 # Traditional local execution
-Builder.new()
-|> Builder.add(table: "filter")
-|> Builder.submit(pid: pid)  # Goes to NFTables.Port
+NFTables. NFTables.add(table: "filter")
+|> NFTables.submit(pid: pid)  # Goes to NFTables.Port
 
 # Custom requestor submission
 Builder.new(requestor: MyApp.RemoteRequestor)
-|> Builder.add(table: "filter")
-|> Builder.submit(node: :firewall@server)  # Goes to custom handler
+|> NFTables.add(table: "filter")
+|> NFTables.submit(node: :firewall@server)  # Goes to custom handler
 ```
 
 ### The NFTables.Requestor Behaviour
@@ -949,8 +947,8 @@ end
 
 # Usage
 builder = Builder.new(requestor: MyApp.RemoteRequestor)
-|> Builder.add(table: "filter")
-|> Builder.submit(node: :firewall01@datacenter)
+|> NFTables.add(table: "filter")
+|> NFTables.submit(node: :firewall01@datacenter)
 ```
 
 #### 2. Audit Logging
@@ -982,8 +980,8 @@ end
 
 # Usage
 builder = Builder.new(requestor: MyApp.AuditRequestor)
-|> Builder.add(table: "filter")
-|> Builder.submit(audit_id: UUID.generate(), user: "admin")
+|> NFTables.add(table: "filter")
+|> NFTables.submit(audit_id: UUID.generate(), user: "admin")
 ```
 
 #### 3. Testing/Capture
@@ -1005,9 +1003,9 @@ end
 # In tests
 test "builds correct firewall config" do
   builder = Builder.new(requestor: MyApp.CaptureRequestor)
-  |> Builder.add(table: "filter")
-  |> Builder.add(chain: "INPUT")
-  |> Builder.submit()
+  |> NFTables.add(table: "filter")
+  |> NFTables.add(chain: "INPUT")
+  |> NFTables.submit()
 
   assert_received {:nftables_config, builder}
   assert length(builder.commands) == 2
@@ -1083,8 +1081,7 @@ builder = Builder.new(family: :inet, requestor: MyApp.RemoteRequestor)
 #### 2. Via set_requestor/2
 
 ```elixir
-builder = Builder.new()
-|> Builder.add(table: "filter")
+builder = NFTables.add(table: "filter")
 |> Builder.set_requestor(MyApp.AuditRequestor)
 ```
 
@@ -1092,8 +1089,8 @@ builder = Builder.new()
 
 ```elixir
 builder = Builder.new(requestor: MyApp.DefaultRequestor)
-|> Builder.add(table: "filter")
-|> Builder.submit(requestor: MyApp.SpecialRequestor, priority: :high)
+|> NFTables.add(table: "filter")
+|> NFTables.submit(requestor: MyApp.SpecialRequestor, priority: :high)
 ```
 
 ### Submit Functions
@@ -1102,8 +1099,8 @@ builder = Builder.new(requestor: MyApp.DefaultRequestor)
 
 ```elixir
 builder = Builder.new(requestor: MyApp.RemoteRequestor)
-|> Builder.add(table: "filter")
-|> Builder.submit()  # Uses MyApp.RemoteRequestor with empty opts
+|> NFTables.add(table: "filter")
+|> NFTables.submit()  # Uses MyApp.RemoteRequestor with empty opts
 ```
 
 Raises `ArgumentError` if no requestor is configured.
@@ -1112,15 +1109,14 @@ Raises `ArgumentError` if no requestor is configured.
 
 ```elixir
 # Pass options to requestor
-builder |> Builder.submit(node: :remote_host, timeout: 10_000)
+builder |> NFTables.submit(node: :remote_host, timeout: 10_000)
 
 # Override requestor
-builder |> Builder.submit(requestor: MyApp.SpecialRequestor, opt: "value")
+builder |> NFTables.submit(requestor: MyApp.SpecialRequestor, opt: "value")
 
 # Use without pre-configured requestor
-Builder.new()
-|> Builder.add(table: "filter")
-|> Builder.submit(requestor: MyApp.TestRequestor)
+NFTables. NFTables.add(table: "filter")
+|> NFTables.submit(requestor: MyApp.TestRequestor)
 ```
 
 ### Validation
@@ -1131,7 +1127,7 @@ The `submit/2` function validates that the requestor module:
 
 ```elixir
 # This will raise ArgumentError
-Builder.submit(builder, requestor: NonExistentModule)
+NFTables.submit(builder, requestor: NonExistentModule)
 # => "Module NonExistentModule does not implement NFTables.Requestor behaviour"
 ```
 
@@ -1150,14 +1146,13 @@ Both approaches can coexist in the same codebase:
 
 ```elixir
 # Local execution for immediate changes
-Builder.new()
-|> Builder.add(table: "filter")
-|> Builder.submit(pid: pid)
+NFTables. NFTables.add(table: "filter")
+|> NFTables.submit(pid: pid)
 
 # Remote execution for distributed deployments
 Builder.new(requestor: MyApp.RemoteRequestor)
-|> Builder.add(table: "filter")
-|> Builder.submit(node: :firewall@remote)
+|> NFTables.add(table: "filter")
+|> NFTables.submit(node: :firewall@remote)
 ```
 
 ### Design Rationale
@@ -1205,10 +1200,10 @@ end
 
 # Usage
 builder = Builder.new(requestor: MyApp.ClusterRequestor)
-|> Builder.add(table: "filter")
-|> Builder.add(chain: "INPUT")
-|> Builder.add(rule: block_rule)
-|> Builder.submit(strategy: :canary, nodes: [:fw01, :fw02, :fw03])
+|> NFTables.add(table: "filter")
+|> NFTables.add(chain: "INPUT")
+|> NFTables.add(rule: block_rule)
+|> NFTables.submit(strategy: :canary, nodes: [:fw01, :fw02, :fw03])
 ```
 
 ---
@@ -1233,7 +1228,7 @@ Most functions are pure (no side effects):
 
 ```elixir
 # Pure - returns new struct
-Builder.add(builder, table: "filter")
+NFTables.add(builder, table: "filter")
 
 # Pure - returns new struct
 expr() |> tcp() |> dport(22)
@@ -1242,7 +1237,7 @@ expr() |> tcp() |> dport(22)
 Query.list_tables(family: :inet)
 
 # Side effect - only when explicitly called
-Builder.submit(builder, pid: pid)
+NFTables.submit(builder, pid: pid)
 ```
 
 ### 3. **Composition Over Inheritance**
@@ -1266,7 +1261,7 @@ Behavior is explicit and predictable:
 
 ```elixir
 # Explicit execution
-Builder.submit(builder, pid: pid)  # Clear when side effects occur
+NFTables.submit(builder, pid: pid)  # Clear when side effects occur
 
 # Explicit conversion (though now automatic)
 to_expr(rule)  # Clear when format changes
@@ -1281,7 +1276,7 @@ Configuration is just data until executed:
 
 ```elixir
 # Just data structures
-config = Builder.new() |> Builder.add(table: "filter")
+config = NFTables.add(table: "filter")
 
 # Can be inspected
 IO.inspect(config.commands)
@@ -1293,7 +1288,7 @@ json = Builder.to_json(config)
 assert length(config.commands) == 1
 
 # Only becomes "real" when executed
-Builder.submit(config, pid: pid)
+NFTables.submit(config, pid: pid)
 ```
 
 ### 6. **Progressive Disclosure**
@@ -1307,11 +1302,11 @@ NFTables.setup_basic_firewall(pid)
 
 # Level 2: Builder + Match (flexible)
 ssh_rule = expr() |> tcp() |> dport(22) |> accept()
-Builder.new() |> Builder.add(rule: ssh_rule) |> Builder.submit(pid: pid)
+NFTables.add(rule: ssh_rule) |> NFTables.submit(pid: pid)
 
 # Level 3: Direct expression building (full control)
 expr = Expr.payload_match("tcp", "dport", 22)
-Builder.add(builder, rule: [expr, Expr.verdict("accept")])
+NFTables.add(builder, rule: [expr, Expr.verdict("accept")])
 
 # Level 4: Raw JSON (maximum control)
 json = ~s({"nftables":[{"add":{"rule":{...}}}]})
@@ -1324,15 +1319,15 @@ Errors are caught early with clear messages:
 
 ```elixir
 # Invalid priority combination
-Builder.add(builder, set: "s1", map: "m1")
+NFTables.add(builder, set: "s1", map: "m1")
 # ** (ArgumentError) Ambiguous object: only use one of [:set, :map, ...]
 
 # Missing required field
-Builder.add(builder, rule: [...])  # No table/chain context
+NFTables.add(builder, rule: [...])  # No table/chain context
 # ** (ArgumentError) table must be specified as an option or set via set_table/2
 
 # Invalid command/object combination
-Builder.flush(builder, element: [...])
+NFTables.flush(builder, element: [...])
 # ** (ArgumentError) Command :flush is not valid for :element. Valid commands: add, delete
 ```
 

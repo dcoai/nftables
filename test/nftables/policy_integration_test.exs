@@ -11,32 +11,29 @@ defmodule NFTables.PolicyIntegrationTest do
   # Most policy functionality is tested via unit tests in policy_unit_test.exs
 
   setup do
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
 
     # Use isolated test table
     test_table = "nftables_test_policy_integration"
 
     # Clean up and create test table and chain WITHOUT hook (safe)
-    Builder.new()
-    |> Builder.delete(table: test_table, family: :inet)
-    |> Builder.submit(pid: pid)
+    NFTables.delete(table: test_table, family: :inet)
+    |> NFTables.submit(pid: pid)
 
-    Builder.new()
-    |> Builder.add(table: test_table, family: :inet)
-    |> Builder.add(
+    NFTables.add(table: test_table, family: :inet)
+    |> NFTables.add(
       table: test_table,
       chain: "INPUT",
       family: :inet
     )
-    |> Builder.submit(pid: pid)
+    |> NFTables.submit(pid: pid)
 
     on_exit(fn ->
       if Process.alive?(pid) do
-        Builder.new()
-        |> Builder.delete(table: test_table, family: :inet)
-        |> Builder.submit(pid: pid)
+        NFTables.delete(table: test_table, family: :inet)
+        |> NFTables.submit(pid: pid)
 
-        NFTables.stop(pid)
+        NFTables.Port.stop(pid)
       end
     end)
 
@@ -48,7 +45,7 @@ defmodule NFTables.PolicyIntegrationTest do
       result =
         Builder.new()
         |> Policy.accept_loopback(table: test_table, chain: "INPUT")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert result == :ok
 
@@ -61,7 +58,7 @@ defmodule NFTables.PolicyIntegrationTest do
       result =
         Builder.new()
         |> Policy.accept_established(table: test_table, chain: "INPUT")
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert result == :ok
     end
@@ -75,7 +72,7 @@ defmodule NFTables.PolicyIntegrationTest do
           rate_limit: 10,
           log: true
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert result == :ok
 
@@ -85,9 +82,9 @@ defmodule NFTables.PolicyIntegrationTest do
 
     test "setup_basic_firewall executes in test mode", %{pid: pid} do
       filter_test = "nftables_test_filter_setup"
-      Builder.new()
-      |> Builder.delete(table: filter_test, family: :inet)
-      |> Builder.submit(pid: pid)
+
+      NFTables.delete(table: filter_test, family: :inet)
+      |> NFTables.submit(pid: pid)
 
       result = Policy.setup_basic_firewall(pid, table: filter_test, test_mode: true)
 
@@ -96,9 +93,8 @@ defmodule NFTables.PolicyIntegrationTest do
       assert chain_exists?(pid, filter_test, "INPUT", :inet)
 
       # Cleanup
-      Builder.new()
-      |> Builder.delete(table: filter_test, family: :inet)
-      |> Builder.submit(pid: pid)
+      NFTables.delete(table: filter_test, family: :inet)
+      |> NFTables.submit(pid: pid)
     end
   end
 
@@ -110,7 +106,7 @@ defmodule NFTables.PolicyIntegrationTest do
           table: "nonexistent_table",
           chain: "INPUT"
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert {:error, _reason} = result
     end
@@ -122,7 +118,7 @@ defmodule NFTables.PolicyIntegrationTest do
           table: test_table,
           chain: "NONEXISTENT"
         )
-        |> Builder.submit(pid: pid)
+        |> NFTables.submit(pid: pid)
 
       assert {:error, _reason} = result
     end

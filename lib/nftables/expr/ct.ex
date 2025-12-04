@@ -203,6 +203,7 @@ defmodule NFTables.Expr.CT do
         "op" => "=="
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 
@@ -224,6 +225,7 @@ defmodule NFTables.Expr.CT do
         "op" => "=="
       }
     }
+
     Expr.add_expr(builder, expr)
   end
 

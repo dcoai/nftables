@@ -45,7 +45,7 @@ defmodule RateLimiting do
 
   defp setup_rate_limiting do
     # Use JSON-based port (Elixir maps/terms)
-    {:ok, pid} = NFTables.start_link()
+    {:ok, pid} = NFTables.Port.start_link()
     IO.puts("✓ NFTables started (JSON-based port)")
 
     # Clean existing filter table
@@ -74,11 +74,11 @@ defmodule RateLimiting do
     IO.puts("\n=== Setting up baseline security ===")
 
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> Policy.accept_loopback()
       |> Policy.accept_established()
       |> Policy.drop_invalid()
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("✓ Accept loopback traffic")
     IO.puts("✓ Accept established/related connections")
@@ -105,9 +105,9 @@ defmodule RateLimiting do
 
     # SSH rate limit with logging
     :ok =
-      Builder.new()
+      NFTables.add(table: "filter")
       |> Policy.allow_ssh(rate_limit: 10, log: true)
-      |> Builder.submit(pid: pid)
+      |> NFTables.submit(pid: pid)
 
     IO.puts("✓ SSH rate limit: 10/minute (with logging)")
   end

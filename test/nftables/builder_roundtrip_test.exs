@@ -11,8 +11,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 123
       }
 
-      builder = Builder.new()
-      |> Builder.import_table(table_map)
+      builder =
+        Builder.new()
+        |> Builder.import_table(table_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -31,8 +32,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 456
       }
 
-      builder = Builder.new()
-      |> Builder.import_table(table_map)
+      builder =
+        Builder.new()
+        |> Builder.import_table(table_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -49,17 +51,21 @@ defmodule NFTables.BuilderRoundtripTest do
         %{name: "mangle", family: :inet, handle: 3}
       ]
 
-      builder = Enum.reduce(tables, Builder.new(), fn table, b ->
-        Builder.import_table(b, table)
-      end)
+      builder =
+        Enum.reduce(tables, Builder.new(), fn table, b ->
+          Builder.import_table(b, table)
+        end)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
 
       assert length(decoded["nftables"]) == 3
-      table_names = Enum.map(decoded["nftables"], fn cmd ->
-        cmd["add"]["table"]["name"]
-      end)
+
+      table_names =
+        Enum.map(decoded["nftables"], fn cmd ->
+          cmd["add"]["table"]["name"]
+        end)
+
       assert table_names == ["filter", "nat", "mangle"]
     end
   end
@@ -73,9 +79,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 789
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_chain(chain_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -97,9 +103,9 @@ defmodule NFTables.BuilderRoundtripTest do
         policy: :drop
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_chain(chain_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -122,9 +128,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 202
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_chain(chain_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_chain(chain_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -146,15 +152,21 @@ defmodule NFTables.BuilderRoundtripTest do
         chain: "INPUT",
         handle: 321,
         expr: [
-          %{match: %{left: %{payload: %{protocol: "ip", field: "saddr"}}, right: "10.0.0.1", op: "=="}},
+          %{
+            match: %{
+              left: %{payload: %{protocol: "ip", field: "saddr"}},
+              right: "10.0.0.1",
+              op: "=="
+            }
+          },
           %{accept: nil}
         ]
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
-      |> Builder.import_rule(rule_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> NFTables.add(chain: "INPUT")
+        |> Builder.import_rule(rule_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -180,10 +192,10 @@ defmodule NFTables.BuilderRoundtripTest do
         ]
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
-      |> Builder.import_rule(rule_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> NFTables.add(chain: "INPUT")
+        |> Builder.import_rule(rule_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -199,13 +211,14 @@ defmodule NFTables.BuilderRoundtripTest do
         %{family: :inet, table: "filter", chain: "INPUT", handle: 3, expr: [%{reject: nil}]}
       ]
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.add(chain: "INPUT")
+      builder =
+        NFTables.add(table: "filter")
+        |> NFTables.add(chain: "INPUT")
 
-      builder = Enum.reduce(rules, builder, fn rule, b ->
-        Builder.import_rule(b, rule)
-      end)
+      builder =
+        Enum.reduce(rules, builder, fn rule, b ->
+          Builder.import_rule(b, rule)
+        end)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -225,9 +238,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 555
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_set(set_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -247,9 +260,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 666
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_set(set_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -273,9 +286,9 @@ defmodule NFTables.BuilderRoundtripTest do
         handle: 777
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_set(set_map)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_set(set_map)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -294,10 +307,11 @@ defmodule NFTables.BuilderRoundtripTest do
       table_map = %{name: "filter", family: :inet, handle: 1}
 
       # Import table and add new content
-      builder = Builder.new()
-      |> Builder.import_table(table_map)
-      |> Builder.add(chain: "custom_chain")
-      |> Builder.add(rule: [%{accept: nil}])
+      builder =
+        Builder.new()
+        |> Builder.import_table(table_map)
+        |> NFTables.add(chain: "custom_chain")
+        |> NFTables.add(rule: [%{accept: nil}])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -321,10 +335,10 @@ defmodule NFTables.BuilderRoundtripTest do
         policy: :accept
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_chain(chain_map)
-      |> Builder.add(rule: [%{drop: nil}])
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_chain(chain_map)
+        |> NFTables.add(rule: [%{drop: nil}])
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -367,11 +381,13 @@ defmodule NFTables.BuilderRoundtripTest do
 
     test "maybe_add_opt chains multiple values" do
       opts = []
-      result = opts
-      |> Builder.maybe_add_opt(:type, :filter)
-      |> Builder.maybe_add_opt(:hook, :input)
-      |> Builder.maybe_add_opt(:priority, nil)
-      |> Builder.maybe_add_opt(:policy, :drop)
+
+      result =
+        opts
+        |> Builder.maybe_add_opt(:type, :filter)
+        |> Builder.maybe_add_opt(:hook, :input)
+        |> Builder.maybe_add_opt(:priority, nil)
+        |> Builder.maybe_add_opt(:policy, :drop)
 
       # Keyword list order may vary, check contents
       assert Keyword.has_key?(result, :type)
@@ -388,8 +404,9 @@ defmodule NFTables.BuilderRoundtripTest do
     test "importing and re-exporting table produces same structure" do
       original_table = %{name: "test", family: :inet, handle: 99}
 
-      builder = Builder.new()
-      |> Builder.import_table(original_table)
+      builder =
+        Builder.new()
+        |> Builder.import_table(original_table)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)
@@ -411,9 +428,9 @@ defmodule NFTables.BuilderRoundtripTest do
         policy: :drop
       }
 
-      builder = Builder.new()
-      |> Builder.add(table: "filter")
-      |> Builder.import_chain(original_chain)
+      builder =
+        NFTables.add(table: "filter")
+        |> Builder.import_chain(original_chain)
 
       json = Builder.to_json(builder)
       decoded = Jason.decode!(json)

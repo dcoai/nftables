@@ -276,7 +276,7 @@ defmodule NFTables.SysctlTest do
     end
 
     test "set_conntrack_max/2", %{pid: pid} do
-      case Network.set_conntrack_max(pid, 131072) do
+      case Network.set_conntrack_max(pid, 131_072) do
         :ok ->
           # Verify it was set (might be rounded by kernel)
           assert {:ok, value} = Sysctl.get(pid, "net.netfilter.nf_conntrack_max")
@@ -417,8 +417,9 @@ defmodule NFTables.SysctlTest do
       for param <- params do
         # These should not return "not in whitelist" errors
         result = Sysctl.get(pid, param)
+
         refute match?({:error, msg} when is_binary(msg), result) and
-          elem(result, 1) =~ ~r/whitelist/i
+                 elem(result, 1) =~ ~r/whitelist/i
       end
     end
 
@@ -436,8 +437,9 @@ defmodule NFTables.SysctlTest do
 
       for param <- params do
         result = Sysctl.get(pid, param)
+
         refute match?({:error, msg} when is_binary(msg), result) and
-          elem(result, 1) =~ ~r/whitelist/i
+                 elem(result, 1) =~ ~r/whitelist/i
       end
     end
 
@@ -449,8 +451,9 @@ defmodule NFTables.SysctlTest do
 
       for param <- params do
         result = Sysctl.get(pid, param)
+
         refute match?({:error, msg} when is_binary(msg), result) and
-          elem(result, 1) =~ ~r/whitelist/i
+                 elem(result, 1) =~ ~r/whitelist/i
       end
     end
 
@@ -472,8 +475,9 @@ defmodule NFTables.SysctlTest do
 
       for param <- params do
         result = Sysctl.get(pid, param)
+
         refute match?({:error, msg} when is_binary(msg), result) and
-          elem(result, 1) =~ ~r/whitelist/i
+                 elem(result, 1) =~ ~r/whitelist/i
       end
     end
   end
@@ -497,7 +501,7 @@ defmodule NFTables.SysctlTest do
     end
 
     test "Network helpers accept keyword list", %{pid: pid} do
-      case Network.enable_ipv4_forwarding([pid: pid]) do
+      case Network.enable_ipv4_forwarding(pid: pid) do
         :ok -> assert :ok = :ok
         {:error, _} -> :ok
       end

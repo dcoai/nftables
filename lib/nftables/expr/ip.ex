@@ -29,21 +29,24 @@ defmodule NFTables.Expr.IP do
     ip_str = format_ip(ip)
 
     # Determine IP version based on family or IP format
-    protocol = case builder.family do
-      :ip6 -> "ip6"
-      :inet6 -> "ip6"
-      _ -> if String.contains?(ip_str, ":"), do: "ip6", else: "ip"
-    end
+    protocol =
+      case builder.family do
+        :ip6 -> "ip6"
+        :inet6 -> "ip6"
+        _ -> if String.contains?(ip_str, ":"), do: "ip6", else: "ip"
+      end
 
     # Build JSON expression for IP source address match
-    expr = if String.contains?(ip_str, "/") do
-      # CIDR notation - use prefix match
-      [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
-      Expr.Structs.payload_match_prefix(protocol, "saddr", addr, String.to_integer(prefix_len))
-    else
-      # Single IP - use regular match
-      Expr.Structs.payload_match(protocol, "saddr", ip_str)
-    end
+    expr =
+      if String.contains?(ip_str, "/") do
+        # CIDR notation - use prefix match
+        [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
+        Expr.Structs.payload_match_prefix(protocol, "saddr", addr, String.to_integer(prefix_len))
+      else
+        # Single IP - use regular match
+        Expr.Structs.payload_match(protocol, "saddr", ip_str)
+      end
+
     Expr.add_expr(builder, expr)
   end
 
@@ -69,21 +72,24 @@ defmodule NFTables.Expr.IP do
     ip_str = format_ip(ip)
 
     # Determine IP version based on family or IP format
-    protocol = case builder.family do
-      :ip6 -> "ip6"
-      :inet6 -> "ip6"
-      _ -> if String.contains?(ip_str, ":"), do: "ip6", else: "ip"
-    end
+    protocol =
+      case builder.family do
+        :ip6 -> "ip6"
+        :inet6 -> "ip6"
+        _ -> if String.contains?(ip_str, ":"), do: "ip6", else: "ip"
+      end
 
     # Build JSON expression for IP destination address match
-    expr = if String.contains?(ip_str, "/") do
-      # CIDR notation - use prefix match
-      [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
-      Expr.Structs.payload_match_prefix(protocol, "daddr", addr, String.to_integer(prefix_len))
-    else
-      # Single IP - use regular match
-      Expr.Structs.payload_match(protocol, "daddr", ip_str)
-    end
+    expr =
+      if String.contains?(ip_str, "/") do
+        # CIDR notation - use prefix match
+        [addr, prefix_len] = String.split(ip_str, "/", parts: 2)
+        Expr.Structs.payload_match_prefix(protocol, "daddr", addr, String.to_integer(prefix_len))
+      else
+        # Single IP - use regular match
+        Expr.Structs.payload_match(protocol, "daddr", ip_str)
+      end
+
     Expr.add_expr(builder, expr)
   end
 
@@ -99,9 +105,12 @@ defmodule NFTables.Expr.IP do
   defp format_ip(ip) when byte_size(ip) == 16 do
     # IPv6 binary format - convert to string
     <<a::16, b::16, c::16, d::16, e::16, f::16, g::16, h::16>> = ip
-    parts = [a, b, c, d, e, f, g, h]
+
+    parts =
+      [a, b, c, d, e, f, g, h]
       |> Enum.map(&Integer.to_string(&1, 16))
       |> Enum.map(&String.downcase/1)
+
     Enum.join(parts, ":")
   end
 
@@ -113,13 +122,20 @@ defmodule NFTables.Expr.IP do
     else
       # Might be a binary, try to parse as IPv4
       case :inet.parse_address(String.to_charlist(ip)) do
-        {:ok, {a, b, c, d}} -> "#{a}.#{b}.#{c}.#{d}"
+        {:ok, {a, b, c, d}} ->
+          "#{a}.#{b}.#{c}.#{d}"
+
         {:ok, {a, b, c, d, e, f, g, h}} ->
-          parts = [a, b, c, d, e, f, g, h]
+          parts =
+            [a, b, c, d, e, f, g, h]
             |> Enum.map(&Integer.to_string(&1, 16))
             |> Enum.map(&String.downcase/1)
+
           Enum.join(parts, ":")
-        {:error, _} -> ip  # Return as-is if can't parse
+
+        # Return as-is if can't parse
+        {:error, _} ->
+          ip
       end
     end
   end
