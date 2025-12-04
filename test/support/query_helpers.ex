@@ -45,12 +45,15 @@ defmodule NFTables.QueryHelpers do
       {:ok, _decoded} ->
         # Chain exists (even if it has no rules)
         true
+
       :ok ->
         # Empty response means chain exists but has no rules
         true
+
       {:error, _reason} ->
         # Error means chain doesn't exist
         false
+
       _ ->
         false
     end
@@ -92,8 +95,10 @@ defmodule NFTables.QueryHelpers do
       {:ok, decoded} ->
         sets = Map.get(decoded, :sets, [])
         Enum.any?(sets, fn s -> s.name == set_name and s.table == table end)
+
       :ok ->
         false
+
       _ ->
         false
     end
@@ -127,7 +132,8 @@ defmodule NFTables.QueryHelpers do
 
       {:ok, elements} = QueryHelpers.list_set_elements(pid, "filter", "blocklist")
   """
-  @spec list_set_elements(pid(), String.t(), String.t(), keyword()) :: {:ok, [term()]} | {:error, term()}
+  @spec list_set_elements(pid(), String.t(), String.t(), keyword()) ::
+          {:ok, [term()]} | {:error, term()}
   def list_set_elements(pid, table, set_name, opts \\ []) do
     family = Keyword.get(opts, :family, :inet)
     timeout = Keyword.get(opts, :timeout, 5000)
@@ -138,8 +144,12 @@ defmodule NFTables.QueryHelpers do
       {:ok, decoded} ->
         # Set elements are in the :set_elements key
         {:ok, Map.get(decoded, :set_elements, [])}
-      :ok -> {:ok, []}
-      error -> error
+
+      :ok ->
+        {:ok, []}
+
+      error ->
+        error
     end
   end
 
@@ -158,7 +168,9 @@ defmodule NFTables.QueryHelpers do
       {:ok, decoded} ->
         tables = Map.get(decoded, :tables, [])
         Enum.any?(tables, fn t -> t.name == table_name end)
-      _ -> false
+
+      _ ->
+        false
     end
   end
 end

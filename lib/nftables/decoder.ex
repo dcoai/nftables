@@ -189,9 +189,11 @@ defmodule NFTables.Decoder do
   defp decode_read_only(items) do
     # Extract set elements from sets that have "elem" field
     set_items = items |> Enum.filter(&Map.has_key?(&1, :set))
-    set_elements = set_items
-                   |> Enum.filter(fn %{set: s} -> Map.has_key?(s, :elem) end)
-                   |> Enum.flat_map(&extract_set_elements/1)
+
+    set_elements =
+      set_items
+      |> Enum.filter(fn %{set: s} -> Map.has_key?(s, :elem) end)
+      |> Enum.flat_map(&extract_set_elements/1)
 
     decoded = %{
       tables: items |> Enum.filter(&Map.has_key?(&1, :table)) |> Enum.map(&decode_table/1),
@@ -305,6 +307,7 @@ defmodule NFTables.Decoder do
             other -> %{value: other}
           end
         end)
+
       _ ->
         []
     end
@@ -312,7 +315,8 @@ defmodule NFTables.Decoder do
 
   # Convert JSON range arrays to Elixir ranges
   # Recursively walks through maps and lists, converting {range: [min, max]} to min..max
-  defp convert_ranges_to_elixir(%{range: [min, max]} = map) when is_integer(min) and is_integer(max) do
+  defp convert_ranges_to_elixir(%{range: [min, max]} = map)
+       when is_integer(min) and is_integer(max) do
     # Replace the range array with an Elixir range
     Map.put(map, :range, min..max)
   end

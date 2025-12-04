@@ -101,7 +101,7 @@ defmodule NFTables.Builder do
       |> NFTables.add(rules: [ssh(), dns()])
 
   Libraries of custom patterns can be built this way.
-  
+
   ## Setting Builder Context
 
   For advanced builder manipulation, use `set/2` to update context fields:
@@ -288,10 +288,12 @@ defmodule NFTables.Builder do
   # Validate and set individual fields
   defp validate_and_set_field(builder, :family, value) do
     valid_families = [:inet, :ip, :ip6, :arp, :bridge, :netdev]
+
     unless value in valid_families do
       raise ArgumentError,
-        "Invalid family: #{inspect(value)}. Must be one of: #{inspect(valid_families)}"
+            "Invalid family: #{inspect(value)}. Must be one of: #{inspect(valid_families)}"
     end
+
     %{builder | family: value}
   end
 
@@ -307,30 +309,31 @@ defmodule NFTables.Builder do
     %{builder | chain: value}
   end
 
-  defp validate_and_set_field(builder, :collection, value) when is_binary(value) or is_nil(value) do
+  defp validate_and_set_field(builder, :collection, value)
+       when is_binary(value) or is_nil(value) do
     %{builder | collection: value}
   end
 
-  defp validate_and_set_field(builder, :type, value) when is_atom(value) or is_tuple(value) or is_nil(value) do
+  defp validate_and_set_field(builder, :type, value)
+       when is_atom(value) or is_tuple(value) or is_nil(value) do
     %{builder | type: value}
   end
 
   defp validate_and_set_field(_builder, :spec, _value) do
     raise ArgumentError,
-      ":spec is an internal field and cannot be set directly. Use add/2, delete/2, etc. to build commands."
+          ":spec is an internal field and cannot be set directly. Use add/2, delete/2, etc. to build commands."
   end
 
   defp validate_and_set_field(_builder, :commands, _value) do
     raise ArgumentError,
-      ":commands cannot be set directly. Use add/2, delete/2, insert/2, etc. to build commands."
+          ":commands cannot be set directly. Use add/2, delete/2, insert/2, etc. to build commands."
   end
 
   defp validate_and_set_field(_builder, field, value) do
     raise ArgumentError,
-      "Invalid field #{inspect(field)} with value #{inspect(value)}. " <>
-      "Valid fields: :family, :requestor, :table, :chain, :collection, :type"
+          "Invalid field #{inspect(field)} with value #{inspect(value)}. " <>
+            "Valid fields: :family, :requestor, :table, :chain, :collection, :type"
   end
-
 
   @doc """
   Map object type to nftables JSON object key.
@@ -343,7 +346,8 @@ defmodule NFTables.Builder do
       table: :table,
       chain: :chain,
       rule: :rule,
-      rules: :rule,      # Both map to :rule
+      # Both map to :rule
+      rules: :rule,
       flowtable: :flowtable,
       set: :set,
       map: :map,
@@ -354,7 +358,6 @@ defmodule NFTables.Builder do
     }
     |> Map.get(type, :unknown)
   end
-    
 
   ################################################################################
   # Generic Command Functions
@@ -401,43 +404,45 @@ defmodule NFTables.Builder do
   """
   @spec validate_command_object(atom(), atom()) :: :ok
   def validate_command_object(cmd_op, object_type) do
-    valid = case cmd_op do
-      :add -> true
-      :delete -> true
-      :flush -> object_type in [:table, :chain, :set, :map]
-      :rename -> object_type in [:chain]
-      :insert -> object_type in [:rule, :rules]
-      :replace -> object_type in [:rule]
-      _ -> false
-    end
+    valid =
+      case cmd_op do
+        :add -> true
+        :delete -> true
+        :flush -> object_type in [:table, :chain, :set, :map]
+        :rename -> object_type in [:chain]
+        :insert -> object_type in [:rule, :rules]
+        :replace -> object_type in [:rule]
+        _ -> false
+      end
 
     unless valid do
       raise ArgumentError,
-        "Command :#{cmd_op} is not valid for object type :#{object_type}. " <>
-        valid_commands_message(object_type)
+            "Command :#{cmd_op} is not valid for object type :#{object_type}. " <>
+              valid_commands_message(object_type)
     end
 
     :ok
   end
 
   defp valid_commands_message(object_type) do
-    commands = case object_type do
-      :table -> "add, delete, flush"
-      :chain -> "add, delete, flush, rename"
-      :rule -> "add, delete, insert, replace"
-      :rules -> "add, insert"
-      :flowtable -> "add, delete"
-      :set -> "add, delete, flush"
-      :map -> "add, delete, flush"
-      :counter -> "add, delete"
-      :quota -> "add, delete"
-      :limit -> "add, delete"
-      :element -> "add, delete"
-      _ -> "unknown"
-    end
+    commands =
+      case object_type do
+        :table -> "add, delete, flush"
+        :chain -> "add, delete, flush, rename"
+        :rule -> "add, delete, insert, replace"
+        :rules -> "add, insert"
+        :flowtable -> "add, delete"
+        :set -> "add, delete, flush"
+        :map -> "add, delete, flush"
+        :counter -> "add, delete"
+        :quota -> "add, delete"
+        :limit -> "add, delete"
+        :element -> "add, delete"
+        _ -> "unknown"
+      end
+
     "Valid commands for :#{object_type}: #{commands}"
   end
-
 
   ################################################################################
   # Object Detection via Priority Map
@@ -449,17 +454,28 @@ defmodule NFTables.Builder do
   ################################################################################
 
   @object_priority_map %{
-    table: 0,    # Context: which table
-    chain: 1,    # Context: which chain (within a table)
-    rule: 2,     # Main object: operate on a rule
-    rules: 2,    # Main object: operate on multiple rules (same priority as rule)
-    flowtable: 3,  # Main object: operate on a flowtable
-    set: 3,      # Main object: operate on a set
-    map: 3,      # Main object: operate on a map
-    counter: 3,  # Main object: operate on a counter
-    quota: 3,    # Main object: operate on a quota
-    limit: 3,    # Main object: operate on a limit
-    element: 4   # Main object: operate on element(s) in a set/map
+    # Context: which table
+    table: 0,
+    # Context: which chain (within a table)
+    chain: 1,
+    # Main object: operate on a rule
+    rule: 2,
+    # Main object: operate on multiple rules (same priority as rule)
+    rules: 2,
+    # Main object: operate on a flowtable
+    flowtable: 3,
+    # Main object: operate on a set
+    set: 3,
+    # Main object: operate on a map
+    map: 3,
+    # Main object: operate on a counter
+    counter: 3,
+    # Main object: operate on a quota
+    quota: 3,
+    # Main object: operate on a limit
+    limit: 3,
+    # Main object: operate on element(s) in a set/map
+    element: 4
   }
 
   @doc """
@@ -489,24 +505,33 @@ defmodule NFTables.Builder do
     {max_priority, objects_at_max} =
       Enum.reduce(opts, {-1, []}, fn {key, val}, {max_p, objs} ->
         priority = Map.get(obj_priority_map, key, -1)
+
         cond do
-          priority < 0 -> {max_p, objs}  # Not an object key, skip
-          priority > max_p -> {priority, [{key, val}]}  # New max
-          priority == max_p -> {max_p, [{key, val} | objs]}  # Same priority
-          true -> {max_p, objs}  # Lower priority, skip
+          # Not an object key, skip
+          priority < 0 -> {max_p, objs}
+          # New max
+          priority > max_p -> {priority, [{key, val}]}
+          # Same priority
+          priority == max_p -> {max_p, [{key, val} | objs]}
+          # Lower priority, skip
+          true -> {max_p, objs}
         end
       end)
 
     case objects_at_max do
       [] ->
         raise ArgumentError, "No valid object found in options"
+
       [{key, val}] ->
-        {key, val}  # Unique highest priority
+        # Unique highest priority
+        {key, val}
+
       multiple ->
         keys = Enum.map(multiple, &elem(&1, 0))
         group = find_priority_group(max_priority, obj_priority_map)
+
         raise ArgumentError,
-          "Ambiguous object: only use one object of #{inspect(group)} (found: #{inspect(keys)})"
+              "Ambiguous object: only use one object of #{inspect(group)} (found: #{inspect(keys)})"
     end
   end
 
@@ -632,10 +657,12 @@ defmodule NFTables.Builder do
     add_command(builder_updated, command)
   end
 
-
   def validate_builder_opt(builder, opts, key) when key in [:family, :table, :chain] do
     val = Keyword.get(opts, key, Map.get(builder, key))
-    is_nil(val) && raise ArgumentError, "#{key} must be specified as an option or set via set_#{key}/2"
+
+    is_nil(val) &&
+      raise ArgumentError, "#{key} must be specified as an option or set via set_#{key}/2"
+
     val
   end
 
@@ -644,17 +671,18 @@ defmodule NFTables.Builder do
     is_nil(val) && raise ArgumentError, "#{key} must be specified as an option"
     val
   end
-  
+
   def validate_opts(builder, opts, expect_list) do
     Enum.reduce(expect_list, %{}, fn key, acc ->
-      val = cond do
-        key in [:family, :table, :chain] -> validate_builder_opt(builder, opts, key)
-        true -> validate_required_opt(opts, key)
-      end
+      val =
+        cond do
+          key in [:family, :table, :chain] -> validate_builder_opt(builder, opts, key)
+          true -> validate_required_opt(opts, key)
+        end
+
       Map.put(acc, key, val)
     end)
   end
-  
 
   @doc """
   Flush the entire ruleset (remove all tables, chains, and rules).
@@ -675,17 +703,17 @@ defmodule NFTables.Builder do
   def flush_ruleset(%__MODULE__{} = builder, opts \\ []) do
     family = Keyword.get(opts, :family)
 
-    command = %{flush: %{ruleset: (if family, do: %{family: family}, else: %{}) }}
+    command = %{flush: %{ruleset: if(family, do: %{family: family}, else: %{})}}
 
     add_command(builder, command)
   end
-
 
   # Helper to normalize set/map types for JSON encoding
   # Converts {:concat, [:ipv4_addr, :inet_service]} to just a list for nftables JSON
   defp normalize_set_type({:concat, types}) when is_list(types) do
     Enum.map(types, &to_string/1)
   end
+
   defp normalize_set_type(type), do: type
 
   @doc """
@@ -717,119 +745,145 @@ defmodule NFTables.Builder do
 
   def spec(builder, _cmd_op, :chain, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :chain])
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.chain
     }
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, _cmd_op, :rule, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :chain, :rule])
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       chain: req_opts.chain,
       expr: normalize_rule_value(req_opts.rule)
     }
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, _cmd_op, :rules, opts) do
     # Same as :rule but handles multiple rules
     req_opts = validate_opts(builder, opts, [:family, :table, :chain, :rules])
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       chain: req_opts.chain,
       expr: normalize_rule_value(req_opts.rules)
     }
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, cmd_op, :set, opts) do
     # Don't require :type for delete/flush operations
-    required_fields = case cmd_op do
-      :add -> [:family, :table, :set, :type]
-      _ -> [:family, :table, :set]
-    end
+    required_fields =
+      case cmd_op do
+        :add -> [:family, :table, :set, :type]
+        _ -> [:family, :table, :set]
+      end
+
     req_opts = validate_opts(builder, opts, required_fields)
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.set
     }
+
     # Add type only if present (for add operations)
-    spec_map = if Map.has_key?(req_opts, :type) do
-      Map.put(spec_map, :type, normalize_set_type(req_opts.type))
-    else
-      spec_map
-    end
+    spec_map =
+      if Map.has_key?(req_opts, :type) do
+        Map.put(spec_map, :type, normalize_set_type(req_opts.type))
+      else
+        spec_map
+      end
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, _cmd_op, :map, opts) do
     # Don't require :type for delete/flush operations - only for add
     req_opts = validate_opts(builder, opts, [:family, :table, :map])
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.map
     }
+
     # Note: type handling for maps is special (tuple) - handled in update_spec for add
     %{builder | spec: spec_map}
   end
 
   def spec(builder, _cmd_op, :counter, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :counter])
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.counter
     }
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, _cmd_op, :quota, opts) do
     req_opts = validate_opts(builder, opts, [:family, :table, :quota])
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.quota
     }
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, cmd_op, :limit, opts) do
     # Don't require :rate and :unit for delete/flush operations
-    required_fields = case cmd_op do
-      :add -> [:family, :table, :limit, :rate, :unit]
-      _ -> [:family, :table, :limit]
-    end
+    required_fields =
+      case cmd_op do
+        :add -> [:family, :table, :limit, :rate, :unit]
+        _ -> [:family, :table, :limit]
+      end
+
     req_opts = validate_opts(builder, opts, required_fields)
+
     spec_map = %{
       family: req_opts.family,
       table: req_opts.table,
       name: req_opts.limit
     }
+
     # Add rate and per only if present (for add operations)
-    spec_map = if Map.has_key?(req_opts, :rate) and Map.has_key?(req_opts, :unit) do
-      spec_map
-      |> Map.put(:rate, req_opts.rate)
-      |> Map.put(:per, to_string(req_opts.unit))
-    else
-      spec_map
-    end
+    spec_map =
+      if Map.has_key?(req_opts, :rate) and Map.has_key?(req_opts, :unit) do
+        spec_map
+        |> Map.put(:rate, req_opts.rate)
+        |> Map.put(:per, to_string(req_opts.unit))
+      else
+        spec_map
+      end
+
     %{builder | spec: spec_map}
   end
 
   def spec(builder, cmd_op, :flowtable, opts) do
     # Don't require :hook, :priority, :devices for delete/flush operations
-    required_fields = case cmd_op do
-      :add -> [:family, :table, :flowtable, :hook, :priority, :devices]
-      _ -> [:family, :table, :flowtable]
-    end
+    required_fields =
+      case cmd_op do
+        :add -> [:family, :table, :flowtable, :hook, :priority, :devices]
+        _ -> [:family, :table, :flowtable]
+      end
+
     req_opts = validate_opts(builder, opts, required_fields)
 
     # Validate flowtable-specific fields for add operations
@@ -850,15 +904,18 @@ defmodule NFTables.Builder do
       table: req_opts.table,
       name: req_opts.flowtable
     }
+
     # Add hook, prio, dev only if present (for add operations)
-    spec_map = if Map.has_key?(req_opts, :hook) do
-      spec_map
-      |> Map.put(:hook, to_string(req_opts.hook))
-      |> Map.put(:prio, req_opts.priority)
-      |> Map.put(:dev, req_opts.devices)
-    else
-      spec_map
-    end
+    spec_map =
+      if Map.has_key?(req_opts, :hook) do
+        spec_map
+        |> Map.put(:hook, to_string(req_opts.hook))
+        |> Map.put(:prio, req_opts.priority)
+        |> Map.put(:dev, req_opts.devices)
+      else
+        spec_map
+      end
+
     %{builder | spec: spec_map}
   end
 
@@ -881,16 +938,20 @@ defmodule NFTables.Builder do
       name: collection_name,
       elem: elem_value
     }
+
     %{builder | spec: spec_map}
   end
 
   # Helper to convert tuples to lists for JSON encoding
   defp normalize_element_value(elements) when is_list(elements) do
     Enum.map(elements, fn
-      {key, value} -> [key, value]  # Map element: tuple -> list
-      other -> other  # Set element: keep as-is
+      # Map element: tuple -> list
+      {key, value} -> [key, value]
+      # Set element: keep as-is
+      other -> other
     end)
   end
+
   defp normalize_element_value(other), do: other
 
   ################################################################################
@@ -921,6 +982,7 @@ defmodule NFTables.Builder do
   ## Chain Updates
   def update_spec(:chain, :add, spec, opts) do
     base_chain_opts = [:type, :hook, :priority]
+
     if Enum.any?(base_chain_opts, &Keyword.has_key?(opts, &1)) do
       spec
       |> maybe_add(:type, Keyword.get(opts, :type, :filter))
@@ -935,9 +997,11 @@ defmodule NFTables.Builder do
 
   def update_spec(:chain, :rename, spec, opts) do
     newname = Keyword.get(opts, :newname)
+
     unless newname do
       raise ArgumentError, ":newname must be specified for rename operation"
     end
+
     Map.put(spec, :newname, newname)
   end
 
@@ -956,9 +1020,11 @@ defmodule NFTables.Builder do
 
   def update_spec(:rule, :replace, spec, opts) do
     handle = Keyword.get(opts, :handle)
+
     unless handle do
       raise ArgumentError, ":handle must be specified for replace operation"
     end
+
     spec
     |> Map.put(:handle, handle)
     |> maybe_add(:comment, Keyword.get(opts, :comment))
@@ -966,19 +1032,21 @@ defmodule NFTables.Builder do
 
   def update_spec(:rule, :delete, spec, opts) do
     # Extract handle from various sources
-    handle = cond do
-      # If rule value is an integer, it's the handle directly
-      is_integer(spec.expr) -> spec.expr
-      # If rule value is a keyword list with :handle, extract it
-      is_list(spec.expr) and Keyword.keyword?(spec.expr) -> Keyword.get(spec.expr, :handle)
-      # If handle is in opts, use it
-      Keyword.has_key?(opts, :handle) -> Keyword.get(opts, :handle)
-      # Otherwise error
-      true -> nil
-    end
+    handle =
+      cond do
+        # If rule value is an integer, it's the handle directly
+        is_integer(spec.expr) -> spec.expr
+        # If rule value is a keyword list with :handle, extract it
+        is_list(spec.expr) and Keyword.keyword?(spec.expr) -> Keyword.get(spec.expr, :handle)
+        # If handle is in opts, use it
+        Keyword.has_key?(opts, :handle) -> Keyword.get(opts, :handle)
+        # Otherwise error
+        true -> nil
+      end
 
     unless handle do
-      raise ArgumentError, ":handle must be specified for delete operation (as rule value or separate option)"
+      raise ArgumentError,
+            ":handle must be specified for delete operation (as rule value or separate option)"
     end
 
     # For delete, remove expr and add handle
@@ -1005,6 +1073,7 @@ defmodule NFTables.Builder do
     end
 
     {key_type, value_type} = type_val
+
     spec
     |> Map.put(:type, key_type)
     |> Map.put(:map, to_string(value_type))
@@ -1036,6 +1105,7 @@ defmodule NFTables.Builder do
     flags = Keyword.get(opts, :flags)
     # Convert atom flags to strings for JSON
     flags = if flags, do: Enum.map(flags, &to_string/1), else: nil
+
     spec
     |> maybe_add(:flags, flags)
   end
@@ -1130,7 +1200,6 @@ defmodule NFTables.Builder do
   # Use: builder |> add(element: [...], set: "setname")
   #      builder |> add(element: [...], map: "mapname")
   # See the top-level add/2, delete/2 functions.
-
 
   ## Named Counters
   # Note: Individual counter operations have been replaced by the unified API.
@@ -1314,10 +1383,10 @@ defmodule NFTables.Builder do
     family = Keyword.get(opts, :family, :inet)
 
     # Use new pipeline pattern: Query -> NFTables.Local -> Decoder
-    with {:ok, decoded} <- NFTables.Query.list_ruleset(family: family)
-                          |> NFTables.Local.submit(pid: pid)
-                          |> NFTables.Decoder.decode() do
-
+    with {:ok, decoded} <-
+           NFTables.Query.list_ruleset(family: family)
+           |> NFTables.Local.submit(pid: pid)
+           |> NFTables.Decoder.decode() do
       tables = Map.get(decoded, :tables, [])
       chains = Map.get(decoded, :chains, [])
       sets = Map.get(decoded, :sets, [])
@@ -1326,21 +1395,25 @@ defmodule NFTables.Builder do
       builder = new(family: family)
 
       # Import in order: tables -> chains -> sets -> rules
-      builder = Enum.reduce(tables, builder, fn table, b ->
-        import_table(b, table)
-      end)
+      builder =
+        Enum.reduce(tables, builder, fn table, b ->
+          import_table(b, table)
+        end)
 
-      builder = Enum.reduce(chains, builder, fn chain, b ->
-        import_chain(b, chain)
-      end)
+      builder =
+        Enum.reduce(chains, builder, fn chain, b ->
+          import_chain(b, chain)
+        end)
 
-      builder = Enum.reduce(sets, builder, fn set, b ->
-        import_set(b, set)
-      end)
+      builder =
+        Enum.reduce(sets, builder, fn set, b ->
+          import_set(b, set)
+        end)
 
-      builder = Enum.reduce(rules, builder, fn rule, b ->
-        import_rule(b, rule)
-      end)
+      builder =
+        Enum.reduce(rules, builder, fn rule, b ->
+          import_rule(b, rule)
+        end)
 
       {:ok, builder}
     end
@@ -1539,16 +1612,21 @@ defmodule NFTables.Builder do
     # Check if this is a list of Expr structs or already an expression list
     case rules do
       # Empty list - return as-is
-      [] -> []
+      [] ->
+        []
+
       # List of structs - convert each one
       [%NFTables.Expr{} | _] = rule_list ->
         Enum.map(rule_list, &normalize_rule_value/1)
+
       # Already an expression list (list of maps) - return as-is
-      _ -> rules
+      _ ->
+        rules
     end
   end
 
-  defp normalize_rule_value(expr_list), do: expr_list  # Already a list of expressions
+  # Already a list of expressions
+  defp normalize_rule_value(expr_list), do: expr_list
 
   # Add a command to the builder
   defp add_command(%__MODULE__{commands: commands} = builder, command) do

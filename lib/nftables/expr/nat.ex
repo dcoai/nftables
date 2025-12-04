@@ -60,11 +60,12 @@ defmodule NFTables.Expr.NAT do
   def masquerade(builder \\ Expr.expr(), opts \\ []) do
     port_range = Keyword.get(opts, :port_range)
 
-    expr = if port_range do
-      %{"masquerade" => %{"port" => port_range}}
-    else
-      %{"masquerade" => nil}
-    end
+    expr =
+      if port_range do
+        %{"masquerade" => %{"port" => port_range}}
+      else
+        %{"masquerade" => nil}
+      end
 
     Expr.add_expr(builder, expr)
   end
@@ -80,7 +81,8 @@ defmodule NFTables.Expr.NAT do
       builder |> tcp() |> dport(80) |> redirect_to(3128)
   """
   @spec redirect_to(Expr.t(), non_neg_integer()) :: Expr.t()
-  def redirect_to(builder \\ Expr.expr(), port) when is_integer(port) and port >= 0 and port <= 65535 do
+  def redirect_to(builder \\ Expr.expr(), port)
+      when is_integer(port) and port >= 0 and port <= 65535 do
     expr = %{"redirect" => %{"port" => port}}
     Expr.add_expr(builder, expr)
   end

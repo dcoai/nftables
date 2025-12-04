@@ -191,14 +191,15 @@ defmodule NFTables.Expr.Meter do
 
   # Build limit expression
   defp build_limit_expr(rate, per, opts) do
-    unit_str = case per do
-      :second -> "second"
-      :minute -> "minute"
-      :hour -> "hour"
-      :day -> "day"
-      :week -> "week"
-      other -> to_string(other)
-    end
+    unit_str =
+      case per do
+        :second -> "second"
+        :minute -> "minute"
+        :hour -> "hour"
+        :day -> "day"
+        :week -> "week"
+        other -> to_string(other)
+      end
 
     burst = Keyword.get(opts, :burst, 0)
 

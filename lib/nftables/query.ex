@@ -152,7 +152,8 @@ defmodule NFTables.Query do
     list_rules(table, chain, [])
   end
 
-  def list_rules(table, chain, opts) when is_binary(table) and is_binary(chain) and is_list(opts) do
+  def list_rules(table, chain, opts)
+      when is_binary(table) and is_binary(chain) and is_list(opts) do
     family = Keyword.get(opts, :family, :inet)
 
     %{

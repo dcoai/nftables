@@ -17,10 +17,10 @@ defmodule NFTables.PolicyIntegrationTest do
     test_table = "nftables_test_policy_integration"
 
     # Clean up and create test table and chain WITHOUT hook (safe)
-        NFTables.delete(table: test_table, family: :inet)
+    NFTables.delete(table: test_table, family: :inet)
     |> NFTables.submit(pid: pid)
 
-        NFTables.add(table: test_table, family: :inet)
+    NFTables.add(table: test_table, family: :inet)
     |> NFTables.add(
       table: test_table,
       chain: "INPUT",
@@ -30,7 +30,7 @@ defmodule NFTables.PolicyIntegrationTest do
 
     on_exit(fn ->
       if Process.alive?(pid) do
-                NFTables.delete(table: test_table, family: :inet)
+        NFTables.delete(table: test_table, family: :inet)
         |> NFTables.submit(pid: pid)
 
         NFTables.Port.stop(pid)
@@ -82,7 +82,8 @@ defmodule NFTables.PolicyIntegrationTest do
 
     test "setup_basic_firewall executes in test mode", %{pid: pid} do
       filter_test = "nftables_test_filter_setup"
-            NFTables.delete(table: filter_test, family: :inet)
+
+      NFTables.delete(table: filter_test, family: :inet)
       |> NFTables.submit(pid: pid)
 
       result = Policy.setup_basic_firewall(pid, table: filter_test, test_mode: true)
@@ -92,7 +93,7 @@ defmodule NFTables.PolicyIntegrationTest do
       assert chain_exists?(pid, filter_test, "INPUT", :inet)
 
       # Cleanup
-            NFTables.delete(table: filter_test, family: :inet)
+      NFTables.delete(table: filter_test, family: :inet)
       |> NFTables.submit(pid: pid)
     end
   end

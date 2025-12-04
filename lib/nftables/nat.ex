@@ -88,7 +88,8 @@ defmodule NFTables.NAT do
       |> NFTables.submit(pid: pid)
   """
   @spec setup_masquerade(Builder.t(), String.t(), keyword()) :: Builder.t()
-  def setup_masquerade(builder \\ Builder.new(), interface, opts \\ []) when is_binary(interface) do
+  def setup_masquerade(builder \\ Builder.new(), interface, opts \\ [])
+      when is_binary(interface) do
     table = Keyword.get(opts, :table, "nat")
     chain = Keyword.get(opts, :chain, "postrouting")
     family = Keyword.get(opts, :family, :inet)
@@ -146,7 +147,13 @@ defmodule NFTables.NAT do
   """
   @spec port_forward(Builder.t(), non_neg_integer(), String.t(), non_neg_integer(), keyword()) ::
           Builder.t()
-  def port_forward(builder \\ Builder.new(), external_port, internal_ip, internal_port, opts \\ [])
+  def port_forward(
+        builder \\ Builder.new(),
+        external_port,
+        internal_ip,
+        internal_port,
+        opts \\ []
+      )
       when is_integer(external_port) and is_binary(internal_ip) and
              is_integer(internal_port) do
     protocol = Keyword.get(opts, :protocol, :tcp)
@@ -157,18 +164,19 @@ defmodule NFTables.NAT do
 
     expr_builder = expr(family: family)
 
-    expr_builder = if interface do
-      iif(expr_builder, interface)
-    else
-      expr_builder
-    end
+    expr_builder =
+      if interface do
+        iif(expr_builder, interface)
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
       |> (case protocol do
-        :tcp -> &tcp/1
-        :udp -> &udp/1
-      end).()
+            :tcp -> &tcp/1
+            :udp -> &udp/1
+          end).()
       |> dport(external_port)
       |> dnat_to(internal_ip, port: internal_port)
 
@@ -270,11 +278,12 @@ defmodule NFTables.NAT do
       expr(family: family)
       |> source_ip(source)
 
-    expr_builder = if interface do
-      oif(expr_builder, interface)
-    else
-      expr_builder
-    end
+    expr_builder =
+      if interface do
+        oif(expr_builder, interface)
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
@@ -320,11 +329,12 @@ defmodule NFTables.NAT do
 
     expr_builder = expr(family: family)
 
-    expr_builder = if interface do
-      iif(expr_builder, interface)
-    else
-      expr_builder
-    end
+    expr_builder =
+      if interface do
+        iif(expr_builder, interface)
+      else
+        expr_builder
+      end
 
     expr_list =
       expr_builder
@@ -381,9 +391,9 @@ defmodule NFTables.NAT do
     expr_list =
       expr(family: family)
       |> (case protocol do
-        :tcp -> &tcp/1
-        :udp -> &udp/1
-      end).()
+            :tcp -> &tcp/1
+            :udp -> &udp/1
+          end).()
       |> dport(from_port)
       |> redirect_to(to_port)
 

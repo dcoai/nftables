@@ -208,7 +208,8 @@ defmodule NFTables.Sysctl.Network do
     with :ok <- maybe_set(pid_or_opts, opts[:ipv4_forwarding], &enable_ipv4_forwarding/1),
          :ok <- maybe_set(pid_or_opts, opts[:ipv6_forwarding], &enable_ipv6_forwarding/1),
          :ok <- maybe_set(pid_or_opts, opts[:syncookies], &enable_syncookies/1),
-         :ok <- maybe_set_bool(pid_or_opts, opts[:send_redirects], "net.ipv4.conf.all.send_redirects") do
+         :ok <-
+           maybe_set_bool(pid_or_opts, opts[:send_redirects], "net.ipv4.conf.all.send_redirects") do
       :ok
     end
   end
@@ -295,6 +296,7 @@ defmodule NFTables.Sysctl.Network do
   defp maybe_set(pid_or_opts, true, fun), do: fun.(pid_or_opts)
 
   defp maybe_set_bool(_pid_or_opts, nil, _param), do: :ok
+
   defp maybe_set_bool(pid_or_opts, value, param) when is_boolean(value) do
     Sysctl.set(pid_or_opts, param, if(value, do: "1", else: "0"))
   end

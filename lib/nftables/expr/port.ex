@@ -57,6 +57,7 @@ defmodule NFTables.Expr.Port do
   """
   @spec dport(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def dport(builder \\ Expr.expr(), port)
+
   def dport(builder, port) when is_integer(port) do
     protocol = get_protocol!(builder, "dport")
     validate_port!(port)
@@ -102,6 +103,7 @@ defmodule NFTables.Expr.Port do
   """
   @spec sport(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def sport(builder \\ Expr.expr(), port)
+
   def sport(builder, port) when is_integer(port) do
     protocol = get_protocol!(builder, "sport")
     validate_port!(port)
@@ -151,7 +153,7 @@ defmodule NFTables.Expr.Port do
       nil ->
         raise ArgumentError,
               "#{function_name}/2 requires protocol context. Call tcp(), udp(), sctp(), or dccp() before using #{function_name}/2.\n\n" <>
-              "Example: rule() |> tcp() |> #{function_name}(80)"
+                "Example: rule() |> tcp() |> #{function_name}(80)"
 
       protocol when protocol in [:tcp, :udp, :sctp, :dccp] ->
         to_string(protocol)
@@ -159,11 +161,12 @@ defmodule NFTables.Expr.Port do
       other ->
         raise ArgumentError,
               "#{function_name}/2 requires a protocol with port fields (tcp, udp, sctp, dccp), got: #{inspect(other)}\n\n" <>
-              "Use tcp(), udp(), sctp(), or dccp() before calling #{function_name}/2."
+                "Use tcp(), udp(), sctp(), or dccp() before calling #{function_name}/2."
     end
   end
 
   defp validate_port!(port) when is_integer(port) and port >= 0 and port <= 65535, do: :ok
+
   defp validate_port!(port) when is_integer(port) do
     raise ArgumentError, "Port must be between 0 and 65535, got: #{port}"
   end
