@@ -20,7 +20,7 @@ represents the expressions which will be used to match packets.
 import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
-# Step 1: Initialize
+# Step 1: Initialize - generate a new Expr struct, not necessary, you can start with step 2
 match_expr = expr()
 # %Expr{fmaily: :inet, comment: nil, protocol: nil, expr_list: []}
 
@@ -93,7 +93,7 @@ import NFTables.Expr
 alias NFTables.{Builder, Local, Requestor}
 
 expr = 
-  |> tcp()
+  tcp()
   |> dport(22)
   |> ct_state([:new])
   |> rate_limit(5, :minute, burst: 10)
@@ -113,7 +113,7 @@ NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :ine
 
 ```elixir
 expr = 
-  |> tcp()
+  tcp()
   |> dport(8080)
   |> ct_state([:new])
   |> dnat_to("10.0.0.10", port: 80)
@@ -132,7 +132,7 @@ NFTables. NFTables.add(rule: expr, table: "nat", chain: "prerouting", family: :i
 
 ```elixir
 expr = 
-  |> set("blocklist", :saddr)
+  set("blocklist", :saddr)
   |> counter()
   |> log("BLOCKED_IP: ", level: :info)
   |> drop()
@@ -152,7 +152,7 @@ NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :ine
 
 ```elixir
 expr = 
-  |> tcp()
+  tcp()
   |> dport(443)
   |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
   |> ct_state([:new])
@@ -238,20 +238,17 @@ expr()
 
 ```elixir
 # Match DNS port via raw payload
-expr()
-|> udp()
+udp()
 |> payload_raw(:th, 16, 16, 53)  # Transport header, offset 16, 16 bits, value 53
 |> drop()
 
 # TCP SYN flag check with mask
-expr()
-|> tcp()
+tcp()
 |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
 |> counter()
 
 # HTTP method detection
-expr()
-|> tcp()
+tcp()
 |> dport(80)
 |> payload_raw(:ih, 0, 32, "GET ")  # First 4 bytes
 |> log("HTTP GET: ")
@@ -267,20 +264,17 @@ expr()
 
 ```elixir
 # Mark existing transparent sockets
-expr()
-|> socket_transparent()
+socket_transparent()
 |> set_mark(1)
 |> accept()
 
 # Redirect to local proxy
-expr()
-|> tcp()
+tcp()
 |> dport(80)
 |> tproxy(to: 8080)
 
 # With specific address
-expr()
-|> tcp()
+tcp()
 |> dport(443)
 |> tproxy(to: 8443, addr: "127.0.0.1")
 ```
@@ -289,28 +283,24 @@ expr()
 
 ```elixir
 # SCTP (WebRTC, telephony) - use generic dport/sport
-expr()
-|> sctp()
+sctp()
 |> dport(9899)
 |> accept()
 
 # DCCP (streaming media) - use generic dport/sport
-expr()
-|> dccp()
+dccp()
 |> sport(5000)
 |> dport(6000)
 |> counter()
 
 # GRE (VPN tunnels)
-expr()
-|> gre()
+gre()
 |> gre_version(0)
 |> gre_key(12345)
 |> accept()
 
 # Port ranges supported for SCTP/DCCP
-expr()
-|> sctp()
+sctp()
 |> dport(9000..9999)
 |> accept()
 ```
@@ -324,25 +314,21 @@ nfnl_osf -f /usr/share/pf.os
 
 ```elixir
 # Match Linux systems
-expr()
-|> osf_name("Linux")
+osf_name("Linux")
 |> log("Linux detected: ")
 |> accept()
 
 # Match with strict TTL
-expr()
-|> osf_name("Windows", ttl: :strict)
+osf_name("Windows", ttl: :strict)
 |> set_mark(2)
 
 # Match OS version
-expr()
-|> osf_name("Linux")
+osf_name("Linux")
 |> osf_version("3.x")
 |> counter()
 
 # Security policy
-expr()
-|> tcp()
+tcp()
 |> dport(22)
 |> osf_name("Linux")
 |> accept()
@@ -428,8 +414,8 @@ Functionality is organized into sub-modules:
 
 ### Accept Established Connections
 ```elixir
-expr = expr()
-  |> state([:established, :related])
+expr =
+  state([:established, :related])
   |> accept()
 
 NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :inet)
@@ -438,8 +424,8 @@ NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :ine
 
 ### Rate Limit Service
 ```elixir
-expr = expr()
-  |> tcp()
+expr =
+  tcp()
   |> dport(80)
   |> limit(100, :second, burst: 200)
   |> accept()
@@ -447,16 +433,16 @@ expr = expr()
 
 ### Log and Drop
 ```elixir
-expr = expr()
-  |> source("192.168.1.100")
+expr =
+  source("192.168.1.100")
   |> log("BLOCKED: ", level: :warn)
   |> drop()
 ```
 
 ### NAT Gateway
 ```elixir
-expr = expr()
-  |> oif("eth0")
+expr =
+  oif("eth0")
   |> masquerade()
 
 NFTables. NFTables.add(rule: expr, table: "nat", chain: "postrouting", family: :inet)
@@ -465,8 +451,8 @@ NFTables. NFTables.add(rule: expr, table: "nat", chain: "postrouting", family: :
 
 ### Connection Limit
 ```elixir
-expr = expr()
-  |> tcp()
+expr =
+  tcp()
   |> dport(80)
   |> ct_state([:new])
   |> limit_connections(100)
