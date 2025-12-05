@@ -4,6 +4,28 @@ defmodule NFTables.Expr.CT do
 
   Provides functions for matching based on connection tracking state, status,
   direction, labels, zones, helpers, and other CT-related attributes.
+  Connection tracking is essential for stateful firewalls and enables intelligent
+  packet filtering based on connection context.
+
+  ## Import
+
+      import NFTables.Expr.CT
+
+  ## Examples
+
+      # Allow established and related traffic
+      state([:established, :related]) |> accept()
+
+      # Match new connections with rate limiting
+      tcp() |> dport(22) |> ct_state([:new]) |> limit_connections(3) |> accept()
+
+      # Track NATed connections
+      ct_status([:snat]) |> counter()
+
+      # Match connection marks
+      connmark(42) |> jump("marked_chain")
+
+  For more information, see the [nftables connection tracking wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_connection_tracking_stateful_metainformation).
   """
 
   alias NFTables.Expr
@@ -255,6 +277,22 @@ defmodule NFTables.Expr.CT do
     expr = Expr.Structs.ct_match("count", count)
     Expr.add_expr(builder, expr)
   end
+
+  @doc """
+  Convenience alias for ct_state/2. Match connection tracking state.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Accept established connections
+      state([:established, :related]) |> accept()
+
+      # Continue existing expression
+      builder |> state([:new]) |> rate_limit(10, :minute)
+  """
+  @spec state(Expr.t(), list(atom())) :: Expr.t()
+  def state(builder \\ Expr.expr(), states), do: ct_state(builder, states)
 
   # Helper to convert atom operators to string
   defp atom_to_op(:eq), do: "=="

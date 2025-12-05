@@ -7,6 +7,10 @@ defmodule NFTables.Expr.Meter do
 
   This replaces iptables' hashlimit functionality with a more flexible approach.
 
+  ## Import
+
+      import NFTables.Expr.Meter
+
   ## Overview
 
   A meter consists of:
@@ -53,7 +57,7 @@ defmodule NFTables.Expr.Meter do
           burst: 5                # Allow burst of 5
         )
         |> accept()
-       
+
 
       Builder.new()
       |> NFTables.add(rule: ssh_rule, table: "filter", chain: "input", family: :inet)
@@ -74,6 +78,8 @@ defmodule NFTables.Expr.Meter do
   - **Port scan detection**: Limit new connections per IP
   - **Fair bandwidth sharing**: Limit throughput per user/IP
   - **SYN flood protection**: Limit SYN packets per source
+
+  For more information, see the [nftables meters wiki](https://wiki.nftables.org/wiki-nftables/index.php/Meters).
   """
 
   alias NFTables.Expr
