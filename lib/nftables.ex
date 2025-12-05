@@ -194,13 +194,13 @@ defmodule NFTables do
 
     # Build import statements
     imports =
-      [quote do: import(NFTables.Expr)] ++
+      [quote(do: import(NFTables.Expr))] ++
         Enum.map(expr_modules, fn mod ->
           quote do: import(unquote(mod))
         end)
 
     quote do
-      unquote_splicing(imports)
+      (unquote_splicing(imports))
     end
   end
 

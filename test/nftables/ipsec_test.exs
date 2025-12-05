@@ -28,7 +28,7 @@ defmodule NFTables.IPsecTest do
 
     test "validates non-negative SPI" do
       assert %NFTables.Expr{} = expr() |> ah_spi(0)
-      assert %NFTables.Expr{} = expr() |> ah_spi(999999)
+      assert %NFTables.Expr{} = expr() |> ah_spi(999_999)
     end
   end
 
@@ -56,7 +56,7 @@ defmodule NFTables.IPsecTest do
 
     test "validates non-negative SPI" do
       assert %NFTables.Expr{} = expr() |> esp_spi(0)
-      assert %NFTables.Expr{} = esp_spi(999999)
+      assert %NFTables.Expr{} = esp_spi(999_999)
     end
   end
 

@@ -131,7 +131,7 @@ defmodule NFTables.ProtocolsTest do
 
     test "validates non-negative key" do
       assert %NFTables.Expr{} = expr() |> gre_key(0)
-      assert %NFTables.Expr{} = gre_key(999999)
+      assert %NFTables.Expr{} = gre_key(999_999)
     end
   end
 

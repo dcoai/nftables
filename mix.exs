@@ -87,7 +87,7 @@ defmodule NFTables.MixProject do
           NFTables.Policy,
           NFTables.NAT
         ],
-        "Requests": [
+        Requests: [
           NFTables.Requestor,
           NFTables.Local,
           NFTables.Decoder

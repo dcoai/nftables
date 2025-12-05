@@ -66,9 +66,17 @@ defmodule NFTables.Expr.Actions do
   @spec log(Expr.t(), String.t(), keyword()) :: Expr.t()
   def log(builder \\ Expr.expr(), prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
+
     level_map = %{
-      emerg: "emerg", alert: "alert", crit: "crit", err: "err", warning: "warn",
-      warn: "warn", notice: "notice", info: "info", debug: "debug"
+      emerg: "emerg",
+      alert: "alert",
+      crit: "crit",
+      err: "err",
+      warning: "warn",
+      warn: "warn",
+      notice: "notice",
+      info: "info",
+      debug: "debug"
     }
 
     json_opts =
@@ -130,7 +138,8 @@ defmodule NFTables.Expr.Actions do
       builder |> limit(100, :second)
   """
   @spec limit(Expr.t(), non_neg_integer(), atom(), keyword()) :: Expr.t()
-  def limit(builder \\ Expr.expr(), rate, unit, opts \\ []), do: rate_limit(builder, rate, unit, opts)
+  def limit(builder \\ Expr.expr(), rate, unit, opts \\ []),
+    do: rate_limit(builder, rate, unit, opts)
 
   # Marking actions
 
