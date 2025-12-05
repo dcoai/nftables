@@ -4,6 +4,28 @@ defmodule NFTables.Expr.Actions do
 
   Provides functions for counter, logging, rate limiting, packet/connection marking,
   CT operations, and packet header modifications (DSCP, TTL, hop limit).
+  These actions modify packets or connection state rather than matching conditions.
+
+  ## Import
+
+      import NFTables.Expr.Actions
+
+  ## Examples
+
+      # Counter and logging
+      tcp() |> dport(22) |> counter() |> log("SSH: ") |> accept()
+
+      # Rate limiting
+      tcp() |> dport(80) |> limit(100, :second, burst: 20) |> accept()
+
+      # Packet marking for QoS
+      udp() |> dport(5060) |> set_dscp(:ef) |> set_mark(1) |> accept()
+
+      # Connection marking
+      ct_state([:new]) |> set_mark(100) |> save_mark() |> accept()
+      state([:established]) |> restore_mark() |> accept()
+
+  For more information, see the [nftables statements wiki](https://wiki.nftables.org/wiki-nftables/index.php/Quick_reference-nftables_in_10_minutes#Statements).
   """
 
   alias NFTables.Expr
@@ -44,24 +66,14 @@ defmodule NFTables.Expr.Actions do
   @spec log(Expr.t(), String.t(), keyword()) :: Expr.t()
   def log(builder \\ Expr.expr(), prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
+    level_map = %{
+      emerg: "emerg", alert: "alert", crit: "crit", err: "err", warning: "warn",
+      warn: "warn", notice: "notice", info: "info", debug: "debug"
+    }
 
     json_opts =
       if level do
-        level_str =
-          case level do
-            :emerg -> "emerg"
-            :alert -> "alert"
-            :crit -> "crit"
-            :err -> "err"
-            :warning -> "warn"
-            :warn -> "warn"
-            :notice -> "notice"
-            :info -> "info"
-            :debug -> "debug"
-            other -> to_string(other)
-          end
-
-        [level: level_str]
+        [level: Map.get(level_map, level, to_string(level))]
       else
         []
       end
@@ -100,6 +112,25 @@ defmodule NFTables.Expr.Actions do
     expr = Expr.Structs.limit(rate, unit_str, json_opts)
     Expr.add_expr(builder, expr)
   end
+
+  @doc """
+  Convenience alias for rate_limit/4. Add rate limiting.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Examples
+
+      # Basic rate limiting
+      limit(10, :minute)
+
+      # With burst
+      tcp() |> dport(22) |> limit(10, :minute, burst: 5)
+
+      # Continue existing expression
+      builder |> limit(100, :second)
+  """
+  @spec limit(Expr.t(), non_neg_integer(), atom(), keyword()) :: Expr.t()
+  def limit(builder \\ Expr.expr(), rate, unit, opts \\ []), do: rate_limit(builder, rate, unit, opts)
 
   # Marking actions
 

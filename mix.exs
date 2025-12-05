@@ -10,6 +10,7 @@ defmodule NFTables.MixProject do
       version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
+      compilers: Mix.compilers() ++ [:module_indexer],
       deps: deps(),
 
       # Test configuration

@@ -2,8 +2,7 @@
 
 Elixir module for Linux nftables. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with composable functions.
 
-## Quickstart Guide
-### Installation
+## Installation
 
 Add `nftables` to your dependencies in `mix.exs`:
 
@@ -40,41 +39,117 @@ sudo setcap cap_net_admin=ep deps/nftables_port/priv/port_nftables
 chmod 700 deps/nftables_port/priv/port_nftables
 ```
 
-### Build a Rule
+## Quickstart Guide
 
 **Note** - before running examples on a remote machine, *be aware* you are able block your remote access.  You may want to start by experimenting in a VM or local machine.
 
+### Build a Rule
+
 ```elixir
 import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdicts}
 
 {:ok, pid} = NFTables.Port.start_link()
 
-def ssh(rule), do: rule |> tcp() |> dport(22)
+def ssh(rule \\ Expr.expr()), do: rule |> tcp() |> dport(22)
 
 response =
   NFTables.add(table: "filter", family: :inet)
   |> NFTables.add(chain: "INPUT", hook: :input)
-  |> NFTables.add(rule: expr() |> ssh() |> accept())
+  |> NFTables.add(rule: ssh() |> accept())
   |> NFTables.submit(pid: pid)
 
 IO.inspect(response)
 ```
 
+## Import Options
+
+NFTables provides two ways to import expression building functions:
+
+**Option 1: Use everything (via macro)**
+```elixir
+use NFTables
+
+# Now all expression functions are available
+rule = tcp() |> dport(22) |> accept()
+```
+
+**Option 2: Selective imports**
+```elixir
+import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdicts}
+
+# Same result, explicit imports
+rule = tcp() |> dport(22) |> accept()
+```
+
+Choose the approach that fits your style. Examples in this README use selective imports for clarity.
+
+## Available Modules
+
+Expression building functions are organized into specialized modules:
+
+### Core Modules
+- **`NFTables.Expr`** - Core entry points (`expr/1`, `comment/2`)
+- **`NFTables.Expr.IP`** - IP address matching (`source_ip/2`, `dest_ip/2`, `source/2`, `dest/2`)
+- **`NFTables.Expr.Port`** - Port matching (`dport/2`, `sport/2`, `port/2`)
+- **`NFTables.Expr.TCP`** - TCP/protocol matching (`tcp/1`, `udp/1`, `icmp/1`, `tcp_flags/3`, `ttl/3`)
+
+### Layer 2 & Connection Tracking
+- **`NFTables.Expr.Layer2`** - MAC, interface, VLAN (`source_mac/2`, `iif/2`, `vlan_id/2`)
+- **`NFTables.Expr.CT`** - Connection tracking (`ct_state/2`, `state/2`, `ct_status/2`, `connmark/2`)
+
+### ICMP & Metadata
+- **`NFTables.Expr.ICMP`** - ICMP/ICMPv6 matching (`icmp_type/2`, `icmpv6_type/2`)
+- **`NFTables.Expr.Metadata`** - Packet metadata (`mark/2`, `dscp/2`, `fragmented/2`, `pkttype/2`)
+
+### Advanced Matching
+- **`NFTables.Expr.Socket`** - Socket/process filtering (`skuid/2`, `skgid/2`, `cgroup/2`)
+- **`NFTables.Expr.IPsec`** - IPsec AH/ESP matching (`ah_spi/2`, `esp_spi/2`)
+- **`NFTables.Expr.ARP`** - ARP operation matching (`arp_operation/2`)
+- **`NFTables.Expr.Sets`** - Named set matching (`set/3`)
+- **`NFTables.Expr.Payload`** - Raw payload inspection (`payload_raw/5`, `payload_raw_masked/6`)
+- **`NFTables.Expr.OSF`** - OS fingerprinting (`osf_name/3`, `osf_version/3`)
+
+### Actions & Modifications
+- **`NFTables.Expr.Actions`** - Counters, logging, rate limiting (`counter/1`, `log/2-3`, `limit/3-4`, `set_mark/2`)
+- **`NFTables.Expr.NAT`** - NAT operations (`snat_to/2-3`, `dnat_to/2-3`, `masquerade/1-2`)
+- **`NFTables.Expr.Verdicts`** - Terminal verdicts (`accept/1`, `drop/1`, `reject/1-2`, `jump/2`)
+
+### Specialized Features
+- **`NFTables.Expr.Meter`** - Per-key rate limiting (`meter_update/5-6`, `meter_add/5-6`)
+- **`NFTables.Expr.Protocols`** - Advanced protocols (`sctp/1`, `dccp/1`, `gre/1`)
+
+### Import Examples
+
+```elixir
+# Basic firewall
+import NFTables.Expr
+import NFTables.Expr.{IP, Port, TCP, Verdicts}
+
+# With connection tracking
+import NFTables.Expr
+import NFTables.Expr.{IP, Port, TCP, CT, Actions, Verdicts}
+
+# NAT and routing
+import NFTables.Expr
+import NFTables.Expr.{IP, Port, TCP, NAT, Verdicts}
+
+# Complete firewall (all modules)
+import NFTables.Expr
+import NFTables.Expr.{IP, Port, TCP, Layer2, CT, ICMP, Metadata, Socket,
+                      Actions, NAT, Verdicts}
+```
+
 ## Features
 
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
-- **Pure Functional Expr API** - composable expression builder with no side effects
 - **Sysctl Management** - Read/Write access to network kernel parameters
 - **Batch Operations** - Atomic multi-command execution
 - **Query Operations** - List tables, chains, rules, sets, and elements
-- **Builder Pattern** - Clear separation between building and executing rules
 - **Elixir Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
 - **Security** - Port runs with minimal privileges (CAP_NET_ADMIN only)
-- **Flowtables** - Hardware-accelerated packet forwarding for established connections
-- **Meters/Dynamic Sets** - Per-key rate limiting with composite key support
-- **Raw Payload Matching** - Offset-based packet header access for custom protocols
-- **Socket Matching & TPROXY** - Transparent proxy support without destination changes
-- **OSF (OS Fingerprinting)** - Passive operating system detection via TCP SYN analysis
+- **Advanced Functionality** - Flowtables, Meters/Dynamic Sets, Raw Payload Matching Socket Matching & TPROXY, OSF (OS Fingerprinting)
 
 ### NFTables_Port 
 
@@ -97,6 +172,9 @@ NFTables.Port takes JSON requests and passes them on to the Linux nftables servi
 **Generate JSON using NFTables library**
 
 ```elixir
+import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdicts}
+
 json =
   NFTables.add(table: "filter", family: :inet)
   |> NFTables.add(chain: "INPUT", hook: :input, policy: :drop)
@@ -107,6 +185,9 @@ json =
 **Putting these together**
 
 ```elixir
+import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdicts}
+
 {:ok, pid} = NFTables.Port.start_link()
 
 NFTables.add(table: "filter", family: :inet)

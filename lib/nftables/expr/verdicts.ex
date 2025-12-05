@@ -4,6 +4,32 @@ defmodule NFTables.Expr.Verdicts do
 
   Provides terminal verdicts (accept, drop, reject), non-terminal actions (continue, notrack),
   advanced features (queue, synproxy, flow offload), and chain control flow (jump, goto, return).
+  Verdicts determine the final fate of packets and control how rules are processed.
+
+  ## Import
+
+      import NFTables.Expr.Verdicts
+
+  ## Examples
+
+      # Basic verdicts
+      tcp() |> dport(22) |> accept()
+      source_ip("10.0.0.0/8") |> drop()
+      tcp() |> dport(23) |> reject(:tcp_reset)
+
+      # Non-terminal actions
+      tcp() |> dport(80) |> log("HTTP: ") |> continue()
+      tcp() |> dport(443) |> notrack() |> accept()
+
+      # Chain control flow
+      source_ip("192.168.1.0/24") |> jump("trusted_chain")
+      tcp() |> dport(8080) |> goto("app_chain")
+
+      # Advanced features
+      tcp() |> dport(80) |> tcp_flags([:syn], [:syn, :ack, :rst, :fin]) |> synproxy()
+      ct_state([:established]) |> flow_offload()
+
+  For more information, see the [nftables verdicts wiki](https://wiki.nftables.org/wiki-nftables/index.php/Verdicts).
   """
 
   alias NFTables.Expr

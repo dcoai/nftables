@@ -3,6 +3,27 @@ defmodule NFTables.Expr.NAT do
   Network Address Translation (NAT) functions for Expr.
 
   Provides functions for SNAT, DNAT, masquerading, and port redirection.
+  Essential for routing, port forwarding, and transparent proxying.
+
+  ## Import
+
+      import NFTables.Expr.NAT
+
+  ## Examples
+
+      # Masquerade outgoing traffic
+      oif("wan0") |> masquerade()
+
+      # Port forwarding (DNAT)
+      tcp() |> dport(80) |> dnat_to("192.168.1.100", port: 8080)
+
+      # Source NAT to specific IP
+      oif("wan0") |> snat_to("203.0.113.1")
+
+      # Transparent proxy redirect
+      tcp() |> dport(80) |> redirect_to(3128)
+
+  For more information, see the [nftables NAT wiki](https://wiki.nftables.org/wiki-nftables/index.php/Performing_Network_Address_Translation_(NAT)).
   """
 
   alias NFTables.Expr

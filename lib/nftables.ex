@@ -24,6 +24,32 @@ defmodule NFTables do
       # Clean up when done
       NFTables.Port.stop(pid)
 
+  ## Import Options
+
+  You have two ways to import expression building functions:
+
+  ### Option 1: Use Macro (Import Everything)
+
+  The simplest approach - automatically imports all expression modules:
+
+      use NFTables
+
+  This imports `NFTables.Expr` and all sub-modules, giving you access to all
+  expression building functions. Best for interactive use or when you need
+  many different types of expressions.
+
+  ### Option 2: Selective Imports (Import What You Need)
+
+  For production code, you may prefer explicit imports:
+
+      import NFTables.Expr
+      import NFTables.Expr.{Port, TCP, Verdicts}
+
+  This gives you fine-grained control and makes dependencies explicit.
+  Best for production code where you want to minimize namespace pollution.
+
+  Both approaches are equally valid - choose based on your preferences and use case.
+
   ## Main API Functions
 
   ### Building Rules
@@ -127,6 +153,56 @@ defmodule NFTables do
 
   For advanced use cases requiring direct builder access, see `NFTables.Builder` documentation.
   """
+
+  @doc """
+  Convenience macro to import all NFTables.Expr modules.
+
+  When you `use NFTables`, all expression building modules are automatically imported,
+  making all expression functions available without explicit imports.
+
+  ## Example
+
+      defmodule MyFirewall do
+        use NFTables
+
+        def build_rules(pid) do
+          NFTables.add(table: "filter")
+          |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+          |> NFTables.add(rule: tcp() |> dport(22) |> accept())
+          |> NFTables.submit(pid: pid)
+        end
+      end
+
+  This is equivalent to:
+
+      import NFTables.Expr
+      import NFTables.Expr.{IP, Port, TCP, Layer2, CT, Advanced, Actions, NAT, Verdicts, Meter, Protocols}
+
+  ## Alternative: Selective Imports
+
+  For production code, you may prefer explicit imports for clarity:
+
+      import NFTables.Expr
+      import NFTables.Expr.{Port, TCP, Verdicts}
+
+  Both approaches are equally valid.
+  """
+  defmacro __using__(_opts) do
+    # Get modules from generated index (NFTables.ExprIndex.all())
+    # ExprIndex is generated at compile time by Mix.Tasks.Compile.ModuleIndexer
+    expr_modules = NFTables.ExprIndex.all()
+
+    # Build import statements
+    imports =
+      [quote do: import(NFTables.Expr)] ++
+        Enum.map(expr_modules, fn mod ->
+          quote do: import(unquote(mod))
+        end)
+
+    quote do
+      unquote_splicing(imports)
+    end
+  end
 
   @type nft_family :: :inet | :ip | :ip6 | :arp | :bridge | :netdev
 

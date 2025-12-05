@@ -2,6 +2,7 @@ defmodule NFTables.ExprTest do
   use ExUnit.Case, async: true
 
   import NFTables.Expr
+  import NFTables.Expr.{IP, Port, TCP, Layer2, CT, Actions, Verdicts}
 
   describe "rule/1" do
     test "creates empty rule struct with default family" do
@@ -35,14 +36,14 @@ defmodule NFTables.ExprTest do
     end
 
     test "sport/2 adds expression to builder" do
-      builder = expr() |> tcp() |> sport(1234)
+      builder = expr() |> protocol(:tcp) |> sport(1234)
 
       # tcp() + sport()
       assert length(builder.expr_list) == 2
     end
 
     test "dport/2 adds expression to builder" do
-      builder = expr() |> tcp() |> dport(80)
+      builder = expr() |> protocol(:tcp) |> dport(80)
 
       # tcp() + dport()
       assert length(builder.expr_list) == 2
@@ -50,16 +51,16 @@ defmodule NFTables.ExprTest do
 
     test "dport/2 validates port range" do
       # Valid ports
-      assert %NFTables.Expr{} = expr() |> tcp() |> dport(0)
-      assert %NFTables.Expr{} = expr() |> tcp() |> dport(65535)
+      assert %NFTables.Expr{} = expr() |> protocol(:tcp) |> dport(0)
+      assert %NFTables.Expr{} = expr() |> protocol(:tcp) |> dport(65535)
 
       # Invalid ports should raise ArgumentError
       assert_raise ArgumentError, fn ->
-        expr() |> tcp() |> dport(-1)
+        expr() |> protocol(:tcp) |> dport(-1)
       end
 
       assert_raise ArgumentError, fn ->
-        expr() |> tcp() |> dport(65536)
+        expr() |> protocol(:tcp) |> dport(65536)
       end
     end
 
@@ -71,14 +72,14 @@ defmodule NFTables.ExprTest do
     end
 
     test "dport/2 works with ranges" do
-      builder = expr() |> tcp() |> dport(8000..9000)
+      builder = expr() |> protocol(:tcp) |> dport(8000..9000)
 
       # tcp() + dport()
       assert length(builder.expr_list) == 2
     end
 
     test "sport/2 works with ranges" do
-      builder = expr() |> tcp() |> sport(1024..65535)
+      builder = expr() |> protocol(:tcp) |> sport(1024..65535)
 
       # tcp() + sport()
       assert length(builder.expr_list) == 2
@@ -173,68 +174,68 @@ defmodule NFTables.ExprTest do
     end
   end
 
-  describe "convenience aliases" do
-    test "source/2 is alias for source_ip/2" do
-      builder = expr() |> source("192.168.1.1")
+  describe "basic matching functions" do
+    test "source_ip/2 matches source IP address" do
+      builder = expr() |> source_ip("192.168.1.1")
 
       assert length(builder.expr_list) == 1
     end
 
-    test "dest/2 is alias for dest_ip/2" do
-      builder = expr() |> dest("10.0.0.1")
+    test "dest_ip/2 matches destination IP address" do
+      builder = expr() |> dest_ip("10.0.0.1")
 
       assert length(builder.expr_list) == 1
     end
 
     test "sport/2 matches source port" do
-      builder = expr() |> tcp() |> sport(1024)
+      builder = expr() |> protocol(:tcp) |> sport(1024)
 
-      # tcp() + sport()
+      # protocol(:tcp) + sport()
       assert length(builder.expr_list) == 2
     end
 
     test "dport/2 matches destination port" do
-      builder = expr() |> tcp() |> dport(443)
+      builder = expr() |> protocol(:tcp) |> dport(443)
 
-      # tcp() + dport()
+      # protocol(:tcp) + dport()
       assert length(builder.expr_list) == 2
     end
 
-    test "port/2 is alias for dport/2" do
-      builder = expr() |> tcp() |> port(22)
+    test "dport/2 also works as port matcher" do
+      builder = expr() |> protocol(:tcp) |> dport(22)
 
-      # tcp() + port()
+      # protocol(:tcp) + dport()
       assert length(builder.expr_list) == 2
     end
 
-    test "state/2 is alias for ct_state/2" do
-      builder = expr() |> state([:established, :related])
+    test "ct_state/2 matches connection state" do
+      builder = expr() |> ct_state([:established, :related])
 
       assert length(builder.expr_list) == 1
     end
 
-    test "limit/3 is alias for rate_limit/3" do
-      builder = expr() |> limit(10, :minute)
+    test "rate_limit/3 adds rate limiting" do
+      builder = expr() |> rate_limit(10, :minute)
 
       assert length(builder.expr_list) == 1
     end
   end
 
   describe "protocol helpers" do
-    test "tcp/1 matches TCP protocol" do
-      builder = expr() |> tcp()
+    test "protocol(:tcp) matches TCP protocol" do
+      builder = expr() |> protocol(:tcp)
 
       assert length(builder.expr_list) == 1
     end
 
-    test "udp/1 matches UDP protocol" do
-      builder = expr() |> udp()
+    test "protocol(:udp) matches UDP protocol" do
+      builder = expr() |> protocol(:udp)
 
       assert length(builder.expr_list) == 1
     end
 
-    test "icmp/1 matches ICMP protocol" do
-      builder = expr() |> icmp()
+    test "protocol(:icmp) matches ICMP protocol" do
+      builder = expr() |> protocol(:icmp)
 
       assert length(builder.expr_list) == 1
     end
@@ -244,8 +245,8 @@ defmodule NFTables.ExprTest do
     test "chains multiple match expressions" do
       builder =
         expr()
-        |> source("192.168.1.100")
-        |> tcp()
+        |> source_ip("192.168.1.100")
+        |> protocol(:tcp)
         |> dport(22)
 
       # source() + tcp() + dport()
@@ -255,7 +256,7 @@ defmodule NFTables.ExprTest do
     test "chains match, action, and verdict" do
       builder =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(80)
         |> counter()
         |> accept()
@@ -267,8 +268,8 @@ defmodule NFTables.ExprTest do
     test "preserves expression order" do
       builder =
         expr()
-        |> source("192.168.1.100")
-        |> tcp()
+        |> source_ip("192.168.1.100")
+        |> protocol(:tcp)
         |> dport(22)
         |> log("SSH: ")
         |> drop()
@@ -283,7 +284,7 @@ defmodule NFTables.ExprTest do
     test "extracts expression list from rule" do
       expr_list =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(22)
         |> accept()
         |> to_list()
@@ -297,7 +298,7 @@ defmodule NFTables.ExprTest do
     test "adds comment to rule" do
       builder =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(22)
         |> comment("Allow SSH")
         |> accept()
@@ -310,9 +311,9 @@ defmodule NFTables.ExprTest do
     test "builds SSH rate limiting rule" do
       builder =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(22)
-        |> limit(10, :minute, burst: 5)
+        |> rate_limit(10, :minute, burst: 5)
         |> log("SSH: ")
         |> accept()
 
@@ -323,7 +324,7 @@ defmodule NFTables.ExprTest do
     test "builds IP blocking rule with logging" do
       builder =
         expr()
-        |> source("192.168.1.100")
+        |> source_ip("192.168.1.100")
         |> counter()
         |> log("BLOCKED: ")
         |> drop()
@@ -334,7 +335,7 @@ defmodule NFTables.ExprTest do
     test "builds established connection acceptance rule" do
       builder =
         expr()
-        |> state([:established, :related])
+        |> ct_state([:established, :related])
         |> counter()
         |> accept()
 
@@ -353,9 +354,9 @@ defmodule NFTables.ExprTest do
     test "builds web server rule with rate limiting" do
       builder =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(80)
-        |> limit(100, :second, burst: 200)
+        |> rate_limit(100, :second, burst: 200)
         |> counter()
         |> accept()
 

@@ -4,6 +4,7 @@ defmodule NFTables.PayloadRawUnitTest do
   alias NFTables.Builder
   alias NFTables.Expr.Structs
   import NFTables.Expr
+  import NFTables.Expr.{TCP, Payload, Verdicts}
 
   describe "raw payload expression building" do
     test "builds payload_raw expression for network header" do
@@ -73,7 +74,7 @@ defmodule NFTables.PayloadRawUnitTest do
     test "builds raw payload match in rule" do
       expr =
         expr()
-        |> udp()
+        |> protocol(:udp)
         |> payload_raw(:th, 16, 16, 53)
         |> to_list()
 
@@ -96,7 +97,7 @@ defmodule NFTables.PayloadRawUnitTest do
     test "builds masked raw payload match in rule" do
       expr =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> to_list()
 
@@ -149,7 +150,7 @@ defmodule NFTables.PayloadRawUnitTest do
     test "supports :th (transport header) base" do
       expr =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> payload_raw(:th, 16, 16, 80)
         |> to_list()
 
@@ -184,7 +185,7 @@ defmodule NFTables.PayloadRawUnitTest do
     test "generates correct JSON for raw payload rule" do
       dns_rule =
         expr()
-        |> udp()
+        |> protocol(:udp)
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
 
@@ -216,7 +217,7 @@ defmodule NFTables.PayloadRawUnitTest do
     test "generates correct JSON for masked raw payload" do
       syn_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> accept()
 

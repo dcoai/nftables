@@ -2,7 +2,15 @@ defmodule NFTables.Expr.IP do
   @moduledoc """
   IP address matching functions for Expr.
 
-  Provides functions to match source and destination IP addresses (IPv4 and IPv6).
+  Provides functions to match source and destination IP addresses for both IPv4 and IPv6.
+  These are fundamental matching functions used in most firewall rules to identify
+  traffic based on IP addresses.
+
+  ## Import
+
+      import NFTables.Expr.IP
+
+  For more information, see the [nftables payload expressions wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_packet_headers).
   """
 
   alias NFTables.Expr
@@ -19,10 +27,10 @@ defmodule NFTables.Expr.IP do
       source_ip("192.168.1.100") |> accept()
 
       # Continue existing expression
-      expr() |> source_ip("192.168.1.100")
+      source_ip("192.168.1.100")
 
       # IPv6
-      expr() |> source_ip("2001:db8::1")
+      source_ip("2001:db8::1")
   """
   @spec source_ip(Expr.t(), String.t() | binary()) :: Expr.t()
   def source_ip(builder \\ Expr.expr(), ip) when is_binary(ip) do
@@ -62,10 +70,10 @@ defmodule NFTables.Expr.IP do
       dest_ip("192.168.1.100") |> accept()
 
       # Continue existing expression
-      expr() |> dest_ip("192.168.1.100")
+      dest_ip("192.168.1.100")
 
       # IPv6
-      expr() |> dest_ip("2001:db8::1")
+      dest_ip("2001:db8::1")
   """
   @spec dest_ip(Expr.t(), String.t() | binary()) :: Expr.t()
   def dest_ip(builder \\ Expr.expr(), ip) when is_binary(ip) do
@@ -92,6 +100,38 @@ defmodule NFTables.Expr.IP do
 
     Expr.add_expr(builder, expr)
   end
+
+  @doc """
+  Match source IP address. Convenience alias for `source_ip/2`.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Start new expression
+      source("192.168.1.100")
+
+      # Continue existing expression
+      builder |> source("192.168.1.100")
+  """
+  @spec source(Expr.t(), String.t() | binary()) :: Expr.t()
+  def source(builder \\ Expr.expr(), ip), do: source_ip(builder, ip)
+
+  @doc """
+  Match destination IP address. Convenience alias for `dest_ip/2`.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Start new expression
+      dest("10.0.0.1")
+
+      # Continue existing expression
+      builder |> dest("10.0.0.1")
+  """
+  @spec dest(Expr.t(), String.t() | binary()) :: Expr.t()
+  def dest(builder \\ Expr.expr(), ip), do: dest_ip(builder, ip)
 
   # Private helpers
 

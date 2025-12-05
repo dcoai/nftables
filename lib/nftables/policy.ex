@@ -42,6 +42,7 @@ defmodule NFTables.Policy do
   """
 
   import NFTables.Expr
+  import NFTables.Expr.{Port, TCP, Layer2, CT, Actions, Verdicts}
   alias NFTables.Builder
 
   @doc """
@@ -103,7 +104,7 @@ defmodule NFTables.Policy do
 
     expr_list =
       expr(family: family)
-      |> state([:established, :related])
+      |> ct_state([:established, :related])
       |> accept()
 
     builder
@@ -155,12 +156,12 @@ defmodule NFTables.Policy do
 
     expr_builder =
       expr(family: family)
-      |> tcp()
+      |> protocol(:tcp)
       |> dport(22)
 
     expr_builder =
       if rate_limit_val do
-        limit(expr_builder, rate_limit_val, :minute)
+        rate_limit(expr_builder, rate_limit_val, :minute)
       else
         expr_builder
       end
@@ -535,12 +536,12 @@ defmodule NFTables.Policy do
 
     expr_builder =
       expr(family: family)
-      |> tcp()
+      |> protocol(:tcp)
       |> dport(port)
 
     expr_builder =
       if rate_limit_val do
-        limit(expr_builder, rate_limit_val, :minute)
+        rate_limit(expr_builder, rate_limit_val, :minute)
       else
         expr_builder
       end

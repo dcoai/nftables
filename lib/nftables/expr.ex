@@ -2,64 +2,124 @@ defmodule NFTables.Expr do
   @moduledoc """
   Pure expression builder for nftables rules.
 
-  This module provides a fluent, chainable interface for building firewall rule
-  expressions. It produces pure data structures that can be used with NFTables
-  for building complete configurations.
+  This module provides the core expression builder struct and entry points.
+  All match and action functions are organized into specialized sub-modules.
+
+  ## Usage
+
+  Import the main module for the core `expr/1` function and protocol shortcuts,
+  then import the specific sub-modules you need:
+
+      import NFTables.Expr           # Core: expr/1
+      import NFTables.Expr.{IP, Port, TCP, Verdicts}
+
+      # Build rule expressions
+      rule = tcp() |> dport(22) |> accept()
+
+  ## Module Organization
+
+  Expression building functions are organized into specialized modules:
+
+  - `NFTables.Expr` - Core entry points and helpers (this module)
+  - `NFTables.Expr.IP` - IP address matching (`source_ip/2`, `dest_ip/2`)
+  - `NFTables.Expr.Port` - Port matching (`dport/2`, `sport/2`)
+  - `NFTables.Expr.TCP` - TCP/protocol matching (`tcp/1`, `udp/1`, `tcp_flags/3`, `ttl/3`)
+  - `NFTables.Expr.Layer2` - MAC, interface, VLAN (`source_mac/2`, `iif/2`, `vlan_id/2`)
+  - `NFTables.Expr.CT` - Connection tracking (`ct_state/2`, `ct_status/2`, `connmark/2`)
+  - `NFTables.Expr.ICMP` - ICMP/ICMPv6 matching (`icmp_type/2`, `icmpv6_type/2`)
+  - `NFTables.Expr.Metadata` - Packet metadata (`mark/2`, `dscp/2`, `fragmented/2`, `pkttype/2`)
+  - `NFTables.Expr.Socket` - Socket/process filtering (`skuid/2`, `skgid/2`, `cgroup/2`)
+  - `NFTables.Expr.IPsec` - IPsec AH/ESP matching (`ah_spi/2`, `esp_spi/2`)
+  - `NFTables.Expr.ARP` - ARP operation matching (`arp_operation/2`)
+  - `NFTables.Expr.Sets` - Named set matching (`set/3`)
+  - `NFTables.Expr.Payload` - Raw payload inspection (`payload_raw/5`, `payload_raw_masked/6`)
+  - `NFTables.Expr.OSF` - OS fingerprinting (`osf_name/3`, `osf_version/3`)
+  - `NFTables.Expr.Actions` - Counters, logging, rate limiting (`counter/1`, `log/2-3`, `rate_limit/3-4`)
+  - `NFTables.Expr.NAT` - NAT operations (`snat_to/2-3`, `dnat_to/2-3`, `masquerade/1-2`)
+  - `NFTables.Expr.Verdicts` - Terminal verdicts (`accept/1`, `drop/1`, `reject/1-2`, `jump/2`)
+  - `NFTables.Expr.Meter` - Per-key rate limiting (`meter_update/5-6`, `meter_add/5-6`)
+  - `NFTables.Expr.Protocols` - Specialized protocols (`sctp/1`, `dccp/1`, `gre/1`)
+
+  ## Common Import Patterns
+
+  ### Basic Firewall Rules
+
+      import NFTables.Expr
+      import NFTables.Expr.{IP, Port, TCP, Verdicts}
+
+      rule = tcp() |> dport(22) |> accept()
+
+  ### With Connection Tracking
+
+      import NFTables.Expr
+      import NFTables.Expr.{IP, Port, TCP, CT, Actions, Verdicts}
+
+      rule = tcp() |> dport(22) |> ct_state([:new]) |> counter() |> accept()
+
+  ### NAT Rules
+
+      import NFTables.Expr
+      import NFTables.Expr.{IP, Port, TCP, NAT, Verdicts}
+
+      rule = tcp() |> dport(8080) |> dnat_to("192.168.1.100:80")
+
+  ### Complete Firewall (Import Everything)
+
+      import NFTables.Expr
+      import NFTables.Expr.{IP, Port, TCP, Layer2, CT, ICMP, Metadata, Socket, Actions, NAT, Verdicts}
 
   ## Quick Example
 
       import NFTables.Expr
+      import NFTables.Expr.{Port, TCP, CT, Actions, Verdicts}
 
       # Build rule expressions
-      expr() |> tcp() |> dport(22) |> accept()
-      expr() |> state([:established, :related]) |> accept()
-      expr() |> iif("lo") |> accept()
+      ssh_rule = tcp() |> dport(22) |> ct_state([:new]) |> rate_limit(10, :minute) |> accept()
+      established_rule = ct_state([:established, :related]) |> accept()
 
-  ## Usage with Builder
-
-      import NFTables.Expr
-      alias NFTables.Builder
-
-      # Build rule expressions - Builder automatically converts to expression lists
-      ssh_rule = expr() |> tcp() |> dport(22) |> limit(10, :minute) |> accept()
-      established_rule = expr() |> state([:established, :related]) |> accept()
-
-      # Use with Builder
-      Builder.new()
-      |> NFTables.add(rule: ssh_rule, table: "filter", chain: "INPUT", family: :inet)
-      |> NFTables.add(rule: established_rule, table: "filter", chain: "INPUT", family: :inet)
+      # Use with NFTables
+      NFTables.add(table: "filter", family: :inet)
+      |> NFTables.add(chain: "INPUT", type: :filter, hook: :input)
+      |> NFTables.add(rule: ssh_rule)
+      |> NFTables.add(rule: established_rule)
       |> NFTables.submit(pid: pid)
 
-  ## Import for Concise Syntax
+  ## Expression Structure
 
-  This module works well with `import`:
+  All sub-modules work with the same `%NFTables.Expr{}` struct, which contains:
 
-      import NFTables.Expr
+  - `expr_list` - List of JSON expression maps
+  - `family` - Protocol family (`:inet`, `:inet6`, etc.)
+  - `protocol` - Current protocol context (`:tcp`, `:udp`, etc.)
+  - `comment` - Optional rule comment
 
-      # Now use functions directly
-      expr() |> tcp() |> dport(80) |> accept()
-      expr() |> state([:invalid]) |> drop()
+  Functions from sub-modules can be chained together via the pipeline operator:
+
+      expr()
+      |> IP.source_ip("10.0.0.0/8")
+      |> TCP.tcp()
+      |> Port.dport(22)
+      |> CT.ct_state([:new])
+      |> Actions.log("New SSH connection")
+      |> Verdicts.accept()
+
+  When fully imported, this becomes:
+
+      expr()
+      |> source_ip("10.0.0.0/8")
+      |> tcp()
+      |> dport(22)
+      |> ct_state([:new])
+      |> log("New SSH connection")
+      |> accept()
 
   ## See Also
 
   - `NFTables` - Main builder module
-  - `NFTables.Local` - Execute configurations
+  - `NFTables.Port` - Port process management
   - `NFTables.Policy` - Pre-built common policies
+  - `NFTables.NAT` - High-level NAT helpers
   """
-
-  alias NFTables.Expr.{
-    IP,
-    Port,
-    TCP,
-    Layer2,
-    CT,
-    Advanced,
-    Actions,
-    NAT,
-    Verdicts,
-    Meter,
-    Protocols
-  }
 
   defstruct [
     :family,
@@ -90,19 +150,17 @@ defmodule NFTables.Expr do
   ## Examples
 
       import NFTables.Expr
+      import NFTables.Expr.{TCP, Port, Verdicts}
 
       # Start a new rule with default family
-      expr() |> tcp() |> dport(22) |> accept()
+      tcp() |> dport(22) |> accept()
 
       # Start with specific family
       expr(family: :inet6) |> tcp() |> dport(22) |> accept()
 
       # Multiple rules
-      [
-        expr() |> state([:established, :related]) |> accept(),
-        expr() |> tcp() |> dport(80) |> accept(),
-        expr() |> tcp() |> dport(443) |> accept()
-      ]
+      ssh = tcp() |> dport(22) |> accept()
+      http = tcp() |> dport(80) |> accept()
   """
   @spec expr(keyword()) :: t()
   def expr(opts \\ []) do
@@ -112,434 +170,18 @@ defmodule NFTables.Expr do
     }
   end
 
-  ## IP Matching (delegated to IP)
-
-  def source_ip(builder \\ expr(), ip), do: IP.source_ip(builder, ip)
-  def dest_ip(builder \\ expr(), ip), do: IP.dest_ip(builder, ip)
-
-  ## Port Matching (delegated to Port)
-
-  def dport(builder \\ expr(), port), do: Port.dport(builder, port)
-  def sport(builder \\ expr(), port), do: Port.sport(builder, port)
-  def dst_port(builder \\ expr(), port), do: Port.dst_port(builder, port)
-  def src_port(builder \\ expr(), port), do: Port.src_port(builder, port)
-
-  ## TCP/Protocol Matching (delegated to TCP)
-
-  def tcp_flags(builder \\ expr(), flags, mask), do: TCP.tcp_flags(builder, flags, mask)
-  def length(builder \\ expr(), op, length), do: TCP.length(builder, op, length)
-  def ttl(builder \\ expr(), op, ttl), do: TCP.ttl(builder, op, ttl)
-  def hoplimit(builder \\ expr(), op, hoplimit), do: TCP.hoplimit(builder, op, hoplimit)
-  def protocol(builder \\ expr(), protocol), do: TCP.protocol(builder, protocol)
-
-  ## Layer 2 Matching (delegated to Layer2)
-
-  def source_mac(builder \\ expr(), mac), do: Layer2.source_mac(builder, mac)
-  def dest_mac(builder \\ expr(), mac), do: Layer2.dest_mac(builder, mac)
-  def iif(builder \\ expr(), ifname), do: Layer2.iif(builder, ifname)
-  def oif(builder \\ expr(), ifname), do: Layer2.oif(builder, ifname)
-  def vlan_id(builder \\ expr(), vlan_id), do: Layer2.vlan_id(builder, vlan_id)
-  def vlan_pcp(builder \\ expr(), pcp), do: Layer2.vlan_pcp(builder, pcp)
-
-  ## Connection Tracking Matching (delegated to CT)
-
-  def ct_state(builder \\ expr(), states), do: CT.ct_state(builder, states)
-  def ct_status(builder \\ expr(), statuses), do: CT.ct_status(builder, statuses)
-  def ct_direction(builder \\ expr(), direction), do: CT.ct_direction(builder, direction)
-  def connmark(builder \\ expr(), mark), do: CT.connmark(builder, mark)
-  def ct_label(builder \\ expr(), label), do: CT.ct_label(builder, label)
-  def ct_zone(builder \\ expr(), zone), do: CT.ct_zone(builder, zone)
-  def ct_helper(builder \\ expr(), helper), do: CT.ct_helper(builder, helper)
-  def ct_bytes(builder \\ expr(), op, bytes), do: CT.ct_bytes(builder, op, bytes)
-  def ct_packets(builder \\ expr(), op, packets), do: CT.ct_packets(builder, op, packets)
-  def ct_original_saddr(builder \\ expr(), addr), do: CT.ct_original_saddr(builder, addr)
-  def ct_original_daddr(builder \\ expr(), addr), do: CT.ct_original_daddr(builder, addr)
-  def limit_connections(builder \\ expr(), count), do: CT.limit_connections(builder, count)
-
-  ## Advanced Matching (delegated to Advanced)
-
-  def mark(builder \\ expr(), mark), do: Advanced.mark(builder, mark)
-  def dscp(builder \\ expr(), dscp), do: Advanced.dscp(builder, dscp)
-
-  def fragmented(builder \\ expr(), is_fragmented),
-    do: Advanced.fragmented(builder, is_fragmented)
-
-  def icmp_type(builder \\ expr(), type), do: Advanced.icmp_type(builder, type)
-  def icmp_code(builder \\ expr(), code), do: Advanced.icmp_code(builder, code)
-  def icmpv6_type(builder \\ expr(), type), do: Advanced.icmpv6_type(builder, type)
-  def icmpv6_code(builder \\ expr(), code), do: Advanced.icmpv6_code(builder, code)
-  def pkttype(builder \\ expr(), pkttype), do: Advanced.pkttype(builder, pkttype)
-  def priority(builder \\ expr(), op, priority), do: Advanced.priority(builder, op, priority)
-  def cgroup(builder \\ expr(), cgroup_id), do: Advanced.cgroup(builder, cgroup_id)
-  def skuid(builder \\ expr(), uid), do: Advanced.skuid(builder, uid)
-  def skgid(builder \\ expr(), gid), do: Advanced.skgid(builder, gid)
-  def ah_spi(builder \\ expr(), spi), do: Advanced.ah_spi(builder, spi)
-  def esp_spi(builder \\ expr(), spi), do: Advanced.esp_spi(builder, spi)
-  def arp_operation(builder \\ expr(), operation), do: Advanced.arp_operation(builder, operation)
-
-  def set(builder \\ expr(), set_name, match_type),
-    do: Advanced.set(builder, set_name, match_type)
-
-  def payload_raw(builder \\ expr(), base, offset, length, value),
-    do: Advanced.payload_raw(builder, base, offset, length, value)
-
-  defdelegate payload_raw_masked(builder, base, offset, length, mask, value), to: Advanced
-  defdelegate payload_raw_expr(base, offset, length), to: Advanced
-  def socket_transparent(builder \\ expr()), do: Advanced.socket_transparent(builder)
-
-  ## OSF (OS Fingerprinting) (delegated to Advanced)
-
-  def osf_name(builder, os_name), do: Advanced.osf_name(builder, os_name)
-  def osf_name(builder, os_name, opts), do: Advanced.osf_name(builder, os_name, opts)
-  def osf_version(builder, version), do: Advanced.osf_version(builder, version)
-  def osf_version(builder, version, opts), do: Advanced.osf_version(builder, version, opts)
-
-  ## Advanced Protocols (delegated to Protocols)
-
-  def sctp(builder \\ expr()), do: Protocols.sctp(builder)
-  def dccp(builder \\ expr()), do: Protocols.dccp(builder)
-  def gre(builder \\ expr()), do: Protocols.gre(builder)
-  def gre_version(builder \\ expr(), version), do: Protocols.gre_version(builder, version)
-  def gre_key(builder \\ expr(), key), do: Protocols.gre_key(builder, key)
-  def gre_flags(builder \\ expr(), flags), do: Protocols.gre_flags(builder, flags)
-
-  ## Actions (delegated to Actions)
-
-  def counter(builder \\ expr()), do: Actions.counter(builder)
-  def log(builder, prefix), do: Actions.log(builder, prefix)
-  def log(builder, prefix, opts), do: Actions.log(builder, prefix, opts)
-  def rate_limit(builder, rate, unit), do: Actions.rate_limit(builder, rate, unit)
-  def rate_limit(builder, rate, unit, opts), do: Actions.rate_limit(builder, rate, unit, opts)
-  def set_mark(builder \\ expr(), mark), do: Actions.set_mark(builder, mark)
-  def set_connmark(builder \\ expr(), mark), do: Actions.set_connmark(builder, mark)
-  def restore_mark(builder \\ expr()), do: Actions.restore_mark(builder)
-  def save_mark(builder \\ expr()), do: Actions.save_mark(builder)
-  def set_ct_label(builder \\ expr(), label), do: Actions.set_ct_label(builder, label)
-  def set_ct_helper(builder \\ expr(), helper), do: Actions.set_ct_helper(builder, helper)
-  def set_ct_zone(builder \\ expr(), zone), do: Actions.set_ct_zone(builder, zone)
-  def set_dscp(builder \\ expr(), dscp), do: Actions.set_dscp(builder, dscp)
-  def set_ttl(builder \\ expr(), ttl), do: Actions.set_ttl(builder, ttl)
-  def set_hoplimit(builder \\ expr(), hoplimit), do: Actions.set_hoplimit(builder, hoplimit)
-  def increment_ttl(builder \\ expr()), do: Actions.increment_ttl(builder)
-  def decrement_ttl(builder \\ expr()), do: Actions.decrement_ttl(builder)
-  def increment_hoplimit(builder \\ expr()), do: Actions.increment_hoplimit(builder)
-  def decrement_hoplimit(builder \\ expr()), do: Actions.decrement_hoplimit(builder)
-
-  ## Meter Operations (delegated to Meter)
-
-  def meter_update(builder \\ expr(), key_expr, set_name, rate, per),
-    do: Meter.meter_update(builder, key_expr, set_name, rate, per)
-
-  defdelegate meter_update(builder, key_expr, set_name, rate, per, opts), to: Meter
-
-  def meter_add(builder \\ expr(), key_expr, set_name, rate, per),
-    do: Meter.meter_add(builder, key_expr, set_name, rate, per)
-
-  defdelegate meter_add(builder, key_expr, set_name, rate, per, opts), to: Meter
-
-  ## NAT Actions (delegated to NAT)
-
-  def snat_to(builder, ip), do: NAT.snat_to(builder, ip)
-  def snat_to(builder, ip, opts), do: NAT.snat_to(builder, ip, opts)
-  def dnat_to(builder, ip), do: NAT.dnat_to(builder, ip)
-  def dnat_to(builder, ip, opts), do: NAT.dnat_to(builder, ip, opts)
-  def masquerade(builder), do: NAT.masquerade(builder)
-  def masquerade(builder, opts), do: NAT.masquerade(builder, opts)
-  def redirect_to(builder \\ expr(), port), do: NAT.redirect_to(builder, port)
-
-  ## Verdicts (delegated to Verdicts)
-
-  def accept(builder \\ expr()), do: Verdicts.accept(builder)
-  def drop(builder \\ expr()), do: Verdicts.drop(builder)
-  def reject(builder), do: Verdicts.reject(builder)
-  def reject(builder, type), do: Verdicts.reject(builder, type)
-  def continue(builder \\ expr()), do: Verdicts.continue(builder)
-  def notrack(builder \\ expr()), do: Verdicts.notrack(builder)
-  def queue_to_userspace(builder, queue_num), do: Verdicts.queue_to_userspace(builder, queue_num)
-
-  def queue_to_userspace(builder, queue_num, opts),
-    do: Verdicts.queue_to_userspace(builder, queue_num, opts)
-
-  def synproxy(builder), do: Verdicts.synproxy(builder)
-  def synproxy(builder, opts), do: Verdicts.synproxy(builder, opts)
-  def set_tcp_mss(builder \\ expr(), mss), do: Verdicts.set_tcp_mss(builder, mss)
-  def duplicate_to(builder \\ expr(), interface), do: Verdicts.duplicate_to(builder, interface)
-  def flow_offload(builder), do: Verdicts.flow_offload(builder)
-  def flow_offload(builder, opts), do: Verdicts.flow_offload(builder, opts)
-  def jump(builder \\ expr(), chain_name), do: Verdicts.jump(builder, chain_name)
-  def goto(builder \\ expr(), chain_name), do: Verdicts.goto(builder, chain_name)
-  def return_from_chain(builder \\ expr()), do: Verdicts.return_from_chain(builder)
-  def tproxy(builder \\ expr(), opts), do: Verdicts.tproxy(builder, opts)
-
-  ## Convenience Aliases (shorter names for common operations)
-
   @doc """
-  Alias for `source_ip/2`. Match source IP address.
+  Convert an expression to a list of JSON expression maps.
+
+  This is used internally by Builder when extracting expression lists from
+  Expr structs. Most users won't need to call this directly.
 
   ## Examples
 
-      expr() |> source("192.168.1.1")
-      expr() |> source("10.0.0.0/8")
-  """
-  @spec source(t(), String.t()) :: t()
-  def source(builder \\ expr(), ip), do: IP.source_ip(builder, ip)
+      import NFTables.Expr
+      import NFTables.Expr.{TCP, Port, Verdicts}
 
-  @doc """
-  Alias for `dest_ip/2`. Match destination IP address.
-
-  ## Examples
-
-      expr() |> dest("192.168.1.1")
-      expr() |> dest("10.0.0.0/8")
-  """
-  @spec dest(t(), String.t()) :: t()
-  def dest(builder \\ expr(), ip), do: IP.dest_ip(builder, ip)
-
-  @doc """
-  Alias for `source_ip/2`. Match source IP address.
-
-  ## Examples
-
-      expr() |> src("192.168.1.1")
-      expr() |> src("10.0.0.0/8")
-  """
-  @spec src(t(), String.t()) :: t()
-  def src(builder \\ expr(), ip), do: IP.source_ip(builder, ip)
-
-  @doc """
-  Alias for `dest_ip/2`. Match destination IP address.
-
-  ## Examples
-
-      expr() |> dst("192.168.1.1")
-      expr() |> dst("10.0.0.0/8")
-  """
-  @spec dst(t(), String.t()) :: t()
-  def dst(builder \\ expr(), ip), do: IP.dest_ip(builder, ip)
-
-  @doc """
-  Convenience function for matching destination port (same as `dport/2`).
-
-  Supports both single ports and port ranges.
-
-  ## Examples
-
-      # Single port
-      expr() |> tcp() |> port(22)
-      expr() |> udp() |> port(53)
-
-      # Port range
-      expr() |> tcp() |> port(8000..9000)
-  """
-  @spec port(t(), integer() | Range.t()) :: t()
-  def port(builder, port), do: dport(builder, port)
-
-  @doc """
-  Alias for `ct_state/2`. Match connection tracking state.
-
-  ## Examples
-
-      expr() |> state([:established, :related])
-      expr() |> state([:new])
-      expr() |> state(:invalid)
-  """
-  @spec state(t(), list(atom()) | atom()) :: t()
-  def state(builder \\ expr(), states), do: CT.ct_state(builder, states)
-
-  @doc """
-  Alias for `ct_state(builder, [:new])`. Match connection tracking state [:new].
-
-  ## Examples
-
-      expr() |> new()
-  """
-  @spec new(t()) :: t()
-  def new(builder \\ expr()), do: CT.ct_state(builder, [:new])
-
-  @doc """
-  Alias for `ct_state(builder, [:established])`. Match connection tracking state [:new].
-
-  ## Examples
-
-      expr() |> established()
-  """
-  @spec established(t()) :: t()
-  def established(builder \\ expr()), do: CT.ct_state(builder, [:established])
-
-  @doc """
-  Alias for `ct_state(builder, [:established])`. Match connection tracking state [:related].
-
-  ## Examples
-
-      expr() |> est()
-  """
-  @spec est(t()) :: t()
-  def est(builder \\ expr()), do: CT.ct_state(builder, [:established])
-
-  @doc """
-  Alias for `ct_state(builder, [:related])`. Match connection tracking state [:related].
-
-  ## Examples
-
-      expr() |> related()
-  """
-  @spec related(t()) :: t()
-  def related(builder \\ expr()), do: CT.ct_state(builder, [:related])
-
-  @doc """
-  Alias for `ct_state(builder, [:related])`. Match connection tracking state [:related].
-
-  ## Examples
-
-      expr() |> rel()
-  """
-  @spec rel(t()) :: t()
-  def rel(builder \\ expr()), do: CT.ct_state(builder, [:related])
-
-  @doc """
-  Alias for `ct_state(builder, [:established, :related])`. Match connection tracking state [:established, :related].
-
-  ## Examples
-
-      expr() |> established_related()
-  """
-  @spec established_related(t()) :: t()
-  def established_related(builder \\ expr()), do: CT.ct_state(builder, [:established, :related])
-
-  @doc """
-  Alias for `ct_state(builder, [:established, :related])`. Match connection tracking state [:established, :related].
-
-  ## Examples
-
-      expr() |> est_rel()
-  """
-  @spec est_rel(t()) :: t()
-  def est_rel(builder \\ expr()), do: CT.ct_state(builder, [:established, :related])
-
-  @doc """
-  Alias for `ct_state(builder, [:invalid])`. Match connection tracking state [:invalid].
-
-  ## Examples
-
-      expr() |> invalid()
-  """
-  @spec invalid(t()) :: t()
-  def invalid(builder \\ expr()), do: CT.ct_state(builder, [:invalid])
-
-  @doc """
-  Alias for `ct_state(builder, [:invalid])`. Match connection tracking state [:invalid].
-
-  ## Examples
-
-      expr() |> inv()
-  """
-  @spec inv(t()) :: t()
-  def inv(builder \\ expr()), do: CT.ct_state(builder, [:invalid])
-
-  @doc """
-  Alias for `rate_limit/3`. Add rate limiting.
-
-  ## Examples
-
-      expr() |> limit(10, :minute)
-      expr() |> limit(100, :second)
-  """
-  @spec limit(t(), non_neg_integer(), atom()) :: t()
-  def limit(builder, rate, unit), do: Actions.rate_limit(builder, rate, unit)
-
-  @doc """
-  Alias for `rate_limit/4`. Add rate limiting with options.
-
-  ## Examples
-
-      expr() |> limit(10, :minute, burst: 5)
-      expr() |> limit(100, :second, burst: 200)
-  """
-  @spec limit(t(), non_neg_integer(), atom(), keyword()) :: t()
-  def limit(builder, rate, unit, opts), do: Actions.rate_limit(builder, rate, unit, opts)
-
-  @doc """
-  Match TCP protocol. Convenience for `protocol(:tcp)`.
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Examples
-
-      # Start new expression
-      tcp() |> dport(80)
-
-      # Continue existing expression
-      expr() |> tcp() |> dport(80)
-  """
-  @spec tcp(t()) :: t()
-  def tcp(builder \\ expr()), do: TCP.protocol(builder, :tcp)
-
-  @doc """
-  Match UDP protocol. Convenience for `protocol(:udp)`.
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Examples
-
-      # Start new expression
-      udp() |> dport(53)
-
-      # Continue existing expression
-      expr() |> udp() |> dport(53)
-  """
-  @spec udp(t()) :: t()
-  def udp(builder \\ expr()), do: TCP.protocol(builder, :udp)
-
-  @doc """
-  Match ICMP protocol. Convenience for `protocol(:icmp)`.
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Examples
-
-      # Start new expression
-      icmp() |> icmp_type(:echo_request)
-
-      # Continue existing expression
-      expr() |> icmp() |> icmp_type(:echo_request)
-  """
-  @spec icmp(t()) :: t()
-  def icmp(builder \\ expr()), do: TCP.protocol(builder, :icmp)
-
-  @doc """
-  Alias for `in_set/3`. Match against a named set.
-
-  Delegates to `Advanced.set/3`.
-
-  ## Examples
-
-      expr() |> in_set("blocklist", :saddr)
-      expr() |> in_set("allowed_ports", :dport)
-  """
-  @spec in_set(t(), String.t(), atom()) :: t()
-  def in_set(builder \\ expr(), set_name, match_type),
-    do: Advanced.set(builder, set_name, match_type)
-
-  @doc """
-  Alias for `return_from_chain/1`. Return from current chain.
-
-  ## Examples
-
-      expr() |> return()
-  """
-  @spec return(t()) :: t()
-  def return(builder \\ expr()), do: Verdicts.return_from_chain(builder)
-
-  ## Helpers
-
-  @doc """
-  Extract the expression list from an expression builder.
-
-  Returns the list of JSON expressions that can be used with Builder.add/2.
-
-  ## Examples
-
-      expression = expr() |> tcp() |> dport(22) |> accept()
+      expression = tcp() |> dport(22) |> accept()
       expr_list = to_list(expression)
       # Use expr_list with Builder: NFTables.add(builder, rule: expr_list)
   """
@@ -553,12 +195,13 @@ defmodule NFTables.Expr do
 
   ## Examples
 
-      expr() |> dport(22) |> comment("Allow SSH from trusted network") |> accept()
+      import NFTables.Expr
+      import NFTables.Expr.{Port, TCP, Verdicts}
+
+      tcp() |> dport(22) |> comment("Allow SSH from trusted network") |> accept()
   """
   @spec comment(t(), String.t()) :: t()
-  def comment(rule, text) when is_binary(text) do
-    %{rule | comment: text}
-  end
+  def comment(rule, text) when is_binary(text), do: %{rule | comment: text}
 
   # Private helpers
 
@@ -571,8 +214,10 @@ defmodule NFTables.Expr do
   @doc """
   Set the protocol context for subsequent port matching.
 
-  This is used internally by tcp(), udp(), etc. to track which protocol
-  the rule is matching, allowing sport/dport to work protocol-agnostically.
+  This is used internally by `tcp()`, `udp()`, etc. in the TCP module to track
+  which protocol the rule is matching, allowing sport/dport to work protocol-agnostically.
+
+  Most users won't need to call this directly.
   """
   @spec set_protocol(t(), atom()) :: t()
   def set_protocol(builder, protocol) when is_atom(protocol) do

@@ -3,6 +3,27 @@ defmodule NFTables.Expr.TCP do
   TCP and protocol matching functions for Expr.
 
   Provides functions for TCP flags, packet length, TTL, hop limit, and protocol matching.
+  This module includes both TCP-specific features (like flag matching) and general IP
+  protocol features (like TTL and protocol type matching).
+
+  ## Import
+
+      import NFTables.Expr.TCP
+
+  ## Examples
+
+      # TCP with SYN flag
+      tcp() |> tcp_flags([:syn], [:syn, :ack, :rst, :fin]) |> accept()
+
+      # Match packets with specific TTL
+      tcp() |> ttl(:eq, 64) |> accept()
+
+      # Protocol shortcuts
+      tcp() |> dport(22)
+      udp() |> dport(53)
+      icmp() |> accept()
+
+  For more information, see the [nftables TCP wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_TCP_options_and_flags).
   """
 
   alias NFTables.Expr
@@ -157,6 +178,54 @@ defmodule NFTables.Expr.TCP do
     |> Expr.add_expr(expr)
     |> Expr.set_protocol(protocol_atom)
   end
+
+  @doc """
+  Match TCP protocol. Convenience for `protocol(:tcp)`.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Start a new expression
+      tcp()
+
+      # Continue an existing expression
+      builder |> tcp() |> dport(22)
+  """
+  @spec tcp(Expr.t()) :: Expr.t()
+  def tcp(builder \\ Expr.expr()), do: protocol(builder, :tcp)
+
+  @doc """
+  Match UDP protocol. Convenience for `protocol(:udp)`.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Start a new expression
+      udp()
+
+      # Continue an existing expression
+      builder |> udp() |> dport(53)
+  """
+  @spec udp(Expr.t()) :: Expr.t()
+  def udp(builder \\ Expr.expr()), do: protocol(builder, :udp)
+
+  @doc """
+  Match ICMP protocol. Convenience for `protocol(:icmp)`.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Start a new expression
+      icmp()
+
+      # Continue an existing expression
+      builder |> icmp() |> accept()
+  """
+  @spec icmp(Expr.t()) :: Expr.t()
+  def icmp(builder \\ Expr.expr()), do: protocol(builder, :icmp)
 
   # Helper to convert atom operators to string
   defp atom_to_op(:eq), do: "=="
