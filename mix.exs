@@ -1,7 +1,7 @@
 defmodule NFTables.MixProject do
   use Mix.Project
 
-  @version "0.8.0"
+  @version "0.8.1"
   @source_url "https://github.com/dcoai/nftables"
 
   def project do
@@ -82,6 +82,28 @@ defmodule NFTables.MixProject do
           NFTables,
           NFTables.Expr,
           NFTables.Query
+        ],
+        "Expression API": [
+          NFTables.Expr.Sets,
+          NFTables.Expr.NAT,
+          NFTables.Expr.Structs,
+          NFTables.Expr.CT,
+          NFTables.Expr.OSF,
+          NFTables.Expr.Meter,
+          NFTables.Expr.TCP,
+          NFTables.Expr.Payload,
+          NFTables.Expr.ARP,
+          NFTables.Expr.Socket,
+          NFTables.Expr.IP,
+          NFTables.Expr.Protocols,
+          NFTables.Expr.Actions,
+          NFTables.Expr.Metadata,
+          NFTables.Expr.Verdict,
+          NFTables.Expr.Layer2,
+          NFTables.Expr.ICMP,
+          NFTables.Expr.UDP,
+          NFTables.Expr.IPsec,
+          NFTables.Expr.Port          
         ],
         "Convenience API": [
           NFTables.Policy,
