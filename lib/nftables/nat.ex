@@ -55,6 +55,7 @@ defmodule NFTables.NAT do
   """
 
   import NFTables.Expr
+  import NFTables.Expr.{IP, Port, TCP, Layer2, NAT}
   alias NFTables.Builder
 
   @type family :: :inet | :ip | :ip6
@@ -173,10 +174,7 @@ defmodule NFTables.NAT do
 
     expr_list =
       expr_builder
-      |> (case protocol do
-            :tcp -> &tcp/1
-            :udp -> &udp/1
-          end).()
+      |> protocol(protocol)
       |> dport(external_port)
       |> dnat_to(internal_ip, port: internal_port)
 
@@ -390,10 +388,7 @@ defmodule NFTables.NAT do
 
     expr_list =
       expr(family: family)
-      |> (case protocol do
-            :tcp -> &tcp/1
-            :udp -> &udp/1
-          end).()
+      |> protocol(protocol)
       |> dport(from_port)
       |> redirect_to(to_port)
 

@@ -403,7 +403,7 @@ Builder automatically converts `NFTables.Expr` structs to expression lists:
 
 ```elixir
 # You write:
-ssh_rule = expr() |> tcp() |> dport(22) |> accept()
+ssh_rule = tcp() |> dport(22) |> accept()
 NFTables.add(builder, rule: ssh_rule)
 
 # Builder automatically calls:
@@ -632,10 +632,10 @@ end
 ```elixir
 # NFTables.Expr (verbose, explicit)
 import NFTables.Expr
-expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
+source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
 
 # NFTables.Expr (concise)
-expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
+source_ip("10.0.0.1") |> dest_ip("192.168.1.1") |> ct_state([:new])
 
 # Both produce same expr_list
 ```
@@ -718,7 +718,7 @@ Rules can be composed with `Enum` functions:
 ports = [80, 443, 8080, 8443]
 
 rules = Enum.map(ports, fn port ->
-  expr() |> tcp() |> dport(port) |> accept()
+  tcp() |> dport(port) |> accept()
 end)
 
 # Add all rules to builder
@@ -781,7 +781,7 @@ defmodule NFTables.Expr do
 end
 
 # User composes naturally
-expr() |> source_ip("10.0.0.1") |> dest_ip("192.168.1.1")
+source_ip("10.0.0.1") |> dest_ip("192.168.1.1")
 ```
 
 ---
@@ -851,8 +851,8 @@ User Code
 import NFTables.Expr
 alias NFTables.Builder
 
-ssh_rule = expr() |> tcp() |> dport(22) |> accept()
-http_rule = expr() |> tcp() |> dport(80) |> accept()
+ssh_rule = tcp() |> dport(22) |> accept()
+http_rule = tcp() |> dport(80) |> accept()
 
 config = Builder.new(family: :inet)
   |> NFTables.add(table: "filter")
@@ -1231,7 +1231,7 @@ Most functions are pure (no side effects):
 NFTables.add(builder, table: "filter")
 
 # Pure - returns new struct
-expr() |> tcp() |> dport(22)
+tcp() |> dport(22)
 
 # Pure - returns command map
 Query.list_tables(family: :inet)
@@ -1301,7 +1301,7 @@ NFTables.allow_ssh(pid)
 NFTables.setup_basic_firewall(pid)
 
 # Level 2: Builder + Match (flexible)
-ssh_rule = expr() |> tcp() |> dport(22) |> accept()
+ssh_rule = tcp() |> dport(22) |> accept()
 NFTables.add(rule: ssh_rule) |> NFTables.submit(pid: pid)
 
 # Level 3: Direct expression building (full control)

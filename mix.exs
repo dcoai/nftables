@@ -10,6 +10,7 @@ defmodule NFTables.MixProject do
       version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
+      compilers: Mix.compilers() ++ [:module_indexer],
       deps: deps(),
 
       # Test configuration
@@ -86,7 +87,7 @@ defmodule NFTables.MixProject do
           NFTables.Policy,
           NFTables.NAT
         ],
-        "Requests": [
+        Requests: [
           NFTables.Requestor,
           NFTables.Local,
           NFTables.Decoder
