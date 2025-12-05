@@ -15,23 +15,23 @@ defmodule NFTables.Expr.Port do
   ## Examples
 
       # TCP port matching
-      rule() |> tcp() |> dport(80)
-      rule() |> tcp() |> sport(1024)
+      tcp() |> dport(80)
+      tcp() |> sport(1024)
 
       # UDP port matching
-      rule() |> udp() |> dport(53)
-      rule() |> udp() |> sport(5353)
+      udp() |> dport(53)
+      udp() |> sport(5353)
 
       # SCTP port matching
-      rule() |> sctp() |> dport(9899)
-      rule() |> sctp() |> sport(5000)
+      sctp() |> dport(9899)
+      sctp() |> sport(5000)
 
       # DCCP port matching
-      rule() |> dccp() |> dport(6000)
+      dccp() |> dport(6000)
 
       # Port ranges (all protocols)
-      rule() |> tcp() |> dport(8000..9000)
-      rule() |> sctp() |> sport(1024..65535)
+      tcp() |> dport(8000..9000)
+      sctp() |> sport(1024..65535)
 
   For more information, see the [nftables payload expressions wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_packet_headers).
   """
@@ -48,14 +48,14 @@ defmodule NFTables.Expr.Port do
   ## Examples
 
       # Single port
-      rule() |> tcp() |> dport(80)
-      rule() |> udp() |> dport(53)
-      rule() |> sctp() |> dport(9899)
-      rule() |> dccp() |> dport(6000)
+      tcp() |> dport(80)
+      udp() |> dport(53)
+      sctp() |> dport(9899)
+      dccp() |> dport(6000)
 
       # Port range
-      rule() |> tcp() |> dport(8000..9000)
-      rule() |> sctp() |> dport(1024..65535)
+      tcp() |> dport(8000..9000)
+      sctp() |> dport(1024..65535)
 
   ## Errors
 
@@ -94,14 +94,14 @@ defmodule NFTables.Expr.Port do
   ## Examples
 
       # Single port
-      rule() |> tcp() |> sport(1024)
-      rule() |> udp() |> sport(5353)
-      rule() |> sctp() |> sport(5000)
-      rule() |> dccp() |> sport(4000)
+      tcp() |> sport(1024)
+      udp() |> sport(5353)
+      sctp() |> sport(5000)
+      dccp() |> sport(4000)
 
       # Port range
-      rule() |> tcp() |> sport(1024..65535)
-      rule() |> udp() |> sport(10000..20000)
+      tcp() |> sport(1024..65535)
+      udp() |> sport(10000..20000)
 
   ## Errors
 
@@ -135,8 +135,8 @@ defmodule NFTables.Expr.Port do
 
   ## Examples
 
-      rule() |> tcp() |> dst_port(443)
-      rule() |> udp() |> dst_port(53)
+      tcp() |> dst_port(443)
+      udp() |> dst_port(53)
   """
   @spec dst_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def dst_port(builder \\ Expr.expr(), port), do: dport(builder, port)
@@ -146,8 +146,8 @@ defmodule NFTables.Expr.Port do
 
   ## Examples
 
-      rule() |> tcp() |> src_port(1024)
-      rule() |> tcp() |> src_port(1024..65535)
+      tcp() |> src_port(1024)
+      tcp() |> src_port(1024..65535)
   """
   @spec src_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def src_port(builder \\ Expr.expr(), port), do: sport(builder, port)
@@ -175,7 +175,7 @@ defmodule NFTables.Expr.Port do
       nil ->
         raise ArgumentError,
               "#{function_name}/2 requires protocol context. Call tcp(), udp(), sctp(), or dccp() before using #{function_name}/2.\n\n" <>
-                "Example: rule() |> tcp() |> #{function_name}(80)"
+                "Example: tcp() |> #{function_name}(80)"
 
       protocol when protocol in [:tcp, :udp, :sctp, :dccp] ->
         to_string(protocol)
