@@ -649,9 +649,9 @@ strict_match = expr()
 ```elixir
 # Set QoS marks based on OS
 os_qos_rules = [
-  expr() |> osf_name("Linux") |> set_mark(1),
-  expr() |> osf_name("Windows") |> set_mark(2),
-  expr() |> osf_name("MacOS") |> set_mark(3)
+  osf_name("Linux") |> set_mark(1),
+  osf_name("Windows") |> set_mark(2),
+  osf_name("MacOS") |> set_mark(3)
 ]
 
 Enum.each(os_qos_rules, fn qos_rule ->

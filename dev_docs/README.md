@@ -78,6 +78,7 @@ Match is now a **pure expression builder** with no side effects:
 
 ```elixir
 import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdicts}
 alias NFTables.{Builder, Local, Requestor}
 
 # Build pure expression

@@ -1,9 +1,14 @@
 defmodule NFTables.Expr.Protocols do
   @moduledoc """
-  Advanced protocol matching helpers for SCTP, DCCP, and GRE.
+  Specialized protocol matching for SCTP, DCCP, and GRE.
 
   Provides convenient functions for matching less common protocols that are
-  not part of the standard TCP/UDP/ICMP set.
+  not part of the standard TCP/UDP/ICMP set. Essential for telephony, streaming,
+  tunneling, and advanced networking scenarios.
+
+  ## Import
+
+      import NFTables.Expr.Protocols
 
   ## Supported Protocols
 
@@ -11,29 +16,19 @@ defmodule NFTables.Expr.Protocols do
   - **DCCP** (Datagram Congestion Control Protocol) - Congestion-controlled unreliable datagrams
   - **GRE** (Generic Routing Encapsulation) - Tunneling protocol
 
-  ## Usage
-
-      import NFTables.Match
-      import NFTables.Match.Protocols  # Or use via Match module
+  ## Examples
 
       # SCTP port matching (use generic dport/sport from Port module)
-      rule()
-      |> sctp()
-      |> dport(9899)
-      |> accept()
+      sctp() |> dport(9899) |> accept()
 
-      # DCCP with ports (use generic dport/sport from Port module)
-      rule()
-      |> dccp()
-      |> sport(5000)
-      |> dport(6000)
-      |> counter()
+      # DCCP with ports
+      dccp() |> sport(5000) |> dport(6000) |> counter()
 
-      # GRE tunnel
-      rule()
-      |> gre()
-      |> gre_version(0)
-      |> accept()
+      # GRE tunnel matching
+      gre() |> gre_version(0) |> accept()
+      gre() |> gre_key(12345) |> set_mark(1)
+
+  For more information, see the [nftables protocol matching wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_packet_headers).
   """
 
   alias NFTables.Expr

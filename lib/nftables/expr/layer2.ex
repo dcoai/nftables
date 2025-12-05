@@ -3,6 +3,26 @@ defmodule NFTables.Expr.Layer2 do
   Layer 2 (MAC, interface, VLAN) matching functions for Expr.
 
   Provides functions for matching MAC addresses, network interfaces, and VLAN tags.
+  Essential for bridge filtering, VLAN-aware firewalls, and interface-based routing.
+
+  ## Import
+
+      import NFTables.Expr.Layer2
+
+  ## Examples
+
+      # MAC address filtering
+      source_mac("aa:bb:cc:dd:ee:ff") |> drop()
+
+      # Interface-based rules
+      iif("eth0") |> accept()
+      oif("wan0") |> masquerade()
+
+      # VLAN filtering
+      vlan_id(100) |> accept()
+      vlan_pcp(7) |> counter()
+
+  For more information, see the [nftables bridge filtering wiki](https://wiki.nftables.org/wiki-nftables/index.php/Bridge_filtering).
   """
 
   alias NFTables.Expr

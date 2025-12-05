@@ -1,8 +1,6 @@
 defmodule NFTables.FlowtableIntegrationTest do
   use ExUnit.Case, async: false
 
-  alias NFTables.Builder
-
   @moduletag :integration
   @moduletag :slow
 

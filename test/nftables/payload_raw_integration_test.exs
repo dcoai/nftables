@@ -1,8 +1,8 @@
 defmodule NFTables.PayloadRawIntegrationTest do
   use ExUnit.Case, async: false
 
-  alias NFTables.Builder
   import NFTables.Expr
+  import NFTables.Expr.{Port, TCP, Payload, Actions, Verdict}
 
   @moduletag :integration
   @moduletag :slow
@@ -31,7 +31,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
       # Match DNS queries (port 53) using raw payload
       dns_rule =
         expr()
-        |> udp()
+        |> protocol(:udp)
         |> payload_raw(:th, 16, 16, 53)
         |> counter()
         |> accept()
@@ -50,7 +50,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
       # Match HTTP GET requests by looking at first 4 bytes of payload
       http_get_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(80)
         |> payload_raw(:ih, 0, 32, "GET ")
         |> log("HTTP GET detected: ")
@@ -71,7 +71,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
       # SYN flag is bit 1 (0x02)
       syn_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> payload_raw_masked(:th, 104, 8, 0x02, 0x02)
         |> counter()
         |> accept()
@@ -126,13 +126,13 @@ defmodule NFTables.PayloadRawIntegrationTest do
     test "creates multiple raw payload rules atomically", %{pid: pid, table: table} do
       dns_rule =
         expr()
-        |> udp()
+        |> protocol(:udp)
         |> payload_raw(:th, 16, 16, 53)
         |> accept()
 
       http_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> payload_raw(:th, 16, 16, 80)
         |> accept()
 

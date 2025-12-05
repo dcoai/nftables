@@ -35,3 +35,7 @@ nftables-*.tar
 \#*\#
 .\#*
 .DS_Store
+
+# Auto-generated files from custom compilers
+.compile.module_indexer
+/lib/nftables_expr_index.ex
