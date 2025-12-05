@@ -45,13 +45,11 @@ defmodule NFTables.Expr.Protocols do
   ## Examples
 
       # Match any SCTP traffic
-      rule()
-      |> sctp()
+       sctp()
       |> accept()
 
       # Combine with other matchers
-      rule()
-      |> sctp()
+      sctp()
       |> source_ip("192.168.1.0/24")
       |> counter()
 
@@ -80,13 +78,11 @@ defmodule NFTables.Expr.Protocols do
   ## Examples
 
       # Match any DCCP traffic
-      rule()
-      |> dccp()
+      dccp()
       |> counter()
 
       # DCCP with logging
-      rule()
-      |> dccp()
+      dccp()
       |> log("DCCP packet: ")
       |> accept()
 
@@ -114,13 +110,11 @@ defmodule NFTables.Expr.Protocols do
   ## Examples
 
       # Match any GRE traffic
-      rule()
-      |> gre()
+      gre()
       |> counter()
 
       # GRE tunnel from specific source
-      rule()
-      |> gre()
+      gre()
       |> source_ip("10.0.0.1")
       |> accept()
 
@@ -147,13 +141,11 @@ defmodule NFTables.Expr.Protocols do
   ## Examples
 
       # Match standard GRE (version 0)
-      rule()
-      |> gre_version(0)
+      gre_version(0)
       |> accept()
 
       # Match PPTP GRE (version 1)
-      rule()
-      |> gre_version(1)
+      gre_version(1)
       |> log("PPTP tunnel: ")
       |> accept()
   """
@@ -176,13 +168,11 @@ defmodule NFTables.Expr.Protocols do
   ## Examples
 
       # Match specific GRE tunnel key
-      rule()
-      |> gre_key(12345)
+      gre_key(12345)
       |> accept()
 
       # Route based on GRE key
-      rule()
-      |> gre_key(100)
+      gre_key(100)
       |> set_mark(1)
       |> accept()
 
@@ -211,8 +201,7 @@ defmodule NFTables.Expr.Protocols do
   ## Examples
 
       # Match GRE packets with key flag set
-      rule()
-      |> gre_flags(0x2000)  # Key bit
+      gre_flags(0x2000)  # Key bit
       |> accept()
 
   ## Flags Bitmask
