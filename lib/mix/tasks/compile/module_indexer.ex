@@ -20,8 +20,8 @@ defmodule Mix.Tasks.Compile.ModuleIndexer do
   Runs the module indexer compiler.
 
   Returns:
-  - {:ok, []} on success with changes
-  - {:noop, []} when no changes detected
+  - `{:ok, []}` on success with changes
+  - `{:noop, []}` when no changes detected
   """
   def run(_args) do
     # Discover all NFTables.Expr.* modules
