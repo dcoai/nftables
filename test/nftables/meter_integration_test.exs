@@ -4,6 +4,7 @@ defmodule NFTables.MeterIntegrationTest do
   alias NFTables.Builder
   alias NFTables.Expr.Meter
   import NFTables.Expr
+  import NFTables.Expr.{Port, TCP, CT, Verdict, Meter}
 
   @moduletag :integration
   @moduletag :slow
@@ -69,7 +70,7 @@ defmodule NFTables.MeterIntegrationTest do
       # Step 3: Create rule using meter
       ssh_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(22)
         |> ct_state([:new])
         |> meter_update(Meter.payload(:ip, :saddr), "ssh_ratelimit", 3, :minute, burst: 5)
@@ -87,7 +88,7 @@ defmodule NFTables.MeterIntegrationTest do
 
       meter_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(80)
         |> meter_update(Meter.payload(:ip, :saddr), "http_limits", 100, :second, burst: 200)
         |> accept()

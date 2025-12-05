@@ -1,9 +1,35 @@
-defmodule NFTables.Expr.Verdicts do
+defmodule NFTables.Expr.Verdict do
   @moduledoc """
   Verdict and control flow functions for Expr.
 
   Provides terminal verdicts (accept, drop, reject), non-terminal actions (continue, notrack),
-  advanced features (queue, synproxy, flow offload), and chain control flow (jump, goto, return).
+  advanced features (queue, flow offload), and chain control flow (jump, goto, return).
+  Verdicts determine the final fate of packets and control how rules are processed.
+
+  ## Import
+
+      import NFTables.Expr.Verdict
+
+  ## Examples
+
+      # Basic verdicts
+      tcp() |> dport(22) |> accept()
+      source_ip("10.0.0.0/8") |> drop()
+      tcp() |> dport(23) |> reject(:tcp_reset)
+
+      # Non-terminal actions
+      tcp() |> dport(80) |> log("HTTP: ") |> continue()
+      tcp() |> dport(443) |> notrack() |> accept()
+
+      # Chain control flow
+      source_ip("192.168.1.0/24") |> jump("trusted_chain")
+      tcp() |> dport(8080) |> goto("app_chain")
+
+      # Advanced features
+      tcp() |> dport(80) |> tcp_flags([:syn], [:syn, :ack, :rst, :fin]) |> synproxy()
+      ct_state([:established]) |> flow_offload()
+
+  For more information, see the [nftables verdicts wiki](https://wiki.nftables.org/wiki-nftables/index.php/Verdicts).
   """
 
   alias NFTables.Expr
@@ -184,147 +210,6 @@ defmodule NFTables.Expr.Verdicts do
   end
 
   @doc """
-  Enable SYN proxy for DDoS protection.
-
-  Implements SYN cookie-based protection against SYN flood attacks.
-  The firewall handles the TCP handshake, protecting backend servers.
-
-  ## Options
-
-  - `:mss` - Maximum segment size (default: auto)
-  - `:wscale` - Window scaling (default: auto)
-  - `:sack_perm` - SACK permitted (default: auto)
-  - `:timestamp` - TCP timestamp (default: auto)
-
-  ## Example
-
-      # Basic synproxy
-      builder
-      |> tcp()
-      |> dport(80)
-      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-      |> synproxy()
-
-      # With custom MSS
-      builder
-      |> tcp()
-      |> dport(443)
-      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-      |> synproxy(mss: 1460)
-
-      # Full options
-      builder
-      |> tcp()
-      |> dport(22)
-      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-      |> synproxy(mss: 1460, wscale: 7, sack_perm: true, timestamp: true)
-
-  ## Use Cases
-
-  - SYN flood DDoS protection
-  - High-volume web servers
-  - Public-facing services
-  - Attack mitigation
-
-  ## WARNING
-
-  - Only use on SYN packets (tcp_flags required)
-  - May break some TCP options
-  - Backend servers see firewall as client
-  """
-  @spec synproxy(Expr.t(), keyword()) :: Expr.t()
-  def synproxy(builder \\ Expr.expr(), opts \\ []) do
-    synproxy_expr = %{}
-
-    synproxy_expr =
-      if mss = Keyword.get(opts, :mss) do
-        Map.put(synproxy_expr, "mss", mss)
-      else
-        synproxy_expr
-      end
-
-    synproxy_expr =
-      if wscale = Keyword.get(opts, :wscale) do
-        Map.put(synproxy_expr, "wscale", wscale)
-      else
-        synproxy_expr
-      end
-
-    synproxy_expr =
-      if Keyword.get(opts, :sack_perm) do
-        Map.put(synproxy_expr, "sack-perm", true)
-      else
-        synproxy_expr
-      end
-
-    synproxy_expr =
-      if Keyword.get(opts, :timestamp) do
-        Map.put(synproxy_expr, "timestamp", true)
-      else
-        synproxy_expr
-      end
-
-    synproxy_expr = if map_size(synproxy_expr) == 0, do: nil, else: synproxy_expr
-    expr = %{"synproxy" => synproxy_expr}
-    Expr.add_expr(builder, expr)
-  end
-
-  @doc """
-  Set TCP Maximum Segment Size (MSS).
-
-  Modifies or clamps the TCP MSS option. Useful for fixing PMTU issues
-  with PPPoE or VPN connections.
-
-  ## Example
-
-      # Clamp MSS to 1400 (for PPPoE)
-      builder
-      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-      |> set_tcp_mss(1400)
-      |> accept()
-
-      # Clamp to PMTU
-      builder
-      |> oif("pppoe0")
-      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
-      |> set_tcp_mss(:pmtu)
-      |> accept()
-
-  ## Use Cases
-
-  - PPPoE connections (typically 1492 MTU → 1452 MSS)
-  - VPN tunnels with reduced MTU
-  - Fixing PMTU black holes
-  - WAN interface MSS clamping
-  """
-  @spec set_tcp_mss(Expr.t(), non_neg_integer() | :pmtu) :: Expr.t()
-  def set_tcp_mss(builder \\ Expr.expr(), mss)
-
-  def set_tcp_mss(builder, :pmtu) do
-    # TCP MSS clamping to PMTU
-    expr = %{
-      "mangle" => %{
-        "key" => %{"tcp option" => %{"name" => "maxseg", "field" => "size"}},
-        "value" => %{"rt" => "mtu"}
-      }
-    }
-
-    Expr.add_expr(builder, expr)
-  end
-
-  def set_tcp_mss(builder, mss) when is_integer(mss) and mss > 0 and mss <= 65535 do
-    # TCP MSS clamping to specific value
-    expr = %{
-      "mangle" => %{
-        "key" => %{"tcp option" => %{"name" => "maxseg", "field" => "size"}},
-        "value" => mss
-      }
-    }
-
-    Expr.add_expr(builder, expr)
-  end
-
-  @doc """
   Duplicate packet to another interface.
 
   Sends a copy of the packet to a different interface while the original
@@ -488,88 +373,4 @@ defmodule NFTables.Expr.Verdicts do
     Expr.add_expr(builder, expr)
   end
 
-  @doc """
-  Redirect to local transparent proxy (TPROXY).
-
-  Redirects packets to a local socket without changing the destination address.
-  Used for transparent proxy setups where the proxy needs to see the original
-  destination.
-
-  ## Parameters
-
-  - `builder` - Match builder
-  - `opts` - Options:
-    - `:to` - Port number to redirect to (required)
-    - `:addr` - Local IP address to redirect to (optional)
-    - `:family` - Address family (`:ipv4` or `:ipv6`, optional)
-
-  ## Examples
-
-      # Redirect HTTP to local transparent proxy on port 8080
-      rule()
-      |> tcp()
-      |> dport(80)
-      |> tproxy(to: 8080)
-      |> accept()
-
-      # With specific address
-      rule()
-      |> tcp()
-      |> dport(80)
-      |> tproxy(to: 8080, addr: "127.0.0.1")
-
-      # IPv6 transparent proxy
-      rule()
-      |> tcp()
-      |> dport(443)
-      |> tproxy(to: 8443, addr: "::1", family: :ipv6)
-
-  ## Use Cases
-
-  - Transparent HTTP/HTTPS proxies
-  - Deep packet inspection
-  - Content filtering
-  - Traffic monitoring without changing destinations
-
-  ## Requirements
-
-  - Requires special routing and iptables setup
-  - Socket must have IP_TRANSPARENT option
-  - Usually combined with socket_transparent() matching
-  - Requires CAP_NET_ADMIN capability
-
-  ## Typical Transparent Proxy Setup
-
-      # 1. Mark packets with existing transparent socket
-      prerouting_mark = rule()
-        |> tcp()
-        |> socket_transparent()
-        |> set_mark(1)
-        |> accept()
-
-      # 2. Redirect unmarked packets to proxy
-      prerouting_tproxy = rule()
-        |> tcp()
-        |> dport(80)
-        |> mark(0)
-        |> tproxy(to: 8080)
-
-      # 3. Accept marked packets in input
-      input_accept = rule()
-        |> mark(1)
-        |> accept()
-  """
-  @spec tproxy(Expr.t(), keyword()) :: Expr.t()
-  def tproxy(builder \\ Expr.expr(), opts) do
-    port = Keyword.fetch!(opts, :to)
-    addr = Keyword.get(opts, :addr)
-    family = Keyword.get(opts, :family)
-
-    tproxy_map = %{port: port}
-    tproxy_map = if addr, do: Map.put(tproxy_map, :addr, addr), else: tproxy_map
-    tproxy_map = if family, do: Map.put(tproxy_map, :family, to_string(family)), else: tproxy_map
-
-    expr = %{tproxy: tproxy_map}
-    Expr.add_expr(builder, expr)
-  end
 end

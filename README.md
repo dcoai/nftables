@@ -2,8 +2,7 @@
 
 Elixir module for Linux nftables. NFTables provides both high-level helper functions for common firewall operations and flexible rule building with composable functions.
 
-## Quickstart Guide
-### Installation
+## Installation
 
 Add `nftables` to your dependencies in `mix.exs`:
 
@@ -40,21 +39,24 @@ sudo setcap cap_net_admin=ep deps/nftables_port/priv/port_nftables
 chmod 700 deps/nftables_port/priv/port_nftables
 ```
 
-### Build a Rule
+## Quickstart Guide
 
 **Note** - before running examples on a remote machine, *be aware* you are able block your remote access.  You may want to start by experimenting in a VM or local machine.
 
+### Build a Rule
+
 ```elixir
 import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdict}
 
 {:ok, pid} = NFTables.Port.start_link()
 
-def ssh(rule), do: rule |> tcp() |> dport(22)
+def ssh(rule \\ Expr.expr()), do: rule |> tcp() |> dport(22)
 
 response =
   NFTables.add(table: "filter", family: :inet)
   |> NFTables.add(chain: "INPUT", hook: :input)
-  |> NFTables.add(rule: expr() |> ssh() |> accept())
+  |> NFTables.add(rule: ssh() |> accept())
   |> NFTables.submit(pid: pid)
 
 IO.inspect(response)
@@ -63,18 +65,12 @@ IO.inspect(response)
 ## Features
 
 - **High-Level APIs** - Simple functions for blocking IPs, managing sets, creating rules
-- **Pure Functional Expr API** - composable expression builder with no side effects
 - **Sysctl Management** - Read/Write access to network kernel parameters
 - **Batch Operations** - Atomic multi-command execution
 - **Query Operations** - List tables, chains, rules, sets, and elements
-- **Builder Pattern** - Clear separation between building and executing rules
 - **Elixir Port-based Architecture** - Fault isolation (crashes don't affect BEAM VM)
 - **Security** - Port runs with minimal privileges (CAP_NET_ADMIN only)
-- **Flowtables** - Hardware-accelerated packet forwarding for established connections
-- **Meters/Dynamic Sets** - Per-key rate limiting with composite key support
-- **Raw Payload Matching** - Offset-based packet header access for custom protocols
-- **Socket Matching & TPROXY** - Transparent proxy support without destination changes
-- **OSF (OS Fingerprinting)** - Passive operating system detection via TCP SYN analysis
+- **Advanced Functionality** - Flowtables, Meters/Dynamic Sets, Raw Payload Matching Socket Matching & TPROXY, OSF (OS Fingerprinting)
 
 ### NFTables_Port 
 
@@ -97,6 +93,9 @@ NFTables.Port takes JSON requests and passes them on to the Linux nftables servi
 **Generate JSON using NFTables library**
 
 ```elixir
+import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdict}
+
 json =
   NFTables.add(table: "filter", family: :inet)
   |> NFTables.add(chain: "INPUT", hook: :input, policy: :drop)
@@ -107,6 +106,9 @@ json =
 **Putting these together**
 
 ```elixir
+import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdict}
+
 {:ok, pid} = NFTables.Port.start_link()
 
 NFTables.add(table: "filter", family: :inet)

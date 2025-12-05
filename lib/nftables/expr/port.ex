@@ -8,6 +8,10 @@ defmodule NFTables.Expr.Port do
 
   Supports both single ports and port ranges using Elixir ranges.
 
+  ## Import
+
+      import NFTables.Expr.Port
+
   ## Examples
 
       # TCP port matching
@@ -28,6 +32,8 @@ defmodule NFTables.Expr.Port do
       # Port ranges (all protocols)
       rule() |> tcp() |> dport(8000..9000)
       rule() |> sctp() |> sport(1024..65535)
+
+  For more information, see the [nftables payload expressions wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_packet_headers).
   """
 
   alias NFTables.Expr
@@ -145,6 +151,22 @@ defmodule NFTables.Expr.Port do
   """
   @spec src_port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
   def src_port(builder \\ Expr.expr(), port), do: sport(builder, port)
+
+  @doc """
+  Convenience alias for dport/2. Match destination port.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Examples
+
+      # Single port
+      tcp() |> port(22)
+
+      # Port range
+      tcp() |> port(8000..9000)
+  """
+  @spec port(Expr.t(), non_neg_integer() | Range.t()) :: Expr.t()
+  def port(builder \\ Expr.expr(), port), do: dport(builder, port)
 
   # Private helpers
 

@@ -1,5 +1,14 @@
 # NFTables Quick Reference
 
+## Import Options
+
+NFTables provides two ways to import expression functions:
+
+- **`use NFTables`** - Automatically imports all Expr modules (convenient)
+- **Selective imports** - Explicitly import only what you need (examples below use this approach)
+
+Both are equally valid. This guide uses selective imports for clarity.
+
 ## Match Expressions
 
 The `Expr` module provides tooling for building match expressions.
@@ -18,6 +27,7 @@ represents the expressions which will be used to match packets.
 
 ```elixir
 import NFTables.Expr
+import NFTables.Expr.{Port, TCP, Verdicts}
 alias NFTables.{Builder, Local, Requestor}
 
 # Step 1: Initialize - generate a new Expr struct, not necessary, you can start with step 2
@@ -171,16 +181,17 @@ NFTables. NFTables.add(rule: expr, table: "filter", chain: "INPUT", family: :ine
 All Match functions support both starting new rules and continuing existing ones:
 
 ```elixir
-# Arity-1: Start new rule
+# Start with expr()
 tcp() |> dport(22) |> accept()
 
-# Arity-2: Continue existing rule
+# Or start without expr() using arity-1
+tcp() |> dport(22) |> accept()
+
+# Or use an existing builder
 builder = expr()
 builder = tcp(builder)
 builder = dport(builder, 22)
 builder = accept(builder)
-
-# Both work, Use whichever is clearer.
 ```
 
 ## Advanced Features Quick Reference

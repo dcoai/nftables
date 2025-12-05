@@ -4,12 +4,13 @@ defmodule NFTables.MeterUnitTest do
   alias NFTables.Builder
   alias NFTables.Expr.Meter
   import NFTables.Expr
+  import NFTables.Expr.{Port, TCP, CT, Actions, Verdict, Meter}
 
   describe "meter expression building" do
     test "builds meter_update with single key" do
       expr =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(22)
         |> meter_update(Meter.payload(:ip, :saddr), "ssh_limits", 3, :minute)
         |> to_list()
@@ -26,7 +27,7 @@ defmodule NFTables.MeterUnitTest do
     test "builds meter_update with burst" do
       expr =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(80)
         |> meter_update(Meter.payload(:ip, :saddr), "http_limits", 100, :second, burst: 200)
         |> to_list()
@@ -112,7 +113,7 @@ defmodule NFTables.MeterUnitTest do
     test "generates correct JSON for meter rule" do
       meter_expr =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(22)
         |> ct_state([:new])
         |> meter_update(Meter.payload(:ip, :saddr), "ssh_limits", 3, :minute, burst: 5)
@@ -198,7 +199,7 @@ defmodule NFTables.MeterUnitTest do
       # This is a unit test - just validates the expression structure
       tracked_rule =
         expr()
-        |> tcp()
+        |> protocol(:tcp)
         |> dport(443)
         |> meter_update(Meter.payload(:ip, :saddr), "tracked_ips", 50, :second)
         |> counter()

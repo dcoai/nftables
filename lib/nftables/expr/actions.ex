@@ -4,6 +4,28 @@ defmodule NFTables.Expr.Actions do
 
   Provides functions for counter, logging, rate limiting, packet/connection marking,
   CT operations, and packet header modifications (DSCP, TTL, hop limit).
+  These actions modify packets or connection state rather than matching conditions.
+
+  ## Import
+
+      import NFTables.Expr.Actions
+
+  ## Examples
+
+      # Counter and logging
+      tcp() |> dport(22) |> counter() |> log("SSH: ") |> accept()
+
+      # Rate limiting
+      tcp() |> dport(80) |> limit(100, :second, burst: 20) |> accept()
+
+      # Packet marking for QoS
+      udp() |> dport(5060) |> set_dscp(:ef) |> set_mark(1) |> accept()
+
+      # Connection marking
+      ct_state([:new]) |> set_mark(100) |> save_mark() |> accept()
+      state([:established]) |> restore_mark() |> accept()
+
+  For more information, see the [nftables statements wiki](https://wiki.nftables.org/wiki-nftables/index.php/Quick_reference-nftables_in_10_minutes#Statements).
   """
 
   alias NFTables.Expr
@@ -45,23 +67,21 @@ defmodule NFTables.Expr.Actions do
   def log(builder \\ Expr.expr(), prefix, opts \\ []) do
     level = Keyword.get(opts, :level)
 
+    level_map = %{
+      emerg: "emerg",
+      alert: "alert",
+      crit: "crit",
+      err: "err",
+      warning: "warn",
+      warn: "warn",
+      notice: "notice",
+      info: "info",
+      debug: "debug"
+    }
+
     json_opts =
       if level do
-        level_str =
-          case level do
-            :emerg -> "emerg"
-            :alert -> "alert"
-            :crit -> "crit"
-            :err -> "err"
-            :warning -> "warn"
-            :warn -> "warn"
-            :notice -> "notice"
-            :info -> "info"
-            :debug -> "debug"
-            other -> to_string(other)
-          end
-
-        [level: level_str]
+        [level: Map.get(level_map, level, to_string(level))]
       else
         []
       end
@@ -100,6 +120,26 @@ defmodule NFTables.Expr.Actions do
     expr = Expr.Structs.limit(rate, unit_str, json_opts)
     Expr.add_expr(builder, expr)
   end
+
+  @doc """
+  Convenience alias for rate_limit/4. Add rate limiting.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Examples
+
+      # Basic rate limiting
+      limit(10, :minute)
+
+      # With burst
+      tcp() |> dport(22) |> limit(10, :minute, burst: 5)
+
+      # Continue existing expression
+      builder |> limit(100, :second)
+  """
+  @spec limit(Expr.t(), non_neg_integer(), atom(), keyword()) :: Expr.t()
+  def limit(builder \\ Expr.expr(), rate, unit, opts \\ []),
+    do: rate_limit(builder, rate, unit, opts)
 
   # Marking actions
 
@@ -524,6 +564,232 @@ defmodule NFTables.Expr.Actions do
       }
     }
 
+    Expr.add_expr(builder, expr)
+  end
+
+  @doc """
+  Enable SYN proxy for DDoS protection.
+
+  Implements SYN cookie-based protection against SYN flood attacks.
+  The firewall handles the TCP handshake, protecting backend servers.
+
+  ## Options
+
+  - `:mss` - Maximum segment size (default: auto)
+  - `:wscale` - Window scaling (default: auto)
+  - `:sack_perm` - SACK permitted (default: auto)
+  - `:timestamp` - TCP timestamp (default: auto)
+
+  ## Example
+
+      # Basic synproxy
+      builder
+      |> tcp()
+      |> dport(80)
+      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+      |> synproxy()
+
+      # With custom MSS
+      builder
+      |> tcp()
+      |> dport(443)
+      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+      |> synproxy(mss: 1460)
+
+      # Full options
+      builder
+      |> tcp()
+      |> dport(22)
+      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+      |> synproxy(mss: 1460, wscale: 7, sack_perm: true, timestamp: true)
+
+  ## Use Cases
+
+  - SYN flood DDoS protection
+  - High-volume web servers
+  - Public-facing services
+  - Attack mitigation
+
+  ## WARNING
+
+  - Only use on SYN packets (tcp_flags required)
+  - May break some TCP options
+  - Backend servers see firewall as client
+  """
+  @spec synproxy(Expr.t(), keyword()) :: Expr.t()
+  def synproxy(builder \\ Expr.expr(), opts \\ []) do
+    synproxy_expr = %{}
+
+    synproxy_expr =
+      if mss = Keyword.get(opts, :mss) do
+        Map.put(synproxy_expr, "mss", mss)
+      else
+        synproxy_expr
+      end
+
+    synproxy_expr =
+      if wscale = Keyword.get(opts, :wscale) do
+        Map.put(synproxy_expr, "wscale", wscale)
+      else
+        synproxy_expr
+      end
+
+    synproxy_expr =
+      if Keyword.get(opts, :sack_perm) do
+        Map.put(synproxy_expr, "sack-perm", true)
+      else
+        synproxy_expr
+      end
+
+    synproxy_expr =
+      if Keyword.get(opts, :timestamp) do
+        Map.put(synproxy_expr, "timestamp", true)
+      else
+        synproxy_expr
+      end
+
+    synproxy_expr = if map_size(synproxy_expr) == 0, do: nil, else: synproxy_expr
+    expr = %{"synproxy" => synproxy_expr}
+    Expr.add_expr(builder, expr)
+  end
+
+  @doc """
+  Set TCP Maximum Segment Size (MSS).
+
+  Modifies or clamps the TCP MSS option. Useful for fixing PMTU issues
+  with PPPoE or VPN connections.
+
+  ## Example
+
+      # Clamp MSS to 1400 (for PPPoE)
+      builder
+      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+      |> set_tcp_mss(1400)
+      |> accept()
+
+      # Clamp to PMTU
+      builder
+      |> oif("pppoe0")
+      |> tcp_flags([:syn], [:syn, :ack, :rst, :fin])
+      |> set_tcp_mss(:pmtu)
+      |> accept()
+
+  ## Use Cases
+
+  - PPPoE connections (typically 1492 MTU → 1452 MSS)
+  - VPN tunnels with reduced MTU
+  - Fixing PMTU black holes
+  - WAN interface MSS clamping
+  """
+  @spec set_tcp_mss(Expr.t(), non_neg_integer() | :pmtu) :: Expr.t()
+  def set_tcp_mss(builder \\ Expr.expr(), mss)
+
+  def set_tcp_mss(builder, :pmtu) do
+    # TCP MSS clamping to PMTU
+    expr = %{
+      "mangle" => %{
+        "key" => %{"tcp option" => %{"name" => "maxseg", "field" => "size"}},
+        "value" => %{"rt" => "mtu"}
+      }
+    }
+
+    Expr.add_expr(builder, expr)
+  end
+
+  def set_tcp_mss(builder, mss) when is_integer(mss) and mss > 0 and mss <= 65535 do
+    # TCP MSS clamping to specific value
+    expr = %{
+      "mangle" => %{
+        "key" => %{"tcp option" => %{"name" => "maxseg", "field" => "size"}},
+        "value" => mss
+      }
+    }
+
+    Expr.add_expr(builder, expr)
+  end
+
+  @doc """
+  Redirect to local transparent proxy (TPROXY).
+
+  Redirects packets to a local socket without changing the destination address.
+  Used for transparent proxy setups where the proxy needs to see the original
+  destination.
+
+  ## Parameters
+
+  - `builder` - Match builder
+  - `opts` - Options:
+    - `:to` - Port number to redirect to (required)
+    - `:addr` - Local IP address to redirect to (optional)
+    - `:family` - Address family (`:ipv4` or `:ipv6`, optional)
+
+  ## Examples
+
+      # Redirect HTTP to local transparent proxy on port 8080
+      rule()
+      |> tcp()
+      |> dport(80)
+      |> tproxy(to: 8080)
+      |> accept()
+
+      # With specific address
+      rule()
+      |> tcp()
+      |> dport(80)
+      |> tproxy(to: 8080, addr: "127.0.0.1")
+
+      # IPv6 transparent proxy
+      rule()
+      |> tcp()
+      |> dport(443)
+      |> tproxy(to: 8443, addr: "::1", family: :ipv6)
+
+  ## Use Cases
+
+  - Transparent HTTP/HTTPS proxies
+  - Deep packet inspection
+  - Content filtering
+  - Traffic monitoring without changing destinations
+
+  ## Requirements
+
+  - Requires special routing and iptables setup
+  - Socket must have IP_TRANSPARENT option
+  - Usually combined with socket_transparent() matching
+  - Requires CAP_NET_ADMIN capability
+
+  ## Typical Transparent Proxy Setup
+
+      # 1. Mark packets with existing transparent socket
+      prerouting_mark = rule()
+        |> tcp()
+        |> socket_transparent()
+        |> set_mark(1)
+        |> accept()
+
+      # 2. Redirect unmarked packets to proxy
+      prerouting_tproxy = rule()
+        |> tcp()
+        |> dport(80)
+        |> mark(0)
+        |> tproxy(to: 8080)
+
+      # 3. Accept marked packets in input
+      input_accept = rule()
+        |> mark(1)
+        |> accept()
+  """
+  @spec tproxy(Expr.t(), keyword()) :: Expr.t()
+  def tproxy(builder \\ Expr.expr(), opts) do
+    port = Keyword.fetch!(opts, :to)
+    addr = Keyword.get(opts, :addr)
+    family = Keyword.get(opts, :family)
+
+    tproxy_map = %{port: port}
+    tproxy_map = if addr, do: Map.put(tproxy_map, :addr, addr), else: tproxy_map
+    tproxy_map = if family, do: Map.put(tproxy_map, :family, to_string(family)), else: tproxy_map
+
+    expr = %{tproxy: tproxy_map}
     Expr.add_expr(builder, expr)
   end
 end
