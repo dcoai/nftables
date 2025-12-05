@@ -65,8 +65,14 @@ defmodule NFTables.Expr do
 
   ### Complete Firewall (Import Everything)
 
-      import NFTables.Expr
-      import NFTables.Expr.{IP, Port, TCP, Layer2, CT, ICMP, Metadata, Socket, Actions, NAT, Verdicts}
+  `use NFTables` will import all Expr.* modules into the current modules namespace.
+
+      use NFTables
+      # equivalient to:
+      #   import NFTables.Expr
+      #   import NFTables.Expr.{IP, Port, TCP, Layer2, CT, ICMP, Metadata, Socket, Actions, NAT, Verdicts}
+
+      rule = tcp() |> dport(8080) |> dnat_to("192.168.1.100:80")
 
   ## Quick Example
 
