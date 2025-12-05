@@ -47,7 +47,7 @@ chmod 700 deps/nftables_port/priv/port_nftables
 
 ```elixir
 import NFTables.Expr
-import NFTables.Expr.{Port, TCP, Verdicts}
+import NFTables.Expr.{Port, TCP, Verdict}
 
 {:ok, pid} = NFTables.Port.start_link()
 
@@ -94,7 +94,7 @@ NFTables.Port takes JSON requests and passes them on to the Linux nftables servi
 
 ```elixir
 import NFTables.Expr
-import NFTables.Expr.{Port, TCP, Verdicts}
+import NFTables.Expr.{Port, TCP, Verdict}
 
 json =
   NFTables.add(table: "filter", family: :inet)
@@ -107,7 +107,7 @@ json =
 
 ```elixir
 import NFTables.Expr
-import NFTables.Expr.{Port, TCP, Verdicts}
+import NFTables.Expr.{Port, TCP, Verdict}
 
 {:ok, pid} = NFTables.Port.start_link()
 

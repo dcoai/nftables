@@ -2,7 +2,7 @@ defmodule NFTables.ExprTest do
   use ExUnit.Case, async: true
 
   import NFTables.Expr
-  import NFTables.Expr.{IP, Port, TCP, Layer2, CT, Actions, Verdicts}
+  import NFTables.Expr.{IP, Port, TCP, Layer2, CT, Actions, Verdict}
 
   describe "rule/1" do
     test "creates empty rule struct with default family" do

@@ -70,7 +70,7 @@ defmodule NFTables.SetsTest do
 
   describe "chaining" do
     test "chains set match with other expressions" do
-      import NFTables.Expr.Verdicts
+      import NFTables.Expr.Verdict
 
       builder =
         expr()

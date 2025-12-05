@@ -181,7 +181,7 @@ defmodule NFTables.ProtocolsTest do
     end
 
     test "chains with other expressions" do
-      import NFTables.Expr.Verdicts
+      import NFTables.Expr.Verdict
 
       builder =
         expr()

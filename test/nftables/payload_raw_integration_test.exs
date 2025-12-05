@@ -2,7 +2,7 @@ defmodule NFTables.PayloadRawIntegrationTest do
   use ExUnit.Case, async: false
 
   import NFTables.Expr
-  import NFTables.Expr.{Port, TCP, Payload, Actions, Verdicts}
+  import NFTables.Expr.{Port, TCP, Payload, Actions, Verdict}
 
   @moduletag :integration
   @moduletag :slow

@@ -43,7 +43,7 @@ defmodule NFTables do
   For production code, you may prefer explicit imports:
 
       import NFTables.Expr
-      import NFTables.Expr.{Port, TCP, Verdicts}
+      import NFTables.Expr.{Port, TCP, Verdict}
 
   This gives you fine-grained control and makes dependencies explicit.
   Best for production code where you want to minimize namespace pollution.
@@ -176,14 +176,14 @@ defmodule NFTables do
   This is equivalent to:
 
       import NFTables.Expr
-      import NFTables.Expr.{IP, Port, TCP, Layer2, CT, Advanced, Actions, NAT, Verdicts, Meter, Protocols}
+      import NFTables.Expr.{IP, Port, TCP, Layer2, CT, Advanced, Actions, NAT, Verdict, Meter, Protocols}
 
   ## Alternative: Selective Imports
 
   For production code, you may prefer explicit imports for clarity:
 
       import NFTables.Expr
-      import NFTables.Expr.{Port, TCP, Verdicts}
+      import NFTables.Expr.{Port, TCP, Verdict}
 
   Both approaches are equally valid.
   """

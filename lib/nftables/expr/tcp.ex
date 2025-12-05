@@ -1,10 +1,8 @@
 defmodule NFTables.Expr.TCP do
   @moduledoc """
-  TCP and protocol matching functions for Expr.
+  TCP protocol matching functions for Expr.
 
-  Provides functions for TCP flags, packet length, TTL, hop limit, and protocol matching.
-  This module includes both TCP-specific features (like flag matching) and general IP
-  protocol features (like TTL and protocol type matching).
+  Provides functions for TCP-specific matching (flags, protocol).
 
   ## Import
 
@@ -15,13 +13,11 @@ defmodule NFTables.Expr.TCP do
       # TCP with SYN flag
       tcp() |> tcp_flags([:syn], [:syn, :ack, :rst, :fin]) |> accept()
 
-      # Match packets with specific TTL
-      tcp() |> ttl(:eq, 64) |> accept()
+      # TCP with ports
+      tcp() |> dport(22) |> accept()
 
-      # Protocol shortcuts
-      tcp() |> dport(22)
-      udp() |> dport(53)
-      icmp() |> accept()
+      # General protocol matching
+      protocol(:tcp) |> dport(80)
 
   For more information, see the [nftables TCP wiki](https://wiki.nftables.org/wiki-nftables/index.php/Matching_TCP_options_and_flags).
   """
@@ -75,84 +71,6 @@ defmodule NFTables.Expr.TCP do
   end
 
   @doc """
-  Match packet length.
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Example
-
-      # Start a new expression
-      length(:gt, 1000)
-
-      # Continue an existing expression
-      builder |> length(:gt, 1000)
-
-      # Match packets exactly 64 bytes
-      builder |> length(:eq, 64)
-  """
-  @spec length(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def length(builder \\ Expr.expr(), op, length) when is_integer(length) and length >= 0 do
-    op_str = atom_to_op(op)
-    expr = Expr.Structs.meta_match("length", length, op_str)
-    Expr.add_expr(builder, expr)
-  end
-
-  @doc """
-  Match IP TTL (time to live).
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Example
-
-      # Start a new expression
-      ttl(:eq, 1)
-
-      # Continue an existing expression and chain
-      builder |> ttl(:eq, 1) |> drop()
-
-      # Match packets with TTL > 64
-      builder |> ttl(:gt, 64)
-  """
-  @spec ttl(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def ttl(builder \\ Expr.expr(), op, ttl) when is_integer(ttl) and ttl >= 0 and ttl <= 255 do
-    op_str = atom_to_op(op)
-    expr = Expr.Structs.payload_match("ip", "ttl", ttl, op_str)
-    Expr.add_expr(builder, expr)
-  end
-
-  @doc """
-  Match IPv6 hop limit.
-
-  IPv6 equivalent of TTL (Time To Live).
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Example
-
-      # Start a new expression
-      hoplimit(:eq, 1)
-
-      # Continue an existing expression and chain
-      builder |> hoplimit(:eq, 1) |> drop()
-
-      # Block low hop limit (potential spoofing)
-      builder |> hoplimit(:lt, 10) |> drop()
-
-  ## Use Cases
-
-  - IPv6 traceroute blocking
-  - Anti-spoofing (low hop limits)
-  - TTL normalization checks
-  """
-  @spec hoplimit(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
-  def hoplimit(builder \\ Expr.expr(), op, hoplimit)
-      when is_integer(hoplimit) and hoplimit >= 0 and hoplimit <= 255 do
-    op_str = atom_to_op(op)
-    expr = Expr.Structs.payload_match("ip6", "hoplimit", hoplimit, op_str)
-    Expr.add_expr(builder, expr)
-  end
-
-  @doc """
   Match protocol.
 
   Supports dual-arity: can start a new expression or continue an existing one.
@@ -194,44 +112,4 @@ defmodule NFTables.Expr.TCP do
   """
   @spec tcp(Expr.t()) :: Expr.t()
   def tcp(builder \\ Expr.expr()), do: protocol(builder, :tcp)
-
-  @doc """
-  Match UDP protocol. Convenience for `protocol(:udp)`.
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Example
-
-      # Start a new expression
-      udp()
-
-      # Continue an existing expression
-      builder |> udp() |> dport(53)
-  """
-  @spec udp(Expr.t()) :: Expr.t()
-  def udp(builder \\ Expr.expr()), do: protocol(builder, :udp)
-
-  @doc """
-  Match ICMP protocol. Convenience for `protocol(:icmp)`.
-
-  Supports dual-arity: can start a new expression or continue an existing one.
-
-  ## Example
-
-      # Start a new expression
-      icmp()
-
-      # Continue an existing expression
-      builder |> icmp() |> accept()
-  """
-  @spec icmp(Expr.t()) :: Expr.t()
-  def icmp(builder \\ Expr.expr()), do: protocol(builder, :icmp)
-
-  # Helper to convert atom operators to string
-  defp atom_to_op(:eq), do: "=="
-  defp atom_to_op(:ne), do: "!="
-  defp atom_to_op(:lt), do: "<"
-  defp atom_to_op(:gt), do: ">"
-  defp atom_to_op(:le), do: "<="
-  defp atom_to_op(:ge), do: ">="
 end

@@ -11,7 +11,7 @@ defmodule NFTables.Expr do
   then import the specific sub-modules you need:
 
       import NFTables.Expr           # Core: expr/1
-      import NFTables.Expr.{IP, Port, TCP, Verdicts}
+      import NFTables.Expr.{IP, Port, TCP, Verdict}
 
       # Build rule expressions
       rule = tcp() |> dport(22) |> accept()
@@ -21,22 +21,23 @@ defmodule NFTables.Expr do
   Expression building functions are organized into specialized modules:
 
   - `NFTables.Expr` - Core entry points and helpers (this module)
-  - `NFTables.Expr.IP` - IP address matching (`source_ip/2`, `dest_ip/2`)
+  - `NFTables.Expr.IP` - IP address matching and IP-layer fields (`source_ip/2`, `dest_ip/2`, `ttl/3`, `hoplimit/3`)
   - `NFTables.Expr.Port` - Port matching (`dport/2`, `sport/2`)
-  - `NFTables.Expr.TCP` - TCP/protocol matching (`tcp/1`, `udp/1`, `tcp_flags/3`, `ttl/3`)
+  - `NFTables.Expr.TCP` - TCP protocol matching (`tcp/1`, `tcp_flags/3`, `protocol/2`)
+  - `NFTables.Expr.UDP` - UDP protocol matching (`udp/1`)
   - `NFTables.Expr.Layer2` - MAC, interface, VLAN (`source_mac/2`, `iif/2`, `vlan_id/2`)
   - `NFTables.Expr.CT` - Connection tracking (`ct_state/2`, `ct_status/2`, `connmark/2`)
   - `NFTables.Expr.ICMP` - ICMP/ICMPv6 matching (`icmp_type/2`, `icmpv6_type/2`)
-  - `NFTables.Expr.Metadata` - Packet metadata (`mark/2`, `dscp/2`, `fragmented/2`, `pkttype/2`)
+  - `NFTables.Expr.Metadata` - Packet metadata (`mark/2`, `dscp/2`, `fragmented/2`, `pkttype/2`, `length/3`)
   - `NFTables.Expr.Socket` - Socket/process filtering (`skuid/2`, `skgid/2`, `cgroup/2`)
   - `NFTables.Expr.IPsec` - IPsec AH/ESP matching (`ah_spi/2`, `esp_spi/2`)
   - `NFTables.Expr.ARP` - ARP operation matching (`arp_operation/2`)
   - `NFTables.Expr.Sets` - Named set matching (`set/3`)
   - `NFTables.Expr.Payload` - Raw payload inspection (`payload_raw/5`, `payload_raw_masked/6`)
   - `NFTables.Expr.OSF` - OS fingerprinting (`osf_name/3`, `osf_version/3`)
-  - `NFTables.Expr.Actions` - Counters, logging, rate limiting (`counter/1`, `log/2-3`, `rate_limit/3-4`)
+  - `NFTables.Expr.Actions` - Counters, logging, rate limiting, advanced actions (`counter/1`, `log/2-3`, `rate_limit/3-4`, `synproxy/2`, `set_tcp_mss/2`, `tproxy/2`)
   - `NFTables.Expr.NAT` - NAT operations (`snat_to/2-3`, `dnat_to/2-3`, `masquerade/1-2`)
-  - `NFTables.Expr.Verdicts` - Terminal verdicts (`accept/1`, `drop/1`, `reject/1-2`, `jump/2`)
+  - `NFTables.Expr.Verdict` - Terminal verdicts (`accept/1`, `drop/1`, `reject/1-2`, `jump/2`)
   - `NFTables.Expr.Meter` - Per-key rate limiting (`meter_update/5-6`, `meter_add/5-6`)
   - `NFTables.Expr.Protocols` - Specialized protocols (`sctp/1`, `dccp/1`, `gre/1`)
 
@@ -45,21 +46,21 @@ defmodule NFTables.Expr do
   ### Basic Firewall Rules
 
       import NFTables.Expr
-      import NFTables.Expr.{IP, Port, TCP, Verdicts}
+      import NFTables.Expr.{IP, Port, TCP, Verdict}
 
       rule = tcp() |> dport(22) |> accept()
 
   ### With Connection Tracking
 
       import NFTables.Expr
-      import NFTables.Expr.{IP, Port, TCP, CT, Actions, Verdicts}
+      import NFTables.Expr.{IP, Port, TCP, CT, Actions, Verdict}
 
       rule = tcp() |> dport(22) |> ct_state([:new]) |> counter() |> accept()
 
   ### NAT Rules
 
       import NFTables.Expr
-      import NFTables.Expr.{IP, Port, TCP, NAT, Verdicts}
+      import NFTables.Expr.{IP, Port, TCP, NAT, Verdict}
 
       rule = tcp() |> dport(8080) |> dnat_to("192.168.1.100:80")
 
@@ -70,14 +71,14 @@ defmodule NFTables.Expr do
       use NFTables
       # equivalient to:
       #   import NFTables.Expr
-      #   import NFTables.Expr.{IP, Port, TCP, Layer2, CT, ICMP, Metadata, Socket, Actions, NAT, Verdicts}
+      #   import NFTables.Expr.{IP, Port, TCP, UDP, Layer2, CT, ICMP, Metadata, Socket, Actions, NAT, Verdict}
 
       rule = tcp() |> dport(8080) |> dnat_to("192.168.1.100:80")
 
   ## Quick Example
 
       import NFTables.Expr
-      import NFTables.Expr.{Port, TCP, CT, Actions, Verdicts}
+      import NFTables.Expr.{Port, TCP, CT, Actions, Verdict}
 
       # Build rule expressions
       ssh_rule = tcp() |> dport(22) |> ct_state([:new]) |> rate_limit(10, :minute) |> accept()
@@ -107,7 +108,7 @@ defmodule NFTables.Expr do
       |> Port.dport(22)
       |> CT.ct_state([:new])
       |> Actions.log("New SSH connection")
-      |> Verdicts.accept()
+      |> Verdict.accept()
 
   When fully imported, this becomes:
 
@@ -156,7 +157,7 @@ defmodule NFTables.Expr do
   ## Examples
 
       import NFTables.Expr
-      import NFTables.Expr.{TCP, Port, Verdicts}
+      import NFTables.Expr.{TCP, Port, Verdict}
 
       # Start a new rule with default family
       tcp() |> dport(22) |> accept()
@@ -185,7 +186,7 @@ defmodule NFTables.Expr do
   ## Examples
 
       import NFTables.Expr
-      import NFTables.Expr.{TCP, Port, Verdicts}
+      import NFTables.Expr.{TCP, Port, Verdict}
 
       expression = tcp() |> dport(22) |> accept()
       expr_list = to_list(expression)
@@ -202,7 +203,7 @@ defmodule NFTables.Expr do
   ## Examples
 
       import NFTables.Expr
-      import NFTables.Expr.{Port, TCP, Verdicts}
+      import NFTables.Expr.{Port, TCP, Verdict}
 
       tcp() |> dport(22) |> comment("Allow SSH from trusted network") |> accept()
   """

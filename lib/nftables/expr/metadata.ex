@@ -3,8 +3,9 @@ defmodule NFTables.Expr.Metadata do
   Packet metadata matching functions for firewall rules.
 
   This module provides functions to match various packet metadata attributes such as
-  packet marks, DSCP values, fragmentation status, packet types, and priority levels.
-  These are useful for QoS, policy routing, and advanced traffic classification.
+  packet marks, DSCP values, fragmentation status, packet types, priority levels,
+  and packet length. These are useful for QoS, policy routing, and advanced traffic
+  classification.
 
   ## Common Use Cases
 
@@ -12,6 +13,7 @@ defmodule NFTables.Expr.Metadata do
   - QoS and traffic prioritization
   - Filtering fragmented packets
   - Blocking broadcast/multicast traffic
+  - Filtering based on packet size
 
   ## Import
 
@@ -185,6 +187,38 @@ defmodule NFTables.Expr.Metadata do
       end
 
     expr = Expr.Structs.meta_match("priority", priority, op_str)
+    Expr.add_expr(builder, expr)
+  end
+
+  @doc """
+  Match packet length.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Example
+
+      # Start a new expression
+      length(:gt, 1000)
+
+      # Continue an existing expression
+      builder |> length(:gt, 1000)
+
+      # Match packets exactly 64 bytes
+      builder |> length(:eq, 64)
+  """
+  @spec length(Expr.t(), atom(), non_neg_integer()) :: Expr.t()
+  def length(builder \\ Expr.expr(), op, length) when is_integer(length) and length >= 0 do
+    op_str =
+      case op do
+        :eq -> "=="
+        :ne -> "!="
+        :lt -> "<"
+        :gt -> ">"
+        :le -> "<="
+        :ge -> ">="
+      end
+
+    expr = Expr.Structs.meta_match("length", length, op_str)
     Expr.add_expr(builder, expr)
   end
 end

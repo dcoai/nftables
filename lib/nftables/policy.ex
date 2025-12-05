@@ -42,7 +42,7 @@ defmodule NFTables.Policy do
   """
 
   import NFTables.Expr
-  import NFTables.Expr.{Port, TCP, Layer2, CT, Actions, Verdicts}
+  import NFTables.Expr.{Port, TCP, Layer2, CT, Actions, Verdict}
   alias NFTables.Builder
 
   @doc """

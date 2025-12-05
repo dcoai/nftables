@@ -4,7 +4,7 @@ defmodule NFTables.MeterUnitTest do
   alias NFTables.Builder
   alias NFTables.Expr.Meter
   import NFTables.Expr
-  import NFTables.Expr.{Port, TCP, CT, Actions, Verdicts, Meter}
+  import NFTables.Expr.{Port, TCP, CT, Actions, Verdict, Meter}
 
   describe "meter expression building" do
     test "builds meter_update with single key" do

@@ -4,7 +4,7 @@ defmodule NFTables.MeterIntegrationTest do
   alias NFTables.Builder
   alias NFTables.Expr.Meter
   import NFTables.Expr
-  import NFTables.Expr.{Port, TCP, CT, Verdicts, Meter}
+  import NFTables.Expr.{Port, TCP, CT, Verdict, Meter}
 
   @moduletag :integration
   @moduletag :slow

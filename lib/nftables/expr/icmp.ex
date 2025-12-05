@@ -151,4 +151,36 @@ defmodule NFTables.Expr.ICMP do
     expr = Expr.Structs.payload_match("icmpv6", "code", code)
     Expr.add_expr(builder, expr)
   end
+
+  @doc """
+  Match ICMP protocol.
+
+  Convenience function for matching the ICMP protocol. This sets the protocol
+  context to ICMP, which is useful for combining with ICMP type/code matchers.
+
+  Supports dual-arity: can start a new expression or continue an existing one.
+
+  ## Examples
+
+      # Match all ICMP traffic
+      icmp() |> accept()
+
+      # ICMP with type matching
+      icmp() |> icmp_type(:echo_request) |> accept()
+
+      # Block all ICMP
+      icmp() |> drop()
+
+  ## Protocol Context
+
+  After calling this function, the expression's protocol context is set to `:icmp`.
+  """
+  @spec icmp(Expr.t()) :: Expr.t()
+  def icmp(builder \\ Expr.expr()) do
+    expr = Expr.Structs.payload_match("ip", "protocol", "icmp")
+
+    builder
+    |> Expr.add_expr(expr)
+    |> Expr.set_protocol(:icmp)
+  end
 end

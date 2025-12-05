@@ -4,7 +4,7 @@ defmodule NFTables.PayloadRawUnitTest do
   alias NFTables.Builder
   alias NFTables.Expr.Structs
   import NFTables.Expr
-  import NFTables.Expr.{TCP, Payload, Verdicts}
+  import NFTables.Expr.{TCP, Payload, Verdict}
 
   describe "raw payload expression building" do
     test "builds payload_raw expression for network header" do
