@@ -15,7 +15,14 @@
 #   mix run examples/06_query_tables.exs
 
 # Start NFTables (JSON-based port)
+alias NFTables.{Decoder, Local, Query}
+
 {:ok, pid} = NFTables.Port.start_link()
+
+# Query is pure — it builds a command. Local submits it, Decoder turns the
+# response into Elixir data. Every read below goes through these three
+# stages; `run` just saves repeating them.
+run = fn command -> command |> Local.submit(pid: pid) |> Decoder.decode() end
 IO.puts("NFTables Query Examples (JSON-based port)\n")
 IO.puts(String.duplicate("=", 60))
 
@@ -23,14 +30,17 @@ IO.puts(String.duplicate("=", 60))
 IO.puts("\n1. LISTING ALL TABLES (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTables.Query.list_tables(pid, family: :inet) do
-  {:ok, tables} ->
+case run.(Query.list_tables(family: :inet)) do
+  {:ok, %{tables: tables}} ->
     IO.puts("Found #{length(tables)} tables:")
     for table <- tables do
       IO.puts("  📋 #{table.name}")
       IO.puts("     Family: #{table.family}")
       IO.puts("     Flags: #{table.flags}")
     end
+
+  {:ok, _} ->
+    IO.puts("  (none found)")
 
   {:error, reason} ->
     IO.puts("Error: #{reason}")
@@ -40,8 +50,8 @@ end
 IO.puts("\n2. LISTING ALL CHAINS (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTables.Query.list_chains(pid, family: :inet) do
-  {:ok, chains} ->
+case run.(Query.list_chains(family: :inet)) do
+  {:ok, %{chains: chains}} ->
     IO.puts("Found #{length(chains)} chains:")
 
     # Filter out unparsed chains and group by table
@@ -66,6 +76,9 @@ case NFTables.Query.list_chains(pid, family: :inet) do
       IO.puts("\n  (#{length(unparsed)} chains with unparsed data)")
     end
 
+  {:ok, _} ->
+    IO.puts("  (none found)")
+
   {:error, reason} ->
     IO.puts("Error: #{reason}")
 end
@@ -74,8 +87,8 @@ end
 IO.puts("\n3. LISTING ALL SETS (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTables.Query.list_sets(pid, family: :inet) do
-  {:ok, sets} ->
+case run.(Query.list_sets(family: :inet)) do
+  {:ok, %{sets: sets}} ->
     IO.puts("Found #{length(sets)} sets:")
 
     # Group sets by table
@@ -89,6 +102,9 @@ case NFTables.Query.list_sets(pid, family: :inet) do
       end
     end
 
+  {:ok, _} ->
+    IO.puts("  (none found)")
+
   {:error, reason} ->
     IO.puts("Error: #{reason}")
 end
@@ -97,8 +113,8 @@ end
 IO.puts("\n4. LISTING ALL RULES (inet family)")
 IO.puts(String.duplicate("-", 60))
 
-case NFTables.Query.list_rules(pid, family: :inet) do
-  {:ok, rules} ->
+case run.(Query.list_rules(family: :inet)) do
+  {:ok, %{rules: rules}} ->
     IO.puts("Found #{length(rules)} rules:")
 
     # Group rules by table and chain
@@ -106,6 +122,9 @@ case NFTables.Query.list_rules(pid, family: :inet) do
       IO.puts("  📜 Table: #{rule.table}, Chain: #{rule.chain}")
       IO.puts("     Handle: #{rule.handle}, Position: #{rule.position}")
     end
+
+  {:ok, _} ->
+    IO.puts("  (none found)")
 
   {:error, reason} ->
     IO.puts("Error: #{reason}")
@@ -116,28 +135,31 @@ IO.puts("\n5. EXAMINING SET ELEMENTS")
 IO.puts(String.duplicate("-", 60))
 
 # Find a set to examine
-case NFTables.Query.list_sets(pid, family: :inet) do
-  {:ok, [first_set | _]} ->
+case run.(Query.list_sets(family: :inet)) do
+  {:ok, %{sets: [first_set | _]}} ->
     IO.puts("Examining set: #{first_set.name} in table #{first_set.table}")
 
-    case NFTables.Query.list_set_elements(pid, first_set.table, first_set.name, family: :inet) do
-      {:ok, []} ->
+    case run.(Query.list_set_elements(first_set.table, first_set.name, family: :inet)) do
+      {:ok, %{sets: [%{elements: []} | _]}} ->
         IO.puts("  (empty set)")
 
-      {:ok, elements} ->
+      {:ok, %{sets: [%{elements: elements} | _]}} ->
         IO.puts("  Found #{length(elements)} elements:")
         for elem <- Enum.take(elements, 5) do
-          IO.puts("    - Key: #{elem.key_hex} (IP: #{elem.key_ip}), Flags: #{elem.flags}")
+          IO.puts("    - #{inspect(elem)}")
         end
         if length(elements) > 5 do
           IO.puts("    ... and #{length(elements) - 5} more")
         end
 
+      {:ok, _} ->
+        IO.puts("  (empty set)")
+
       {:error, reason} ->
         IO.puts("  Error listing elements: #{reason}")
     end
 
-  {:ok, []} ->
+  {:ok, _} ->
     IO.puts("No sets found to examine")
 
   {:error, reason} ->

@@ -61,7 +61,10 @@ defmodule Mix.Tasks.Nftables.VerifyExamplesTest do
       # rewritten in #17
       "02_basic_firewall.exs",
       "03_firewall_rules.exs",
-      "04_ip_blocklist.exs"
+      "04_ip_blocklist.exs",
+      # rewritten in #18
+      "06_query_tables.exs",
+      "distributed_query.exs"
     ]
 
     test "every example already rewritten resolves cleanly (REQ-TEST-008)" do

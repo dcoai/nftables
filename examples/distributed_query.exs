@@ -20,55 +20,58 @@ defmodule DistributedQueryExample do
     Distributed Query Builder Example
     ========================================
 
-    The Query module now provides build_* functions that generate
-    JSON commands without executing them. These can be sent to
-    remote nodes for execution.
+    Every Query function is pure: it returns a command map and performs
+    no I/O. Submission is a separate step, so a command built on one node
+    can be sent to another for execution.
+
+    The maps below are shown JSON-encoded, which is what reaches the
+    kernel — but nothing here is executed.
     """
 
     # 1. Build query for listing tables
     IO.puts "\n1. List all tables (any family):"
-    json = Query.build_list_tables()
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_tables()
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 2. Build query for specific family
     IO.puts "\n2. List tables for inet family:"
-    json = Query.build_list_tables(family: :inet)
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_tables(family: :inet)
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 3. Build query for chains
     IO.puts "\n3. List all chains:"
-    json = Query.build_list_chains(family: :inet)
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_chains(family: :inet)
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 4. Build query for rules in specific chain
     IO.puts "\n4. List rules in specific chain:"
-    json = Query.build_list_rules("filter", "INPUT")
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_rules("filter", "INPUT")
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 5. Build query for all rules
     IO.puts "\n5. List all rules for family:"
-    json = Query.build_list_rules(family: :inet)
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_rules(family: :inet)
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 6. Build query for sets
     IO.puts "\n6. List all sets:"
-    json = Query.build_list_sets(family: :inet)
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_sets(family: :inet)
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 7. Build query for set elements
     IO.puts "\n7. List elements in specific set:"
-    json = Query.build_list_set_elements("filter", "blocklist")
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_set_elements("filter", "blocklist")
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 8. Build query for entire ruleset
     IO.puts "\n8. List entire ruleset:"
-    json = Query.build_list_ruleset(family: :inet)
-    IO.puts "   JSON: #{json}"
+    cmd = Query.list_ruleset(family: :inet)
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     # 9. Build flush command
     IO.puts "\n9. Flush ruleset (inet family):"
-    json = Query.build_flush_ruleset(family: :inet)
-    IO.puts "   JSON: #{json}"
+    cmd = Query.flush_ruleset(family: :inet)
+    IO.puts "   #{JSON.encode!(cmd)}"
 
     IO.puts """
 
@@ -92,10 +95,10 @@ defmodule DistributedQueryExample do
       def collect_firewall_state(nodes) do
         # Build queries
         queries = [
-          {"tables", Query.build_list_tables(family: :inet)},
-          {"chains", Query.build_list_chains(family: :inet)},
-          {"rules", Query.build_list_rules(family: :inet)},
-          {"sets", Query.build_list_sets(family: :inet)}
+          {"tables", Query.list_tables(family: :inet)},
+          {"chains", Query.list_chains(family: :inet)},
+          {"rules", Query.list_rules(family: :inet)},
+          {"sets", Query.list_sets(family: :inet)}
         ]
 
         # Send to all nodes in parallel
