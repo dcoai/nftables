@@ -2,29 +2,34 @@
 
 # Firewall Rules Example
 #
-# This example demonstrates how to use NFTables to create firewall rules
-# dynamically for blocking and allowing IP addresses.
+# Creating firewall rules dynamically to block and allow IP addresses.
 #
-# **Format**: This example uses JSON format for communication with libnftables.
+# This example builds rules as data first, then submits them. Nothing
+# touches the kernel until `NFTables.submit/2` is called, so you can
+# inspect exactly what will be applied.
 #
 # Requirements:
-# - The NFTables port binary must have CAP_NET_ADMIN capability
-# - Run: sudo setcap cap_net_admin=ep priv/port_nftables
-# - A base chain must exist: nft add chain filter INPUT '{ type filter hook input priority 0; }'
+# - The port binary must have CAP_NET_ADMIN:
+#     sudo setcap cap_net_admin=ep deps/nftables_port/priv/port_nftables
+# - A base chain must exist:
+#     nft add chain filter INPUT '{ type filter hook input priority 0; }'
 #
 # Usage:
 #   mix run examples/03_firewall_rules.exs
 
-# Start NFTables (JSON-based port)
+import NFTables.Expr.IP, only: [source_ip: 2]
+import NFTables.Expr.Actions, only: [counter: 1]
+import NFTables.Expr.Verdict, only: [accept: 1, drop: 1]
+
+alias NFTables.{Decoder, Local, Query}
+
 {:ok, pid} = NFTables.Port.start_link()
-IO.puts("✓ NFTables started (JSON-based port)\n")
+IO.puts("✓ NFTables port started\n")
 
 table = "filter"
 chain = "INPUT"
 
 IO.puts("===== DYNAMIC FIREWALL RULES EXAMPLE =====\n")
-
-# Scenario: Block malicious IPs, allow trusted IPs (now using string format)
 
 malicious_ips = [
   "192.168.1.111",
@@ -33,59 +38,71 @@ malicious_ips = [
 ]
 
 trusted_ips = [
-  "192.168.1.10",  # Admin workstation
-  "192.168.1.20"   # Monitoring server
+  # Admin workstation
+  "192.168.1.10",
+  # Monitoring server
+  "192.168.1.20"
 ]
 
-## STEP 1: Block malicious IPs
-IO.puts("Step 1: Blocking malicious IPs...")
+## STEP 1: Build the rules (pure — no kernel interaction yet)
+IO.puts("Step 1: Building rules...")
 
-for ip_string <- malicious_ips do
-  case NFTables.Rule.block_ip(pid, table, chain, ip_string) do
-    :ok ->
-      IO.puts("  ✓ Blocked #{ip_string}")
-    {:error, reason} ->
-      IO.puts("  ✗ Failed to block #{ip_string}: #{reason}")
-  end
+block_rules = Enum.map(malicious_ips, fn ip -> source_ip(ip) |> counter() |> drop() end)
+accept_rules = Enum.map(trusted_ips, fn ip -> source_ip(ip) |> counter() |> accept() end)
+
+IO.puts("  ✓ #{length(block_rules)} block rules, #{length(accept_rules)} accept rules\n")
+
+## STEP 2: Submit them
+#
+# Order matters: nftables evaluates a chain top to bottom and the first
+# terminal verdict wins. The accept rules are inserted rather than
+# appended so they are evaluated before the drops — otherwise a trusted
+# address that also matched a block rule would never reach its accept.
+IO.puts("Step 2: Applying to the kernel...")
+
+config =
+  NFTables.add(table: table, chain: chain, family: :inet)
+  |> NFTables.add(rules: block_rules)
+  |> NFTables.insert(rules: accept_rules)
+
+case NFTables.submit(config, pid: pid) do
+  :ok ->
+    IO.puts("  ✓ Blocked: #{Enum.join(malicious_ips, ", ")}")
+    IO.puts("  ✓ Allowed: #{Enum.join(trusted_ips, ", ")}\n")
+
+  {:error, reason} ->
+    IO.puts("  ✗ Failed: #{inspect(reason)}\n")
 end
 
-IO.puts("\nMalicious IPs are now blocked. Packets from these addresses will be dropped.\n")
+## STEP 3: Read the rules back
+#
+# Query builds a command, Local submits it, Decoder turns the response
+# into Elixir data. The three stages are separate on purpose.
+IO.puts("Step 3: Listing current rules...")
 
-## STEP 2: Accept trusted IPs (higher priority - add first)
-IO.puts("Step 2: Creating accept rules for trusted IPs...")
+case Query.list_rules(table, chain, family: :inet) |> Local.submit(pid: pid) |> Decoder.decode() do
+  {:ok, %{rules: rules}} ->
+    IO.puts("  ✓ Total rules in #{table}/#{chain}: #{length(rules)}")
+    IO.puts("\n  Last 5 rules added:")
 
-for ip_string <- trusted_ips do
-  case NFTables.Rule.accept_ip(pid, table, chain, ip_string) do
-    :ok ->
-      IO.puts("  ✓ Accepted #{ip_string}")
-    {:error, reason} ->
-      IO.puts("  ✗ Failed to accept #{ip_string}: #{reason}")
-  end
-end
-
-IO.puts("\nTrusted IPs are now explicitly allowed.\n")
-
-## STEP 3: List all rules in the chain
-IO.puts("Step 3: Listing current firewall rules...")
-
-case NFTables.Rule.list(pid, table, chain, family: :inet) do
-  {:ok, rules} ->
-    IO.puts("✓ Total rules in #{table}/#{chain}: #{length(rules)}")
-    IO.puts("\nLast 5 rules added:")
     rules
     |> Enum.sort_by(& &1.handle, :desc)
     |> Enum.take(5)
     |> Enum.each(fn rule ->
-      IO.puts("  - Handle: #{rule.handle}, Table: #{rule.table}, Chain: #{rule.chain}")
+      IO.puts("    - handle #{rule.handle}  #{rule.table}/#{rule.chain}")
     end)
 
+  {:ok, _} ->
+    IO.puts("  (no rules found in #{table}/#{chain})")
+
   {:error, reason} ->
-    IO.puts("✗ Failed to list rules: #{reason}")
+    IO.puts("  ✗ Failed to list rules: #{inspect(reason)}")
 end
 
 IO.puts("\n" <> String.duplicate("=", 60))
 IO.puts("✓✓✓ FIREWALL RULES EXAMPLE COMPLETE ✓✓✓")
 IO.puts(String.duplicate("=", 60))
+
 IO.puts("""
 
 Summary:
@@ -94,11 +111,11 @@ Summary:
   ✓ Rules are now active in the kernel
 
 Key Features Demonstrated:
-  1. NFTables.Rule.block_ip/4  - Simple API for blocking IPs
-  2. NFTables.Rule.accept_ip/4 - Simple API for allowing IPs
-  3. NFTables.Rule.list/4      - Query existing rules
-  4. Automatic counter addition for traffic monitoring
-  5. Dynamic rule creation without restart
+  1. Expressions are data     - source_ip(ip) |> counter() |> drop()
+  2. Build then submit        - nothing applies until NFTables.submit/2
+  3. Batch application        - all rules land in one atomic operation
+  4. insert vs add            - insert/2 places rules ahead of existing ones
+  5. Query -> submit -> decode - the read pipeline
 
 Real-World Use Cases:
   - Intrusion detection system (IDS) integration
@@ -109,7 +126,7 @@ Real-World Use Cases:
 
 Next Steps:
   1. Integrate with your application's authentication system
-  2. Add logging for blocked packets
-  3. Implement automatic IP unblocking after timeout
-  4. Create dashboard to monitor rule statistics
+  2. Add logging for blocked packets with Expr.Actions.log/3
+  3. Implement automatic IP unblocking after a timeout
+  4. Move the blocklist into a named set — see 04_ip_blocklist.exs
 """)
