@@ -27,7 +27,7 @@ defmodule BasicFirewall do
   Complete basic firewall setup with secure defaults.
   """
 
-  alias NFTables.{Table, Chain, Policy, Builder}
+  alias NFTables.{Decoder, Local, Policy, Query}
 
   def run do
     IO.puts("Setting up basic firewall...")
@@ -52,8 +52,12 @@ defmodule BasicFirewall do
 
     IO.puts("✓ NFTables started (JSON-based port)")
 
-    # Clean slate - delete existing filter table if it exists
-    case Table.delete(pid, "filter", :inet) do
+    # Clean slate - delete existing filter table if it exists.
+    # Deleting a table removes everything inside it, so this is the one
+    # destructive step; the rules below rebuild from nothing.
+    delete_table = NFTables.delete(table: "filter", family: :inet)
+
+    case NFTables.submit(delete_table, pid: pid) do
       :ok -> IO.puts("✓ Removed existing filter table")
       {:error, _} -> :ok
     end
@@ -125,8 +129,12 @@ defmodule BasicFirewall do
   end
 
   defp display_rules(pid) do
-    case NFTables.Query.list_chains(pid, family: :inet) do
-      {:ok, chains} ->
+    # Query builds the command, Local submits it, Decoder returns Elixir
+    # data — the read path is always these three stages.
+    result = Query.list_chains(family: :inet) |> Local.submit(pid: pid) |> Decoder.decode()
+
+    case result do
+      {:ok, %{chains: chains}} ->
         for chain <- chains do
           IO.puts("Chain #{chain.name} (table: #{chain.table})")
           if hook = Map.get(chain, :hook) do
@@ -135,6 +143,10 @@ defmodule BasicFirewall do
             IO.puts("  Policy: #{Map.get(chain, :policy, :accept)}")
           end
         end
+
+      {:ok, _} ->
+        IO.puts("No chains found.")
+
       {:error, reason} ->
         IO.puts("Failed to list chains: #{inspect(reason)}")
     end

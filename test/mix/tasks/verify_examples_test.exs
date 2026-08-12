@@ -46,18 +46,42 @@ defmodule Mix.Tasks.Nftables.VerifyExamplesTest do
     end
   end
 
-  describe "baseline against the real example suite" do
-    @tag :baseline
-    test "reports exactly the 11 known-broken examples" do
-      results =
+  describe "the real example suite" do
+    # Examples known to reference only functions that exist. This list is a
+    # ratchet: each rewrite work item adds its files, and nothing may leave.
+    #
+    # It deliberately does not pin a total. An earlier version asserted "11
+    # broken", which made every rewrite fail a test that was measuring the
+    # bug rather than the fix. Asserting that fixed files stay fixed catches
+    # regressions without rotting as the work proceeds. When the last
+    # rewrite lands (#25) this becomes the whole suite.
+    @verified [
+      # was already clean
+      "01_sysctl_management.exs",
+      # rewritten in #17
+      "02_basic_firewall.exs",
+      "03_firewall_rules.exs",
+      "04_ip_blocklist.exs"
+    ]
+
+    test "every example already rewritten resolves cleanly (REQ-TEST-008)" do
+      for name <- @verified do
+        assert VerifyExamples.check_file(Path.join("examples", name)) == [],
+               "#{name} was verified previously and has regressed"
+      end
+    end
+
+    test "the checker still finds breakage in the examples not yet rewritten" do
+      # Guards against the checker silently becoming a no-op — a bug that
+      # would make every remaining work item look finished.
+      remaining =
         "examples/*.exs"
         |> Path.wildcard()
-        |> Enum.map(&{Path.basename(&1), VerifyExamples.check_file(&1)})
+        |> Enum.reject(&(Path.basename(&1) in @verified))
 
-      {clean, broken} = Enum.split_with(results, fn {_, findings} -> findings == [] end)
-
-      assert Enum.map(clean, &elem(&1, 0)) == ["01_sysctl_management.exs"]
-      assert length(broken) == 11
+      if remaining != [] do
+        assert Enum.any?(remaining, &(VerifyExamples.check_file(&1) != []))
+      end
     end
   end
 end
